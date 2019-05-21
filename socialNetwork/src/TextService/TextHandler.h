@@ -16,6 +16,7 @@
 #include "../ClientPool.h"
 #include "../ThriftClient.h"
 #include <xtrace/xtrace.h>
+#include <xtrace/baggage.h>
 
 namespace social_network {
 
@@ -49,9 +50,15 @@ void TextHandler::UploadText(
     const std::string &text,
     const std::map<std::string, std::string> & carrier) {
 
-  XTrace::StartTrace();
+  std::map<std::string, std::string>::const_iterator baggage_it = carrier.find("baggage");
+  if (baggage_it != carrier.end()) {
+    SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
+  }
 
-  XTRACE("HELLO WORLD");
+  if (!XTrace::IsTracing()) {
+    XTrace::StartTrace("TextHandler");
+  }
+  XTRACE("TextHandler::UploadText", {{"RequestID", std::to_string(req_id)}});
 
   // Initialize a span
   TextMapReader reader(carrier);
@@ -83,8 +90,11 @@ void TextHandler::UploadText(
     s = m.suffix().str();
   }
 
+  Baggage shortened_urls_baggage = BRANCH_CURRENT_BAGGAGE();
   std::future<std::vector<std::string>> shortened_urls_future = std::async(
       std::launch::async, [&](){
+        BAGGAGE(shortened_urls_baggage);  // automatically set / reinstate baggage on destructor
+
         auto url_client_wrapper = _url_client_pool->Pop();
         if (!url_client_wrapper) {
           ServiceException se;
@@ -103,11 +113,15 @@ void TextHandler::UploadText(
         }    
         
         _url_client_pool->Push(url_client_wrapper);
+
         return return_urls;
       });
 
+  Baggage user_mention_baggage = BRANCH_CURRENT_BAGGAGE();
   std::future<void> user_mention_future = std::async(
       std::launch::async, [&](){
+        BAGGAGE(user_mention_baggage);  // automatically set / reinstate baggage on destructor
+
         auto user_mention_client_wrapper = _user_mention_client_pool->Pop();
         if (!user_mention_client_wrapper) {
           ServiceException se;
@@ -127,12 +141,12 @@ void TextHandler::UploadText(
         }
 
         _user_mention_client_pool->Push(user_mention_client_wrapper);
-
       });
 
   std::vector<std::string> shortened_urls;
   try {
     shortened_urls = shortened_urls_future.get();
+    JOIN_CURRENT_BAGGAGE(shortened_urls_baggage);
   } catch (...) {
     LOG(error) << "Failed to get shortened urls from url-shorten-service";
     throw;
@@ -140,6 +154,7 @@ void TextHandler::UploadText(
 
   std::string updated_text;
   if (!urls.empty()) {
+    XTRACE("Using shortened urls");
     s = text;
     int idx = 0;
     while (std::regex_search(s, m, e)){
@@ -150,12 +165,16 @@ void TextHandler::UploadText(
       idx++;
     }
   } else {
+    XTRACE("No shortened urls to use");
     updated_text = text;
   }
 
   
+  Baggage upload_text_baggage = BRANCH_CURRENT_BAGGAGE();
   std::future<void> upload_text_future = std::async(
       std::launch::async, [&]() {
+        BAGGAGE(upload_text_baggage);  // automatically set / reinstate baggage on destructor
+
         // Upload to compose post service
         auto compose_post_client_wrapper = _compose_client_pool->Pop();
         if (!compose_post_client_wrapper) {
@@ -177,6 +196,7 @@ void TextHandler::UploadText(
 
   try {
     user_mention_future.get();
+    JOIN_CURRENT_BAGGAGE(user_mention_baggage);
   } catch (...) {
     LOG(error) << "Failed to upload user mentions to user-mention-service";
     throw;
@@ -184,6 +204,7 @@ void TextHandler::UploadText(
 
   try {
     upload_text_future.get();
+    JOIN_CURRENT_BAGGAGE(upload_text_baggage);
   } catch (...) {
     LOG(error) << "Failed to upload text to compose-post-service";
     throw;
@@ -191,7 +212,9 @@ void TextHandler::UploadText(
 
   span->Finish();
 
-  XTRACE("GOODBYE WORLD");
+  XTRACE("TextHandler::UploadText complete");
+
+  DELETE_CURRENT_BAGGAGE();
 }
 
 } //namespace social_network
