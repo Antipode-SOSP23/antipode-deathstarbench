@@ -92,7 +92,7 @@ void TextHandler::UploadText(
 
   Baggage shortened_urls_baggage = BRANCH_CURRENT_BAGGAGE();
   std::future<std::vector<std::string>> shortened_urls_future = std::async(
-      std::launch::async, [&](){
+      std::launch::async, [&, writer_text_map]() mutable {
         BAGGAGE(shortened_urls_baggage);  // automatically set / reinstate baggage on destructor
 
         auto url_client_wrapper = _url_client_pool->Pop();
@@ -105,6 +105,7 @@ void TextHandler::UploadText(
         std::vector<std::string> return_urls;
         auto url_client = url_client_wrapper->GetClient();
         try {
+          writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
           url_client->UploadUrls(return_urls, req_id, urls, writer_text_map);
         } catch (...) {
           LOG(error) << "Failed to upload urls to url-shorten-service";
@@ -119,7 +120,7 @@ void TextHandler::UploadText(
 
   Baggage user_mention_baggage = BRANCH_CURRENT_BAGGAGE();
   std::future<void> user_mention_future = std::async(
-      std::launch::async, [&](){
+      std::launch::async, [&, writer_text_map]() mutable {
         BAGGAGE(user_mention_baggage);  // automatically set / reinstate baggage on destructor
 
         auto user_mention_client_wrapper = _user_mention_client_pool->Pop();
@@ -132,6 +133,7 @@ void TextHandler::UploadText(
         std::vector<std::string> urls;
         auto user_mention_client = user_mention_client_wrapper->GetClient();
         try {
+          writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
           user_mention_client->UploadUserMentions(req_id, user_mentions,
                                                   writer_text_map);
         } catch (...) {
@@ -172,7 +174,7 @@ void TextHandler::UploadText(
   
   Baggage upload_text_baggage = BRANCH_CURRENT_BAGGAGE();
   std::future<void> upload_text_future = std::async(
-      std::launch::async, [&]() {
+      std::launch::async, [&, writer_text_map]() mutable {
         BAGGAGE(upload_text_baggage);  // automatically set / reinstate baggage on destructor
 
         // Upload to compose post service
@@ -185,6 +187,7 @@ void TextHandler::UploadText(
         }
         auto compose_post_client = compose_post_client_wrapper->GetClient();
         try {
+          writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
           compose_post_client->UploadText(req_id, updated_text, writer_text_map);
         } catch (...) {
           LOG(error) << "Failed to upload text to compose-post-service";
@@ -213,6 +216,8 @@ void TextHandler::UploadText(
   span->Finish();
 
   XTRACE("TextHandler::UploadText complete");
+
+  // TODO: INCLUDE BAGGAGE IN RESPONSE (POSSIBLY MUST MODIFY THRIFT DEFINITIONS)
 
   DELETE_CURRENT_BAGGAGE();
 }
