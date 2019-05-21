@@ -128,7 +128,30 @@ RUN apt-get update \
     cpp-jwt-${LIB_CPP_JWT_VERSION} \
     cpp_redis \
     AMQP-CPP \
-    SimpleAmqpClient \
+    SimpleAmqpClient
+
+RUN cd /tmp \ 
+  && wget https://github.com/google/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.gz \
+  && gunzip protobuf-2.5.0.tar.gz \
+  && tar -xvf protobuf-2.5.0.tar \
+  && cd protobuf-2.5.0 \
+  && ./configure --prefix=/usr \
+  && make \
+  && make install \
+  # Install xtrace
+  && cd /tmp \
+  && git clone https://github.com/JonathanMace/xtrace-cpp.git \
+  && cd xtrace-cpp \
+  && mkdir build \
+  && cd build \
+  && cmake .. \
+  && make \
+  && make install \
+  && cd /tmp \
+  && rm -rf \
+      protobuf-2.5.0.tar \
+      protobuf-2.5.0 \
+      xtrace-cpp
 
 ENV LD_LIBRARY_PATH /usr/local/lib:${LD_LIBRARY_PATH}
 RUN ldconfig
