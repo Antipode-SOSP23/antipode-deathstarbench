@@ -1,3 +1,7 @@
+# Modifications
+
+This is a modified version of the Cornell DeathStarBench.  It has been modified to add X-Trace tracing support.
+
 # Social Network Microservices
 
 A social network with unidirectional follow relationships, implemented with loosely-coupled microservices, communicating with each other via Thrift RPCs. 
@@ -28,7 +32,22 @@ Supported actions:
 ### Before you start
 - Install Docker and Docker Compose.
 - Make sure the following ports are available: port `8080` for Nginx frontend, `8081` for media frontend and 
-  `16686` for Jaeger.
+  `16686` for Jaeger, `4080` and `5563` for X-Trace
+
+### Build modified docker containers
+By default, the DeathStarBench pulls its containers from docker hub.  We need to override these with our modified X-Trace containers.  To do this, we will manually build the docker images for the modified components.
+
+1. Build the base docker image that contains all the dependent libraries.  We modified this to add X-Trace and protocol buffers.
+```
+cd docker/thrift-microservice-deps/cpp
+docker build --no-cache -t yg397/thrift-microservice-deps .
+cd ../../..
+```
+2. Build the social network docker image
+```
+docker build -t yg397/social-network-microservices .
+```
+
 
 ### Start docker containers
 Start docker containers by running `docker-compose up -d`. All images will be 
@@ -71,6 +90,9 @@ View Jaeger traces by accessing `http://localhost:16686`
 Example of a Jaeger trace for a compose post request: 
 
 ![jaeger_example](socialNet_jaeger.png)
+
+#### View X-Trace traces
+View X-Trace traces by accessing `http://localhost:4080`
 
 ### Development Status
 
