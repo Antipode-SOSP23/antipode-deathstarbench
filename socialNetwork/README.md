@@ -1,5 +1,20 @@
 # Social Network Microservices
 
+A social network with unidirectional follow relationships, implemented with loosely-coupled microservices, communicating with each other via Thrift RPCs. 
+
+## Application Structure
+
+![Social Network Architecture](socialNet_arch.png)
+
+Supported actions: 
+* Create text post (optional media: image, video, shortened URL, user tag)
+* Read post
+* Read entire user timeline
+* Receive recommendations on which users to follow
+* Search database for user or post
+* Register/Login using user credentials
+* Follow/Unfollow user
+
 ## Pre-requirements
 - Docker
 - Docker-compose
@@ -53,7 +68,9 @@ cd wrk2
 #### View Jaeger traces
 View Jaeger traces by accessing `http://localhost:16686`
 
+Example of a Jaeger trace for a compose post request: 
 
+![jaeger_example](socialNet_jaeger.png)
 
 ### Development Status
 
