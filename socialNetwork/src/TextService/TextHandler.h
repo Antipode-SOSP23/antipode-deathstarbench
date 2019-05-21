@@ -15,6 +15,7 @@
 #include "../tracing.h"
 #include "../ClientPool.h"
 #include "../ThriftClient.h"
+#include <xtrace/xtrace.h>
 
 namespace social_network {
 
@@ -47,6 +48,10 @@ void TextHandler::UploadText(
     int64_t req_id,
     const std::string &text,
     const std::map<std::string, std::string> & carrier) {
+
+  XTrace::StartTrace();
+
+  XTRACE("HELLO WORLD");
 
   // Initialize a span
   TextMapReader reader(carrier);
@@ -185,6 +190,8 @@ void TextHandler::UploadText(
   }
 
   span->Finish();
+
+  XTRACE("GOODBYE WORLD");
 }
 
 } //namespace social_network

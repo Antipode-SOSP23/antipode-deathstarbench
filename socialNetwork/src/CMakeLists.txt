@@ -7,9 +7,11 @@ find_package(nlohmann_json 3.5.0 REQUIRED)
 find_package(Threads)
 find_package(OpenSSL REQUIRED)
 find_package(amqpcpp REQUIRED)
+find_package(Protobuf REQUIRED)
+
 
 set(Boost_USE_STATIC_LIBS ON)
-find_package(Boost 1.54.0 REQUIRED COMPONENTS log log_setup)
+find_package(Boost 1.54.0 REQUIRED COMPONENTS system log log_setup)
 if(Boost_FOUND)
   include_directories(${Boost_INCLUDE_DIRS})
   link_directories(${Boost_LIBRARY_DIRS})
@@ -34,7 +36,6 @@ endif()
 #add_library(tacopie STATIC IMPORTED)
 #set_target_properties(tacopie PROPERTIES IMPORTED_LOCATION
 #    /usr/local/lib/libtacopie.a)
-
 
 
 set(THRIFT_GEN_CPP_DIR ../../gen-cpp)
