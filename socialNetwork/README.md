@@ -1,6 +1,6 @@
 # Modifications
 
-This is a modified version of the Cornell DeathStarBench.  It has been modified to add X-Trace tracing support.
+This is a modified version of the Cornell DeathStarBench social network microservices.  It has been modified to add X-Trace tracing support.  Please note the modified build / install / run directions.
 
 # Social Network Microservices
 
