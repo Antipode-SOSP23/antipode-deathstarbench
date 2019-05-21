@@ -255,3 +255,11 @@ services:
     environment:
       - COLLECTOR_ZIPKIN_HTTP_PORT=9411
 
+  xtrace-server:
+    image: jonathanmace/xtrace-server:latest
+    hostname: xtrace-server
+    ports:
+      - 4080:4080
+      - 5563:5563
+    restart: always
+
