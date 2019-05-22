@@ -14,6 +14,8 @@
 #include "../logger.h"
 #include "../tracing.h"
 #include "../utils.h"
+#include <xtrace/xtrace.h>
+#include <xtrace/baggage.h>
 
 namespace social_network {
 
@@ -47,6 +49,17 @@ void UserMentionHandler::UploadUserMentions(
     const std::vector<std::string> &usernames,
     const std::map<std::string, std::string> &carrier) {
 
+  // Initialize a baggage
+  auto baggage_it = carrier.find("baggage");
+  if (baggage_it != carrier.end()) {
+    SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
+  }
+
+  if (!XTrace::IsTracing()) {
+    XTrace::StartTrace("UserMentionHandler");
+  }
+  XTRACE("UserMentionHandler::UploadUserMentions", {{"RequestID", std::to_string(req_id)}});
+
   // Initialize a span
   TextMapReader reader(carrier);
   std::map<std::string, std::string> writer_text_map;
@@ -59,6 +72,7 @@ void UserMentionHandler::UploadUserMentions(
 
   std::vector<UserMention> user_mentions;
   if (!usernames.empty()) {
+    XTRACE("Usernames not empty");
     std::map<std::string, bool> usernames_not_cached;
 
     for (auto &username : usernames) {
@@ -72,6 +86,7 @@ void UserMentionHandler::UploadUserMentions(
       ServiceException se;
       se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
       se.message = "Failed to pop a client from memcached pool";
+      XTRACE("Failed to pop a client from memcached pool");
       throw se;
     }
 
@@ -96,6 +111,7 @@ void UserMentionHandler::UploadUserMentions(
       se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
       se.message = memcached_strerror(client, rc);
       memcached_pool_push(_memcached_client_pool, client);
+      XTRACE("Cannot get usernames of request" + std::to_string(req_id));
       throw se;
     }
 
@@ -121,6 +137,7 @@ void UserMentionHandler::UploadUserMentions(
         ServiceException se;
         se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
         se.message =  "Cannot get usernames of request " + std::to_string(req_id);
+        XTRACE("Cannot get usernames of request");
         throw se;
       }
       UserMention new_user_mention;
@@ -149,6 +166,7 @@ void UserMentionHandler::UploadUserMentions(
         ServiceException se;
         se.errorCode = ErrorCode::SE_MONGODB_ERROR;
         se.message = "Failed to pop a client from MongoDB pool";
+        XTRACE("Failed to pop a client form MongoDB pool");
         throw se;
       }
 
@@ -159,6 +177,7 @@ void UserMentionHandler::UploadUserMentions(
         se.errorCode = ErrorCode::SE_MONGODB_ERROR;
         se.message = "Failed to create collection user from DB user";
         mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
+        XTRACE("Failed to create collection user from DB user");
         throw se;
       }
 
@@ -196,6 +215,7 @@ void UserMentionHandler::UploadUserMentions(
           mongoc_cursor_destroy(cursor);
           mongoc_collection_destroy(collection);
           mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
+          XTRACE("Attribute of MongoDB item is not complete");
           throw se;
         }
         if (bson_iter_init_find(&iter, doc, "username")) {
@@ -208,6 +228,7 @@ void UserMentionHandler::UploadUserMentions(
           mongoc_cursor_destroy(cursor);
           mongoc_collection_destroy(collection);
           mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
+          XTRACE("Attribute of MongoDB item is not complete");
           throw se;
         }
         user_mentions.emplace_back(new_user_mention);
@@ -224,20 +245,27 @@ void UserMentionHandler::UploadUserMentions(
   if (!compose_post_client_wrapper) {
     ServiceException se;
     se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
-    se.message = "Failed to connected to compose-post-service";
+    se.message = "Failed to connect to compose-post-service";
+    XTRACE("Failed to connect to compose-post-service");
     throw se;
   }
   auto compose_post_client = compose_post_client_wrapper->GetClient();
   try {
+    writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
     compose_post_client->UploadUserMentions(req_id, user_mentions,
                                             writer_text_map);
   } catch (...) {
     _compose_client_pool->Push(compose_post_client_wrapper);
     LOG(error) << "Failed to upload user_mentions to user-mention-service";
+    XTRACE("Failed to upload user_mentions to user-mention-service");
     throw;
   }  
   _compose_client_pool->Push(compose_post_client_wrapper);
   span->Finish();
+
+  XTRACE("UserMentionService::UploadUserMentions");
+
+  DELETE_CURRENT_BAGGAGE();
 }
 
 }
