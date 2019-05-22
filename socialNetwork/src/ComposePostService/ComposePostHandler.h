@@ -250,6 +250,17 @@ void ComposePostHandler::UploadMedia(
     const std::vector<Media> &media,
     const std::map<std::string, std::string> &carrier) {
 
+  auto baggage_it = carrier.find("baggage");
+  if (baggage_it != carrier.end()) {
+    SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
+  }
+
+  if (!XTrace::IsTracing()) {
+    XTrace::StartTrace("ComposePostHandler");
+  }
+
+  XTRACE("ComposePostHandler::UploadMedia", {{"RequestID", std::to_string(req_id)}});
+
   // Initialize a span
   TextMapReader reader(carrier);
   std::map<std::string, std::string> writer_text_map;
@@ -274,10 +285,12 @@ void ComposePostHandler::UploadMedia(
   if (!redis_client_wrapper) {
     ServiceException se;
     se.errorCode = ErrorCode::SE_REDIS_ERROR;
-    se.message = "Cannot connected to Redis server";
+    se.message = "Cannot connect to Redis server";
+    XTRACE("Cannot connect to Redis server");
     throw se;
   }
   auto redis_client = redis_client_wrapper->GetClient();
+  XTRACE("RedisHashSet start");
   auto add_span = opentracing::Tracer::Global()->StartSpan(
       "RedisHashSet", {opentracing::ChildOf(&span->context())});
   auto hset_reply = redis_client->hset(std::to_string(req_id),
@@ -287,6 +300,7 @@ void ComposePostHandler::UploadMedia(
   redis_client->expire(std::to_string(req_id), REDIS_EXPIRE_TIME);
   redis_client->sync_commit();
   add_span->Finish();
+  XTRACE("RedisHashSet complete");
   _redis_client_pool->Push(redis_client_wrapper);
 
   auto num_components_reply = hlen_reply.get();
@@ -294,15 +308,19 @@ void ComposePostHandler::UploadMedia(
     ServiceException se;
     se.errorCode = ErrorCode::SE_REDIS_ERROR;
     se.message = "Failed to retrieve message from Redis";
+    XTRACE("Failed to retrieve message from Redis");
     throw se;
   }
 
   if (num_components_reply.as_integer() == NUM_COMPONENTS) {
+    writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
     _ComposeAndUpload(req_id, writer_text_map);
   }
 
   span->Finish();
 
+  XTRACE("ComposePostService::UploadMedia complete");
+  DELETE_CURRENT_BAGGAGE();
 }
 
 void ComposePostHandler::UploadUniqueId(
