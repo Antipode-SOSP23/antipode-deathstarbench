@@ -11,6 +11,7 @@ target_include_directories(
     ${MONGOC_INCLUDE_DIRS}
     /usr/local/include/jaegertracing
     /usr/local/include/cpp_redis
+    /usr/local/include/xtrace
 )
 
 target_link_libraries(
@@ -25,6 +26,8 @@ target_link_libraries(
     jaegertracing
     /usr/local/lib/libcpp_redis.a
     /usr/local/lib/libtacopie.a
+    xtrace
+    protobuf
 )
 
 install(TARGETS UserTimelineService DESTINATION ./)

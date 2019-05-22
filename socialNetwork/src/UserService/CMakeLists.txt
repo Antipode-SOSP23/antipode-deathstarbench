@@ -14,6 +14,7 @@ target_include_directories(
     ${MONGOC_INCLUDE_DIRS}
     /usr/local/include/jwt
     /usr/local/include/jaegertracing
+    /usr/local/include/xtrace
 )
 
 target_link_libraries(
@@ -28,6 +29,8 @@ target_link_libraries(
     Boost::log_setup
     jaegertracing
     OpenSSL::SSL
+    xtrace
+    protobuf
 )
 
 install(TARGETS UserService DESTINATION ./)

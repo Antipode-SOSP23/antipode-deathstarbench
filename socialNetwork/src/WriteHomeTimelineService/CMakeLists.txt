@@ -10,6 +10,7 @@ target_include_directories(
     /usr/local/include/jaegertracing
     /usr/local/include/cpp_redis
     ${LIBEVENT_INCLUDE_DIRS}
+    /usr/local/include/xtrace
 )
 
 
@@ -27,6 +28,8 @@ target_link_libraries(
     ${LIBEVENT_LIBRARIES}
     /usr/local/lib/libcpp_redis.a
     /usr/local/lib/libtacopie.a
+    xtrace
+    protobuf
 )
 
 install(TARGETS WriteHomeTimelineService DESTINATION ./)
