@@ -14,6 +14,8 @@
 #include "../ClientPool.h"
 #include "../RedisClient.h"
 #include "../ThriftClient.h"
+#include <xtrace/xtrace.h>
+#include <xtrace/baggage.h>
 
 namespace social_network {
 
@@ -46,6 +48,16 @@ void ReadHomeTimelineHandler::ReadHomeTimeline(
     int stop,
     const std::map<std::string, std::string> &carrier) {
 
+  auto baggage_it = carrier.find("baggage");
+  if (baggage_it != carrier.end()) {
+    SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
+  }
+
+  if (!XTrace::IsTracing()) {
+    XTrace::StartTrace("ReadHomeTimelineHandler");
+  }
+
+  XTRACE("ReadHomeTimelineHandler::ReadHomeTimeline", {{"RequestID", std::to_string(req_id)}});
   // Initialize a span
   TextMapReader reader(carrier);
   std::map<std::string, std::string> writer_text_map;
@@ -64,10 +76,12 @@ void ReadHomeTimelineHandler::ReadHomeTimeline(
   if (!redis_client_wrapper) {
     ServiceException se;
     se.errorCode = ErrorCode::SE_REDIS_ERROR;
-    se.message = "Cannot connected to Redis server";
+    se.message = "Cannot connect to Redis server";
+    XTRACE("Cannot connect to Redis server");
     throw se;
   }
   auto redis_client = redis_client_wrapper->GetClient();
+  XTRACE("RedisFind start");
   auto redis_span = opentracing::Tracer::Global()->StartSpan(
       "RedisFind", {opentracing::ChildOf(&span->context())});
   auto post_ids_future = redis_client->zrevrange(
@@ -75,14 +89,17 @@ void ReadHomeTimelineHandler::ReadHomeTimeline(
   redis_client->sync_commit();
   _redis_client_pool->Push(redis_client_wrapper);
   redis_span->Finish();
+  XTRACE("RedisFind complete");
   cpp_redis::reply post_ids_reply;
   try {
     post_ids_reply = post_ids_future.get();
   } catch (...) {
     LOG(error) << "Failed to read post_ids from home-timeline-redis";
+    XTRACE("Failed to read post_ids from home-timeline-redis");
     throw;
   }
 
+  XTRACE("Collecting posts from Post IDs");
   std::vector<int64_t> post_ids;
   auto post_ids_reply_array = post_ids_reply.as_array();
   for (auto &post_id_reply : post_ids_reply_array) {
@@ -93,19 +110,25 @@ void ReadHomeTimelineHandler::ReadHomeTimeline(
   if (!post_client_wrapper) {
     ServiceException se;
     se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
-    se.message = "Failed to connected to post-storage-service";
+    se.message = "Failed to connect to post-storage-service";
+    XTRACE("Failed to connect to post-storage-service");
     throw se;
   }
   auto post_client = post_client_wrapper->GetClient();
   try {
+    XTRACE("Reading Posts");
     post_client->ReadPosts(_return, req_id, post_ids, writer_text_map);
   } catch (...) {
     _post_client_pool->Push(post_client_wrapper);
     LOG(error) << "Failed to read posts from post-storage-service";
+    XTRACE("Failed to read posts from post-storage-service");
     throw;
   }
   _post_client_pool->Push(post_client_wrapper);
   span->Finish();
+
+  XTRACE("ReadHomeTimelineHandler::ReadHomeTimeline complete");
+  DELETE_CURRENT_BAGGAGE();
 }
 
 } // namespace social_network
