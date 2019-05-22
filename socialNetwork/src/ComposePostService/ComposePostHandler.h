@@ -18,6 +18,8 @@
 #include "../RedisClient.h"
 #include "../ThriftClient.h"
 #include "RabbitmqClient.h"
+#include <xtrace/xtrace.h>
+#include <xtrace/baggage.h>
 
 #define NUM_COMPONENTS 6
 #define REDIS_EXPIRE_TIME 10
@@ -73,15 +75,18 @@ class ComposePostHandler : public ComposePostServiceIf {
 
   void _UploadUserTimelineHelper(int64_t req_id, int64_t post_id,
       int64_t user_id, int64_t timestamp,
-      const std::map<std::string, std::string> & carrier);
+      const std::map<std::string, std::string> & carrier,
+      Baggage& baggage);
 
   void _UploadPostHelper(int64_t req_id, const Post &post,
-      const std::map<std::string, std::string> &carrier);
+      const std::map<std::string, std::string> &carrier,
+      Baggage& baggage);
 
   void _UploadHomeTimelineHelper(int64_t req_id, int64_t post_id,
       int64_t user_id, int64_t timestamp,
       const std::vector<int64_t> &user_mentions_id,
-      const std::map<std::string, std::string> &carrier);
+      const std::map<std::string, std::string> &carrier,
+      Baggage& baggage);
 
 };
 
@@ -140,7 +145,7 @@ void ComposePostHandler::UploadCreator(
     throw se;
   }
   auto redis_client = redis_client_wrapper->GetClient();
-  XTRACE("RedisHashSet start")
+  XTRACE("RedisHashSet start");
   auto add_span = opentracing::Tracer::Global()->StartSpan(
       "RedisHashSet", {opentracing::ChildOf(&span->context())});
   auto hset_reply = redis_client->hset(std::to_string(req_id),
@@ -150,7 +155,7 @@ void ComposePostHandler::UploadCreator(
   redis_client->expire(std::to_string(req_id), REDIS_EXPIRE_TIME);
   redis_client->sync_commit();
   add_span->Finish();
-  XTRACE("RedisHashSet complete")
+  XTRACE("RedisHashSet complete");
   _redis_client_pool->Push(redis_client_wrapper);
 
   auto num_components_reply = hlen_reply.get();
@@ -168,7 +173,7 @@ void ComposePostHandler::UploadCreator(
   }
 
   span->Finish();
-  XTRACE("ComposePostHandler::Upload Creator complete")
+  XTRACE("ComposePostHandler::Upload Creator complete");
 
   DELETE_CURRENT_BAGGAGE();
 }
@@ -460,11 +465,24 @@ void ComposePostHandler::_ComposeAndUpload(
     int64_t req_id,
     const std::map<std::string, std::string> &carrier) {
 
+  auto baggage_it = carrier.find("baggage");
+  if (baggage_it != carrier.end()) {
+    SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second)); 
+  }
+
+  if (!XTrace::IsTracing()) {
+    XTrace::StartTrace("ComposePostHandler");
+  }
+
+  XTRACE("ComposePostHandler::_ComposeAndUpload Start");
+
+  XTRACE("Redis RetrieveMessages start");
   auto redis_client_wrapper = _redis_client_pool->Pop();
   if (!redis_client_wrapper) {
     ServiceException se;
     se.errorCode = ErrorCode::SE_REDIS_ERROR;
     se.message = "Cannot connect to Redis server";
+    XTRACE("Cannot connect to Redis server");
     throw se;
   }
   auto redis_client = redis_client_wrapper->GetClient();
@@ -499,6 +517,7 @@ void ComposePostHandler::_ComposeAndUpload(
     ServiceException se;
     se.errorCode = ErrorCode::SE_REDIS_ERROR;
     se.message = "Failed to retrieve messages from Redis";
+    XTRACE("Failed to retrieve messages from Redis");
     _redis_client_pool->Push(redis_client_wrapper);
     throw se;
   }
@@ -508,13 +527,17 @@ void ComposePostHandler::_ComposeAndUpload(
     ServiceException se;
     se.errorCode = ErrorCode::SE_REDIS_ERROR;
     se.message = "Failed to retrieve messages from Redis";
+    XTRACE("Failed to retrieve messages from Redis");
     _redis_client_pool->Push(redis_client_wrapper);
     throw se;
   }
 
   _redis_client_pool->Push(redis_client_wrapper);
 
+  XTRACE("Redis RetrieveMessages complete");
+
   // Compose the post
+  XTRACE("Compose Post start");
   Post post;
   post.req_id = req_id;
   post.text = text_reply.as_string();
@@ -558,22 +581,31 @@ void ComposePostHandler::_ComposeAndUpload(
     post.urls.emplace_back(url);
   }
 
+  XTRACE("Compose Post complete");
   // Upload the post
+  XTRACE("Upload Post start");
+  Baggage upload_post_helper_baggage = BRANCH_CURRENT_BAGGAGE();
   std::thread upload_post_worker(&ComposePostHandler::_UploadPostHelper,
-                                   this, req_id, std::ref(post), std::ref(carrier));
+                                   this, req_id, std::ref(post), std::ref(carrier), std::ref(upload_post_helper_baggage));
 
+  Baggage upload_user_timeline_helper_baggage = BRANCH_CURRENT_BAGGAGE();
   std::thread upload_user_timeline_worker(
       &ComposePostHandler::_UploadUserTimelineHelper, this, req_id,
-      post.post_id, post.creator.user_id, post.timestamp, std::ref(carrier));
+      post.post_id, post.creator.user_id, post.timestamp, std::ref(carrier), std::ref(upload_user_timeline_helper_baggage));
 
+  Baggage upload_home_timeline_helper_baggage = BRANCH_CURRENT_BAGGAGE();
   std::thread upload_home_timeline_worker(
       &ComposePostHandler::_UploadHomeTimelineHelper, this, req_id,
       post.post_id, post.creator.user_id, post.timestamp,
-      std::ref(user_mentions_id), std::ref(carrier));
+      std::ref(user_mentions_id), std::ref(carrier), std::ref(upload_home_timeline_helper_baggage));
 
   upload_post_worker.join();
   upload_user_timeline_worker.join();
   upload_home_timeline_worker.join();
+
+  JOIN_CURRENT_BAGGAGE(upload_post_helper_baggage);
+  JOIN_CURRENT_BAGGAGE(upload_user_timeline_helper_baggage);
+  JOIN_CURRENT_BAGGAGE(upload_home_timeline_helper_baggage);
 
   if (_user_timeline_teptr) {
     try{
@@ -602,12 +634,19 @@ void ComposePostHandler::_ComposeAndUpload(
       LOG(error) << "Thread exited with exception: " << ex.what();
     }
   }
+
+  XTRACE("Upload Post complete");
+  XTRACE("ComposePostService::_ComposeAndUpload complete");
+
+  DELETE_CURRENT_BAGGAGE();
+
 }
 
 void ComposePostHandler::_UploadPostHelper(
     int64_t req_id,
     const Post &post,
-    const std::map<std::string, std::string> &carrier) {
+    const std::map<std::string, std::string> &carrier,
+    Baggage& baggage) {
   try{
     auto post_storage_client_wrapper = _post_storage_client_pool->Pop();
     if (!post_storage_client_wrapper) {
@@ -636,7 +675,8 @@ void ComposePostHandler::_UploadUserTimelineHelper(
     int64_t post_id,
     int64_t user_id,
     int64_t timestamp,
-    const std::map<std::string, std::string> &carrier) {
+    const std::map<std::string, std::string> &carrier,
+    Baggage& baggage) {
   try{
     auto user_timeline_client_wrapper = _user_timeline_client_pool->Pop();
     if (!user_timeline_client_wrapper) {
@@ -666,7 +706,8 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
     int64_t user_id,
     int64_t timestamp,
     const std::vector<int64_t> &user_mentions_id,
-    const std::map<std::string, std::string> &carrier) {
+    const std::map<std::string, std::string> &carrier,
+    Baggage& baggage) {
   try {
     std::string user_mentions_id_str = "[";
     for (auto &i : user_mentions_id){
