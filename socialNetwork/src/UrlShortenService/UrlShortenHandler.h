@@ -153,6 +153,7 @@ void UrlShortenHandler::UploadUrls(
             mongoc_bulk_operation_destroy(bulk);
             mongoc_collection_destroy(collection);
             mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
+            XTRACE("Failed to insert urls to MongoDB");
             throw se;
           }
           bson_destroy (&reply);
@@ -173,6 +174,7 @@ void UrlShortenHandler::UploadUrls(
           ServiceException se;
           se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
           se.message = "Failed to connected to compose-post-service";
+          XTRACE("Failed to connect to compose-post-service");
           throw se;
         }
         auto compose_post_client = compose_post_client_wrapper->GetClient();
@@ -181,6 +183,7 @@ void UrlShortenHandler::UploadUrls(
         } catch (...) {
           _compose_client_pool->Push(compose_post_client_wrapper);
           LOG(error) << "Failed to upload urls to compose-post-service";
+          XTRACE("Failed to upload urls to compose-post-service");
           throw;
         }
         _compose_client_pool->Push(compose_post_client_wrapper);
@@ -192,6 +195,7 @@ void UrlShortenHandler::UploadUrls(
       JOIN_CURRENT_BAGGAGE(mongo_baggage);
     } catch (...) {
       LOG(error) << "Failed to upload shortened urls from MongoDB";
+      XTRACE("Failed to upload shortened urls from MongoDB");
       throw;
     }
   }
@@ -202,6 +206,7 @@ void UrlShortenHandler::UploadUrls(
     JOIN_CURRENT_BAGGAGE(compose_baggage);
   } catch (...) {
     LOG(error) << "Failed to upload shortened urls from compose-post-service";
+    XTRACE("Failed to upload shortened urls from compose-post-service");
     throw;
   }
 

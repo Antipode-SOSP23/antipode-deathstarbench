@@ -99,7 +99,8 @@ void TextHandler::UploadText(
         if (!url_client_wrapper) {
           ServiceException se;
           se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
-          se.message = "Failed to connected to compose-post-service";
+          se.message = "Failed to connect to url-shorten-service";
+          XTRACE("Failed to connect to url-shorten-service");
           throw se;
         }
         std::vector<std::string> return_urls;
@@ -110,6 +111,7 @@ void TextHandler::UploadText(
         } catch (...) {
           LOG(error) << "Failed to upload urls to url-shorten-service";
           _url_client_pool->Push(url_client_wrapper);
+          XTRACE("Failed to upload urls to url-shorten-service");
           throw;
         }    
         
@@ -127,7 +129,8 @@ void TextHandler::UploadText(
         if (!user_mention_client_wrapper) {
           ServiceException se;
           se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
-          se.message = "Failed to connected to compose-post-service";
+          se.message = "Failed to connected to user-mention-service";
+          XTRACE("Failed to connect to user-mention-service");
           throw se;
         }
         std::vector<std::string> urls;
@@ -139,6 +142,7 @@ void TextHandler::UploadText(
         } catch (...) {
           LOG(error) << "Failed to upload user_mentions to user-mention-service";
           _user_mention_client_pool->Push(user_mention_client_wrapper);
+          XTRACE("Failed to upload user_mentions to user-mention-service");
           throw;
         }
 
@@ -151,6 +155,7 @@ void TextHandler::UploadText(
     JOIN_CURRENT_BAGGAGE(shortened_urls_baggage);
   } catch (...) {
     LOG(error) << "Failed to get shortened urls from url-shorten-service";
+    XTRACE("Failed to get shortened urls form url-shorten-service");
     throw;
   }
 
@@ -183,6 +188,7 @@ void TextHandler::UploadText(
           ServiceException se;
           se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
           se.message = "Failed to connected to compose-post-service";
+          XTRACE("Failed to connect to compose-post-service");
           throw se;
         }
         auto compose_post_client = compose_post_client_wrapper->GetClient();
@@ -192,6 +198,7 @@ void TextHandler::UploadText(
         } catch (...) {
           LOG(error) << "Failed to upload text to compose-post-service";
           _compose_client_pool->Push(compose_post_client_wrapper);
+          XTRACE("Failed to upload text to compose-post-service");
           throw;
         }          
         _compose_client_pool->Push(compose_post_client_wrapper);
@@ -202,6 +209,7 @@ void TextHandler::UploadText(
     JOIN_CURRENT_BAGGAGE(user_mention_baggage);
   } catch (...) {
     LOG(error) << "Failed to upload user mentions to user-mention-service";
+    XTRACE("Failed to upload user mentions to user-mention-service");
     throw;
   }
 
@@ -210,6 +218,7 @@ void TextHandler::UploadText(
     JOIN_CURRENT_BAGGAGE(upload_text_baggage);
   } catch (...) {
     LOG(error) << "Failed to upload text to compose-post-service";
+    XTRACE("Failed to upload text to compose-post-service");
     throw;
   }
 
