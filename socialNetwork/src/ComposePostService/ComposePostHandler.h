@@ -739,25 +739,33 @@ void ComposePostHandler::_UploadPostHelper(
     const Post &post,
     const std::map<std::string, std::string> &carrier,
     Baggage& baggage) {
+  BAGGAGE(baggage);
+  TextMapReader reader(carrier);
+  std::map<std::string, std::string> writer_text_map;
+  TextMapWriter writer(writer_text_map);
   try{
     auto post_storage_client_wrapper = _post_storage_client_pool->Pop();
     if (!post_storage_client_wrapper) {
       ServiceException se;
       se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
-      se.message = "Failed to connected to post-storage-service";
+      se.message = "Failed to connect to post-storage-service";
+      XTRACE("Failed to connect to post-storage-service");
       throw se;
     }
     auto post_storage_client = post_storage_client_wrapper->GetClient();
     try {
-      post_storage_client->StorePost(req_id, post, carrier);
+      writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
+      post_storage_client->StorePost(req_id, post, writer_text_map);
     } catch (...) {
       _post_storage_client_pool->Push(post_storage_client_wrapper);
       LOG(error) << "Failed to store post to post-storage-service";
+      XTRACE("Failed to store post to post-storage-service");
       throw;
     }
     _post_storage_client_pool->Push(post_storage_client_wrapper);
   } catch (...) {
-    LOG(error) << "Failed to connected to post-storage-service";
+    LOG(error) << "Failed to connect to post-storage-service";
+    XTRACE("Failed to connect to post-storage-service");
     _post_storage_teptr = std::current_exception();
   }
 }
@@ -769,18 +777,24 @@ void ComposePostHandler::_UploadUserTimelineHelper(
     int64_t timestamp,
     const std::map<std::string, std::string> &carrier,
     Baggage& baggage) {
+  BAGGAGE(baggage);
+  TextMapReader reader(carrier);
+  std::map<std::string, std::string> writer_text_map;
+  TextMapWriter writer(writer_text_map);
   try{
     auto user_timeline_client_wrapper = _user_timeline_client_pool->Pop();
     if (!user_timeline_client_wrapper) {
       ServiceException se;
       se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
-      se.message = "Failed to connected to user-timeline-service";
+      se.message = "Failed to connect to user-timeline-service";
+      XTRACE("Failed to connect to user-timeline-service");
       throw se;
     }
     auto user_timeline_client = user_timeline_client_wrapper->GetClient();
     try {
+      writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
       user_timeline_client->WriteUserTimeline(req_id, post_id, user_id,
-                                              timestamp, carrier);
+                                              timestamp, writer_text_map);
     } catch (...) {
       _user_timeline_client_pool->Push(user_timeline_client_wrapper);
       throw;
@@ -788,6 +802,7 @@ void ComposePostHandler::_UploadUserTimelineHelper(
     _user_timeline_client_pool->Push(user_timeline_client_wrapper);
   } catch (...) {
     LOG(error) << "Failed to write user-timeline to user-timeline-service";
+    XTRACE("Failed to write user-timeline to user-timeline-service");
     _user_timeline_teptr = std::current_exception();
   }
 }
@@ -800,6 +815,10 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
     const std::vector<int64_t> &user_mentions_id,
     const std::map<std::string, std::string> &carrier,
     Baggage& baggage) {
+  BAGGAGE(baggage);
+  TextMapReader reader(carrier);
+  std::map<std::string, std::string> writer_text_map;
+  TextMapWriter writer(writer_text_map);
   try {
     std::string user_mentions_id_str = "[";
     for (auto &i : user_mentions_id){
@@ -809,7 +828,7 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
         user_mentions_id_str.length() - 2);
     user_mentions_id_str += "]";
     std::string carrier_str = "{";
-    for (auto &item : carrier) {
+    for (auto &item : writer_text_map) {
       carrier_str += "\"" + item.first + "\" : \"" + item.second + "\", ";
     }
     carrier_str = carrier_str.substr(0, carrier_str.length() - 2);
@@ -826,7 +845,8 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
     if (!rabbitmq_client_wrapper) {
       ServiceException se;
       se.errorCode = ErrorCode::SE_RABBITMQ_CONN_ERROR;
-      se.message = "Failed to connected to home-timeline-rabbitmq";
+      se.message = "Failed to connect to home-timeline-rabbitmq";
+      XTRACE("Failed to connect to home-timeline-rabbitmq");
       throw se;
     }
     auto rabbitmq_channel = rabbitmq_client_wrapper->GetChannel();
@@ -835,6 +855,7 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
     _rabbitmq_client_pool->Push(rabbitmq_client_wrapper);
   } catch (...) {
     LOG(error) << "Failed to connected to home-timeline-rabbitmq";
+    XTRACE("Failed to connect to home-timeline-rabbitmq");
     _rabbitmq_teptr = std::current_exception();
   }
 }
