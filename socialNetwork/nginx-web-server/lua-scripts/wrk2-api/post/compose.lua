@@ -4,7 +4,7 @@ local function _StrIsEmpty(s)
   return s == nil or s == ''
 end
 
-local function _UploadUserId(req_id, post, carrier)
+local function _UploadUserId(req_id, post, carrier, baggage)
   local GenericObjectPool = require "GenericObjectPool"
   local UserServiceClient = require "social_network_UserService"
   local ngx = ngx
@@ -22,7 +22,7 @@ local function _UploadUserId(req_id, post, carrier)
   GenericObjectPool:returnConnection(user_client)
 end
 
-local function _UploadText(req_id, post, carrier)
+local function _UploadText(req_id, post, carrier, baggage)
   local GenericObjectPool = require "GenericObjectPool"
   local TextServiceClient = require "social_network_TextService"
   local ngx = ngx
@@ -40,7 +40,7 @@ local function _UploadText(req_id, post, carrier)
   GenericObjectPool:returnConnection(text_client)
 end
 
-local function _UploadUniqueId(req_id, post, carrier)
+local function _UploadUniqueId(req_id, post, carrier, baggage)
   local GenericObjectPool = require "GenericObjectPool"
   local UniqueIdServiceClient = require "social_network_UniqueIdService"
   local ngx = ngx
@@ -58,7 +58,7 @@ local function _UploadUniqueId(req_id, post, carrier)
   GenericObjectPool:returnConnection(unique_id_client)
 end
 
-local function _UploadMedia(req_id, post, carrier)
+local function _UploadMedia(req_id, post, carrier, baggage)
   local GenericObjectPool = require "GenericObjectPool"
   local MediaServiceClient = require "social_network_MediaService"
   local cjson = require "cjson"
@@ -88,7 +88,13 @@ function _M.ComposePost()
   local ngx = ngx
   local cjson = require "cjson"
   local jwt = require "resty.jwt"
+  local xtracer = require "luaxtrace"
 
+  local tracing = xtracer.IsTracing()
+  if tracing ~= true then
+    xtracer.StartLuaTrace("NginxWebServer");
+  end
+  xtracer.LogXTrace("Processing request")
   local req_id = tonumber(string.sub(ngx.var.request_id, 0, 15), 16)
   local tracer = bridge_tracer.new_from_global()
   local parent_span_context = tracer:binary_extract(ngx.var.opentracing_binary_context)
@@ -105,27 +111,42 @@ function _M.ComposePost()
     ngx.status = ngx.HTTP_BAD_REQUEST
     ngx.say("Incomplete arguments")
     ngx.log(ngx.ERR, "Incomplete arguments")
+    xtracer.LogXTrace("Bad Request - Incomplete Arguments")
     ngx.exit(ngx.HTTP_BAD_REQUEST)
   end
 
+  local media_baggage = xtracer.BranchBaggage()
+  local userid_baggage = xtracer.BranchBaggage()
+  local text_baggage = xtracer.BranchBaggage()
+  local uuid_baggage = xtracer.BranchBaggage()
+  local baggages = {
+    media_baggage,
+    userid_baggage,
+    text_baggage,
+    uuid_baggage
+  }
   local threads = {
-    ngx.thread.spawn(_UploadMedia, req_id, post, carrier),
-    ngx.thread.spawn(_UploadUserId, req_id, post, carrier),
-    ngx.thread.spawn(_UploadText, req_id, post, carrier),
-    ngx.thread.spawn(_UploadUniqueId, req_id, post, carrier)
+    ngx.thread.spawn(_UploadMedia, req_id, post, carrier, media_baggage),
+    ngx.thread.spawn(_UploadUserId, req_id, post, carrier, userid_baggage),
+    ngx.thread.spawn(_UploadText, req_id, post, carrier, text_baggage),
+    ngx.thread.spawn(_UploadUniqueId, req_id, post, carrier, uuid_baggage)
   }
 
   local status = ngx.HTTP_OK
   for i = 1, #threads do
     local ok, res = ngx.thread.wait(threads[i])
+    xtracer.JoinBaggage(baggages[i])
     if not ok then
       status = ngx.HTTP_INTERNAL_SERVER_ERROR
+      xtracer.LogXTrace("Internal Server error")
       ngx.exit(status)
     end
   end
   ngx.say("Successfully upload post")
   span:finish()
+  xtracer.LogXTrace("Successfully uploaded post")
   ngx.exit(status)
+  xtracer.DeleteBaggage()
 end
 
 

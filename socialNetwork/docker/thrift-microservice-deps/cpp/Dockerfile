@@ -130,6 +130,8 @@ RUN apt-get update \
     AMQP-CPP \
     SimpleAmqpClient
 
+RUN apt-get install -y lua5.1 lua5.1-dev
+
 RUN cd /tmp \ 
   && wget https://github.com/google/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.gz \
   && gunzip protobuf-2.5.0.tar.gz \
