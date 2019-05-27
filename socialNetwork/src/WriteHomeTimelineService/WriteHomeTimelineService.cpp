@@ -125,6 +125,7 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     LOG(error) << "OnReveived worker error";
     throw;
   }
+  DELETE_CURRENT_BAGGAGE();
 }
 
 void HeartbeatSend(AmqpLibeventHandler &handler,
