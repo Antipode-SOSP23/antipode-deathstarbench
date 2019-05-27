@@ -43,7 +43,15 @@ cd docker/thrift-microservice-deps/cpp
 docker build --no-cache -t yg397/thrift-microservice-deps .
 cd ../../..
 ```
-2. Build the social network docker image
+
+2. Build the nginx server image. We modified this to add X-Trace and protocol buffers
+```
+cd docker/openresty-thrift
+docker build --no-cache -t yg397/openresty-thrift -f xenial/Dockerfile .
+cd ../../../
+```
+
+3. Build the social network docker image
 ```
 docker build -t yg397/social-network-microservices .
 ```
