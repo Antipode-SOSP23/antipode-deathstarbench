@@ -13,7 +13,7 @@ local function _UploadUserId(req_id, post, carrier, baggage)
 
   local user_client = GenericObjectPool:connection(
       UserServiceClient, "user-service", 9090)
-  carrier["baggage"] = baggage
+  carrier["baggage"] = xtracer.BranchBaggage()
   local status, err = pcall(user_client.UploadCreatorWithUserId, user_client,
       req_id, tonumber(post.user_id), post.username, carrier)
   if not status then
@@ -36,7 +36,7 @@ local function _UploadText(req_id, post, carrier, baggage)
 
   local text_client = GenericObjectPool:connection(
       TextServiceClient, "text-service", 9090)
-  carrier["baggage"] = baggage
+  carrier["baggage"] = xtracer.BranchBaggage()
   local status, err = pcall(text_client.UploadText, text_client, req_id,
       post.text, carrier)
   if not status then
@@ -59,7 +59,7 @@ local function _UploadUniqueId(req_id, post, carrier, baggage)
 
   local unique_id_client = GenericObjectPool:connection(
       UniqueIdServiceClient, "unique-id-service", 9090)
-  carrier["baggage"] = baggage
+  carrier["baggage"] = xtracer.BranchBaggage()
   local status, err = pcall(unique_id_client.UploadUniqueId, unique_id_client,
       req_id, tonumber(post.post_type), carrier)
   if not status then
@@ -84,7 +84,7 @@ local function _UploadMedia(req_id, post, carrier, baggage)
   local media_client = GenericObjectPool:connection(
       MediaServiceClient, "media-service", 9090)
   local status, err
-  carrier["baggage"] = baggage
+  carrier["baggage"] = xtracer.BranchBaggage()
   if (not _StrIsEmpty(post.media_ids) and not _StrIsEmpty(post.media_types)) then
     status, err = pcall(media_client.UploadMedia, media_client,
         req_id, cjson.decode(post.media_types), cjson.decode(post.media_ids), carrier)
@@ -132,6 +132,7 @@ function _M.ComposePost()
     ngx.say("Incomplete arguments")
     ngx.log(ngx.ERR, "Incomplete arguments")
     xtracer.LogXTrace("Bad Request - Incomplete Arguments")
+    xtracer.DeleteBaggage()
     ngx.exit(ngx.HTTP_BAD_REQUEST)
   end
 
@@ -159,6 +160,7 @@ function _M.ComposePost()
     if not ok then
       status = ngx.HTTP_INTERNAL_SERVER_ERROR
       xtracer.LogXTrace("Internal Server error")
+      xtracer.DeleteBaggage()
       ngx.exit(status)
     end
   end

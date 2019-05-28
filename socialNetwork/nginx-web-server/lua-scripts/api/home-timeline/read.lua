@@ -1,4 +1,5 @@
 local _M = {}
+local xtracer = require "luaxtrace"
 
 local function _StrIsEmpty(s)
   return s == nil or s == ''
@@ -51,6 +52,11 @@ function _M.ReadHomeTimeline()
   local jwt = require "resty.jwt"
   local liblualongnumber = require "liblualongnumber"
 
+  local tracing = xtracer.IsTracing()
+  if tracing ~= true then
+    xtracer.StartLuaTrace("NginxWebServer", "ReadHomeTimeline")
+  end
+  xtracer.LogXTrace("Processing Request")
   local req_id = tonumber(string.sub(ngx.var.request_id, 0, 15), 16)
   local tracer = bridge_tracer.new_from_global()
   local parent_span_context = tracer:binary_extract(
@@ -67,6 +73,8 @@ function _M.ReadHomeTimeline()
     ngx.status = ngx.HTTP_BAD_REQUEST
     ngx.say("Incomplete arguments")
     ngx.log(ngx.ERR, "Incomplete arguments")
+    xtracer.LogXTrace("Incomplete arguments")
+    xtracer.DeleteBaggage()
     ngx.exit(ngx.HTTP_BAD_REQUEST)
   end
 
@@ -79,6 +87,8 @@ function _M.ReadHomeTimeline()
   if not login_obj["verified"] then
     ngx.status = ngx.HTTP_UNAUTHORIZED
     ngx.say(login_obj.reason);
+    xtracer.LogXTrace("Bad Request - Unauthorized")
+    xtracer.DeleteBaggage()
     ngx.exit(ngx.HTTP_OK)
   end
 
@@ -89,10 +99,13 @@ function _M.ReadHomeTimeline()
   if (timestamp + ttl < ngx.time()) then
     ngx.status = ngx.HTTP_UNAUTHORIZED
     ngx.say("Login token expired, please log in again")
+    xtracer.LogXTrace("Bad request - Expired login token")
+    xtracer.DeleteBaggage()
     ngx.exit(ngx.HTTP_OK)
   else
     local client = GenericObjectPool:connection(
         HomeTimelineServiceClient, "home-timeline-service", 9090)
+    carrier["baggage"] = xtracer.BranchBaggage()
     local status, ret = pcall(client.ReadHomeTimeline, client, req_id,
         user_id, tonumber(args.start), tonumber(args.stop), carrier)
     GenericObjectPool:returnConnection(client)
@@ -101,17 +114,22 @@ function _M.ReadHomeTimeline()
       if (ret.message) then
         ngx.say("Get home-timeline failure: " .. ret.message)
         ngx.log(ngx.ERR, "Get home-timeline failure: " .. ret.message)
+        xtracer.LogXTrace("Get home-timeline failure" .. ret.message)
       else
         ngx.say("Get home-timeline failure: " .. ret.message)
         ngx.log(ngx.ERR, "Get home-timeline failure: " .. ret.message)
+        xtracer.LogXTrace("Get home-timeline failure" .. ret.message)
       end
+      xtracer.DeleteBaggage()
       ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     else
+      xtracer.LogXTrace("Loading timeline")
       local home_timeline = _LoadTimeline(ret)
       ngx.header.content_type = "application/json; charset=utf-8"
       ngx.say(cjson.encode(home_timeline) )
     end
   end
+  xtracer.DeleteBaggage()
 end
 
 return _M

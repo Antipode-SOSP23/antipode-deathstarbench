@@ -1,4 +1,5 @@
 local _M = {}
+local xtracer = require "luaxtrace"
 
 local function _StrIsEmpty(s)
   return s == nil or s == ''
@@ -11,6 +12,11 @@ function _M.Login()
   local UserServiceClient = require "social_network_UserService"
   local cjson = require "cjson"
 
+  local tracing = xtracer.IsTracing()
+  if tracing ~= true then
+    xtracer.StartLuaTrace("NginxWebServer", "Login")
+  end
+  xtracer.LogXTrace("Processing Request")
   local req_id = tonumber(string.sub(ngx.var.request_id, 0, 15), 16)
   local tracer = bridge_tracer.new_from_global()
   local parent_span_context = tracer:binary_extract(
@@ -30,11 +36,14 @@ function _M.Login()
     ngx.say(ngx.var.scheme .. "://" .. ngx.var.server_addr .. ":" .. ngx.var.server_port)
     ngx.log(ngx.ERR, "Incomplete arguments")
     ngx.exit(ngx.HTTP_BAD_REQUEST)
+    xtracer.LogXTrace("Incomplete arguments")
+    xtracer.DeleteBaggage()
     return ngx.redirect("/login.html")
   end
 
   local client = GenericObjectPool:connection(UserServiceClient, "user-service", 9090)
 
+  carrier["baggage"] = xtracer.BranchBaggage()
   local status, ret = pcall(client.Login, client, req_id,
       args.username, args.password, carrier)
   GenericObjectPool:returnConnection(client)
@@ -45,19 +54,24 @@ function _M.Login()
       ngx.header.content_type = "text/plain"
       ngx.say("User login failure: " .. ret.message)
       ngx.log(ngx.ERR, "User login failure: " .. ret.message)
+      xtracer.LogXTrace("User login failure: " .. ret.message)
     else
       ngx.header.content_type = "text/plain"
       ngx.say("User login failure: " .. ret.message)
       ngx.log(ngx.ERR, "User login failure: " .. ret.message)
+      xtracer.LogXTrace("User login failure: " .. ret.message)
     end
+    xtracer.DeleteBaggage()
     ngx.exit(ngx.HTTP_OK)
   else
+    xtracer.LogXTrace("Login Successful")
     ngx.header.content_type = "text/plain"
     ngx.header["Set-Cookie"] = "login_token=" .. ret .. "; Path=/; Expires="
         .. ngx.cookie_time(ngx.time() + ngx.shared.config:get("cookie_ttl"))
     ngx.redirect("../../index.html")
     ngx.exit(ngx.HTTP_OK)
   end
+  xtracer.DeleteBaggage()
   span:finish()
 end
 

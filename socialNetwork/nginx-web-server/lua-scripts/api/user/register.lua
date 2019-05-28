@@ -1,4 +1,5 @@
 local _M = {}
+local xtracer = require "luaxtrace"
 
 local function _StrIsEmpty(s)
   return s == nil or s == ''
@@ -10,6 +11,11 @@ function _M.RegisterUser()
   local GenericObjectPool = require "GenericObjectPool"
   local UserServiceClient = require "social_network_UserService"
 
+  local tracing = xtracer.IsTracing()
+  if tracing ~= true then
+    xtracer.StartLuaTrace("NginxWebServer", "Register")
+  end
+  xtracer.LogXTrace("Processing Request")
   local req_id = tonumber(string.sub(ngx.var.request_id, 0, 15), 16)
   local tracer = bridge_tracer.new_from_global()
   local parent_span_context = tracer:binary_extract(
@@ -27,11 +33,14 @@ function _M.RegisterUser()
     ngx.status = ngx.HTTP_BAD_REQUEST
     ngx.say("Incomplete arguments")
     ngx.log(ngx.ERR, "Incomplete arguments")
+    xtracer.LogXTrace("Incomplete arguments")
+    xtracer.DeleteBaggage()
     ngx.exit(ngx.HTTP_BAD_REQUEST)
   end
 
   local client = GenericObjectPool:connection(UserServiceClient, "user-service", 9090)
 
+  carrier["baggage"] = xtracer.BranchBaggage()
   local status, err = pcall(client.RegisterUser, client, req_id, post.first_name,
       post.last_name, post.username, post.password, carrier)
   GenericObjectPool:returnConnection(client)
@@ -41,15 +50,19 @@ function _M.RegisterUser()
     if (err.message) then
       ngx.say("User registration failure: " .. err.message)
       ngx.log(ngx.ERR, "User registration failure: " .. err.message)
+      xtracer.LogXTrace("User registration failure: " .. err.message)
     else
       ngx.say("User registration failure: " .. err.message)
       ngx.log(ngx.ERR, "User registration failure: " .. err.message)
+      xtracer.LogXTrace("User registration failure: " .. err.message)
     end
+    xtracer.DeleteBaggage()
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
   end
 
 
   span:finish()
+  xtracer.DeleteBaggage()
 end
 
 return _M
