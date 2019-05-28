@@ -112,7 +112,7 @@ function _M.ComposePost()
 
   local tracing = xtracer.IsTracing()
   if tracing ~= true then
-    xtracer.StartLuaTrace("NginxWebServer");
+    xtracer.StartLuaTrace("NginxWebServer", "ComposePost");
   end
   xtracer.LogXTrace("Processing request")
   local req_id = tonumber(string.sub(ngx.var.request_id, 0, 15), 16)
