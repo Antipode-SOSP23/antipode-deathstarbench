@@ -1,4 +1,5 @@
 local _M = {}
+local xtracer = require "luaxtrace"
 
 local function _StrIsEmpty(s)
   return s == nil or s == ''
@@ -10,6 +11,11 @@ function _M.Unfollow()
   local GenericObjectPool = require "GenericObjectPool"
   local SocialGraphServiceClient = require "social_network_SocialGraphService"
 
+  local tracing = xtracer.IsTracing()
+  if tracing ~= true then
+    xtracer.StartLuaTrace("NginxWebServer", "Unfollow")
+  end
+  xtracer.LogXTrace("Processing Request")
   local req_id = tonumber(string.sub(ngx.var.request_id, 0, 15), 16)
   local tracer = bridge_tracer.new_from_global()
   local parent_span_context = tracer:binary_extract(
@@ -28,15 +34,19 @@ function _M.Unfollow()
   local status
   local err
   if (not _StrIsEmpty(post.user_id) and not _StrIsEmpty(post.followee_id)) then
+    xtracer.LogXTrace("Trying to unfollow using user-id")
     status, err = pcall(client.Unfollow, client,req_id,
         tonumber(post.user_id), tonumber(post.followee_id), carrier )
   elseif (not _StrIsEmpty(post.user_name) and not _StrIsEmpty(post.followee_name)) then
+    xtracer.LogXTrace("Trying to unfollow using username")
     status, err = pcall(client.UnfollowWithUsername, client,req_id,
         post.user_name, post.followee_name, carrier )
   else
     ngx.status = ngx.HTTP_BAD_REQUEST
     ngx.say("Incomplete arguments")
     ngx.log(ngx.ERR, "Incomplete arguments")
+    xtracer.LogXTrace("Incomplete arguments")
+    xtracer.DeleteBaggage()
     ngx.exit(ngx.HTTP_BAD_REQUEST)
   end
 
@@ -44,11 +54,14 @@ function _M.Unfollow()
     ngx.status = ngx.HTTP_INTERNAL_SERVER_ERROR
     ngx.say("Unfollow Failed: " .. err.message)
     ngx.log(ngx.ERR, "Unfollow Failed: " .. err.message)
+    xtracer.LogXTrace("Unfollow Failed: " .. err.message)
+    xtracer.DeleteBaggage()
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
   end
   GenericObjectPool:returnConnection(client)
   span:finish()
 
+  xtracer.DeleteBaggage()
 end
 
 return _M
