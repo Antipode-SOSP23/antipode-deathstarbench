@@ -80,6 +80,7 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     auto social_graph_client = social_graph_client_wrapper->GetClient();
     std::vector<int64_t> followers_id;
     try {
+      writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
       social_graph_client->GetFollowers(followers_id, req_id, user_id,
                                         writer_text_map);
     } catch (...) {
