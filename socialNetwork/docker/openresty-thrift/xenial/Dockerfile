@@ -204,7 +204,8 @@ RUN luarocks install long \
 RUN apt-get update \
   && apt-get install -y wget
 
-RUN apt-get install -y libboost-all-dev
+RUN apt-get update \ 
+  && apt-get install -y libboost-all-dev
 
 RUN apt-get install -y lua5.1 lua5.1-dev
 
@@ -216,6 +217,7 @@ RUN cd /tmp \
   && ./configure --prefix=/usr \
   && make \
   && make install \
+  && ldconfig \
   # Install xtrace
   && cd /tmp \
   && git clone https://github.com/JonathanMace/xtrace-cpp.git \
@@ -233,7 +235,7 @@ RUN cd /tmp \
 
 RUN cp /usr/local/lib/luaxtrace.so /usr/local/openresty/lualib/luaxtrace.so
 
-ENV LD_LIBRARY_PATH /usr/local/lib:/usr/lib:${LD_LIBRARY_PATH}
+ENV LD_LIBRARY_PATH /usr/local/lib:/usr/lib:/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}
 RUN ldconfig
 
 # Copy nginx configuration files
