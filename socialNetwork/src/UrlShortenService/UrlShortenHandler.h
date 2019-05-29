@@ -179,6 +179,7 @@ void UrlShortenHandler::UploadUrls(
         }
         auto compose_post_client = compose_post_client_wrapper->GetClient();
         try {
+          writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
           compose_post_client->UploadUrls(req_id, target_urls, writer_text_map);
         } catch (...) {
           _compose_client_pool->Push(compose_post_client_wrapper);
