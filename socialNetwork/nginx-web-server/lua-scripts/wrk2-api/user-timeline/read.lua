@@ -52,10 +52,7 @@ function _M.ReadUserTimeline()
   local cjson = require "cjson"
   local liblualongnumber = require "liblualongnumber"
 
-  local tracing = xtracer.IsTracing()
-  if tracing ~= true then
-    xtracer.StartLuaTrace("NginxWebServer", "ReadUserTimeline")
-  end
+  xtracer.StartLuaTrace("NginxWebServer", "ReadUserTimeline")
   xtracer.LogXTrace("Processing Request")
   local req_id = tonumber(string.sub(ngx.var.request_id, 0, 15), 16)
   local tracer = bridge_tracer.new_from_global()

@@ -11,10 +11,7 @@ function _M.Unfollow()
   local GenericObjectPool = require "GenericObjectPool"
   local SocialGraphServiceClient = require "social_network_SocialGraphService"
 
-  local tracing = xtracer.IsTracing()
-  if tracing ~= true then
-    xtracer.StartLuaTrace("NginxWebServer", "Unfollow")
-  end
+  xtracer.StartLuaTrace("NginxWebServer", "Unfollow")
   xtracer.LogXTrace("Processing Request")
   local req_id = tonumber(string.sub(ngx.var.request_id, 0, 15), 16)
   local tracer = bridge_tracer.new_from_global()

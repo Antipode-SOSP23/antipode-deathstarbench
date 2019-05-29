@@ -11,10 +11,7 @@ function _M.RegisterUser()
   local GenericObjectPool = require "GenericObjectPool"
   local UserServiceClient = require "social_network_UserService"
 
-  local tracing = xtracer.IsTracing()
-  if tracing ~= true then
-    xtracer.StartLuaTrace("NginxWebServer", "Register")
-  end
+  xtracer.StartLuaTrace("NginxWebServer", "Register")
   xtracer.LogXTrace("Processing Request")
   local req_id = tonumber(string.sub(ngx.var.request_id, 0, 15), 16)
   local tracer = bridge_tracer.new_from_global()

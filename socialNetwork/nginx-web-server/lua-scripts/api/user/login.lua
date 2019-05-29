@@ -12,10 +12,7 @@ function _M.Login()
   local UserServiceClient = require "social_network_UserService"
   local cjson = require "cjson"
 
-  local tracing = xtracer.IsTracing()
-  if tracing ~= true then
-    xtracer.StartLuaTrace("NginxWebServer", "Login")
-  end
+  xtracer.StartLuaTrace("NginxWebServer", "Login")
   xtracer.LogXTrace("Processing Request")
   local req_id = tonumber(string.sub(ngx.var.request_id, 0, 15), 16)
   local tracer = bridge_tracer.new_from_global()

@@ -110,10 +110,7 @@ function _M.ComposePost()
   local cjson = require "cjson"
   local jwt = require "resty.jwt"
 
-  local tracing = xtracer.IsTracing()
-  if tracing ~= true then
-    xtracer.StartLuaTrace("NginxWebServer", "ComposePost");
-  end
+  xtracer.StartLuaTrace("NginxWebServer5", "ComposePost");
   xtracer.LogXTrace("Processing request")
   local req_id = tonumber(string.sub(ngx.var.request_id, 0, 15), 16)
   local tracer = bridge_tracer.new_from_global()
