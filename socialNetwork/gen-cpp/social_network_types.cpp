@@ -1148,4 +1148,828 @@ void Post::printTo(std::ostream& out) const {
   out << ")";
 }
 
+
+BaseRpcResponse::~BaseRpcResponse() throw() {
+}
+
+
+void BaseRpcResponse::__set_baggage(const std::string& val) {
+  this->baggage = val;
+}
+std::ostream& operator<<(std::ostream& out, const BaseRpcResponse& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+
+uint32_t BaseRpcResponse::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  ::apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRING) {
+          xfer += iprot->readString(this->baggage);
+          this->__isset.baggage = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t BaseRpcResponse::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  ::apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("BaseRpcResponse");
+
+  xfer += oprot->writeFieldBegin("baggage", ::apache::thrift::protocol::T_STRING, 1);
+  xfer += oprot->writeString(this->baggage);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(BaseRpcResponse &a, BaseRpcResponse &b) {
+  using ::std::swap;
+  swap(a.baggage, b.baggage);
+  swap(a.__isset, b.__isset);
+}
+
+BaseRpcResponse::BaseRpcResponse(const BaseRpcResponse& other34) {
+  baggage = other34.baggage;
+  __isset = other34.__isset;
+}
+BaseRpcResponse& BaseRpcResponse::operator=(const BaseRpcResponse& other35) {
+  baggage = other35.baggage;
+  __isset = other35.__isset;
+  return *this;
+}
+void BaseRpcResponse::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "BaseRpcResponse(";
+  out << "baggage=" << to_string(baggage);
+  out << ")";
+}
+
+
+LoginRpcResponse::~LoginRpcResponse() throw() {
+}
+
+
+void LoginRpcResponse::__set_baggage(const std::string& val) {
+  this->baggage = val;
+}
+
+void LoginRpcResponse::__set_result(const std::string& val) {
+  this->result = val;
+}
+std::ostream& operator<<(std::ostream& out, const LoginRpcResponse& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+
+uint32_t LoginRpcResponse::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  ::apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRING) {
+          xfer += iprot->readString(this->baggage);
+          this->__isset.baggage = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_STRING) {
+          xfer += iprot->readString(this->result);
+          this->__isset.result = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t LoginRpcResponse::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  ::apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("LoginRpcResponse");
+
+  xfer += oprot->writeFieldBegin("baggage", ::apache::thrift::protocol::T_STRING, 1);
+  xfer += oprot->writeString(this->baggage);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("result", ::apache::thrift::protocol::T_STRING, 2);
+  xfer += oprot->writeString(this->result);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(LoginRpcResponse &a, LoginRpcResponse &b) {
+  using ::std::swap;
+  swap(a.baggage, b.baggage);
+  swap(a.result, b.result);
+  swap(a.__isset, b.__isset);
+}
+
+LoginRpcResponse::LoginRpcResponse(const LoginRpcResponse& other36) {
+  baggage = other36.baggage;
+  result = other36.result;
+  __isset = other36.__isset;
+}
+LoginRpcResponse& LoginRpcResponse::operator=(const LoginRpcResponse& other37) {
+  baggage = other37.baggage;
+  result = other37.result;
+  __isset = other37.__isset;
+  return *this;
+}
+void LoginRpcResponse::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "LoginRpcResponse(";
+  out << "baggage=" << to_string(baggage);
+  out << ", " << "result=" << to_string(result);
+  out << ")";
+}
+
+
+UserIdRpcResponse::~UserIdRpcResponse() throw() {
+}
+
+
+void UserIdRpcResponse::__set_baggage(const std::string& val) {
+  this->baggage = val;
+}
+
+void UserIdRpcResponse::__set_result(const int64_t val) {
+  this->result = val;
+}
+std::ostream& operator<<(std::ostream& out, const UserIdRpcResponse& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+
+uint32_t UserIdRpcResponse::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  ::apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRING) {
+          xfer += iprot->readString(this->baggage);
+          this->__isset.baggage = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_I64) {
+          xfer += iprot->readI64(this->result);
+          this->__isset.result = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t UserIdRpcResponse::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  ::apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("UserIdRpcResponse");
+
+  xfer += oprot->writeFieldBegin("baggage", ::apache::thrift::protocol::T_STRING, 1);
+  xfer += oprot->writeString(this->baggage);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("result", ::apache::thrift::protocol::T_I64, 2);
+  xfer += oprot->writeI64(this->result);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(UserIdRpcResponse &a, UserIdRpcResponse &b) {
+  using ::std::swap;
+  swap(a.baggage, b.baggage);
+  swap(a.result, b.result);
+  swap(a.__isset, b.__isset);
+}
+
+UserIdRpcResponse::UserIdRpcResponse(const UserIdRpcResponse& other38) {
+  baggage = other38.baggage;
+  result = other38.result;
+  __isset = other38.__isset;
+}
+UserIdRpcResponse& UserIdRpcResponse::operator=(const UserIdRpcResponse& other39) {
+  baggage = other39.baggage;
+  result = other39.result;
+  __isset = other39.__isset;
+  return *this;
+}
+void UserIdRpcResponse::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "UserIdRpcResponse(";
+  out << "baggage=" << to_string(baggage);
+  out << ", " << "result=" << to_string(result);
+  out << ")";
+}
+
+
+PostRpcResponse::~PostRpcResponse() throw() {
+}
+
+
+void PostRpcResponse::__set_baggage(const std::string& val) {
+  this->baggage = val;
+}
+
+void PostRpcResponse::__set_result(const Post& val) {
+  this->result = val;
+}
+std::ostream& operator<<(std::ostream& out, const PostRpcResponse& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+
+uint32_t PostRpcResponse::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  ::apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRING) {
+          xfer += iprot->readString(this->baggage);
+          this->__isset.baggage = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->result.read(iprot);
+          this->__isset.result = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t PostRpcResponse::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  ::apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("PostRpcResponse");
+
+  xfer += oprot->writeFieldBegin("baggage", ::apache::thrift::protocol::T_STRING, 1);
+  xfer += oprot->writeString(this->baggage);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("result", ::apache::thrift::protocol::T_STRUCT, 2);
+  xfer += this->result.write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(PostRpcResponse &a, PostRpcResponse &b) {
+  using ::std::swap;
+  swap(a.baggage, b.baggage);
+  swap(a.result, b.result);
+  swap(a.__isset, b.__isset);
+}
+
+PostRpcResponse::PostRpcResponse(const PostRpcResponse& other40) {
+  baggage = other40.baggage;
+  result = other40.result;
+  __isset = other40.__isset;
+}
+PostRpcResponse& PostRpcResponse::operator=(const PostRpcResponse& other41) {
+  baggage = other41.baggage;
+  result = other41.result;
+  __isset = other41.__isset;
+  return *this;
+}
+void PostRpcResponse::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "PostRpcResponse(";
+  out << "baggage=" << to_string(baggage);
+  out << ", " << "result=" << to_string(result);
+  out << ")";
+}
+
+
+PostListRpcResponse::~PostListRpcResponse() throw() {
+}
+
+
+void PostListRpcResponse::__set_baggage(const std::string& val) {
+  this->baggage = val;
+}
+
+void PostListRpcResponse::__set_result(const std::vector<Post> & val) {
+  this->result = val;
+}
+std::ostream& operator<<(std::ostream& out, const PostListRpcResponse& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+
+uint32_t PostListRpcResponse::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  ::apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRING) {
+          xfer += iprot->readString(this->baggage);
+          this->__isset.baggage = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_LIST) {
+          {
+            this->result.clear();
+            uint32_t _size42;
+            ::apache::thrift::protocol::TType _etype45;
+            xfer += iprot->readListBegin(_etype45, _size42);
+            this->result.resize(_size42);
+            uint32_t _i46;
+            for (_i46 = 0; _i46 < _size42; ++_i46)
+            {
+              xfer += this->result[_i46].read(iprot);
+            }
+            xfer += iprot->readListEnd();
+          }
+          this->__isset.result = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t PostListRpcResponse::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  ::apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("PostListRpcResponse");
+
+  xfer += oprot->writeFieldBegin("baggage", ::apache::thrift::protocol::T_STRING, 1);
+  xfer += oprot->writeString(this->baggage);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("result", ::apache::thrift::protocol::T_LIST, 2);
+  {
+    xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->result.size()));
+    std::vector<Post> ::const_iterator _iter47;
+    for (_iter47 = this->result.begin(); _iter47 != this->result.end(); ++_iter47)
+    {
+      xfer += (*_iter47).write(oprot);
+    }
+    xfer += oprot->writeListEnd();
+  }
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(PostListRpcResponse &a, PostListRpcResponse &b) {
+  using ::std::swap;
+  swap(a.baggage, b.baggage);
+  swap(a.result, b.result);
+  swap(a.__isset, b.__isset);
+}
+
+PostListRpcResponse::PostListRpcResponse(const PostListRpcResponse& other48) {
+  baggage = other48.baggage;
+  result = other48.result;
+  __isset = other48.__isset;
+}
+PostListRpcResponse& PostListRpcResponse::operator=(const PostListRpcResponse& other49) {
+  baggage = other49.baggage;
+  result = other49.result;
+  __isset = other49.__isset;
+  return *this;
+}
+void PostListRpcResponse::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "PostListRpcResponse(";
+  out << "baggage=" << to_string(baggage);
+  out << ", " << "result=" << to_string(result);
+  out << ")";
+}
+
+
+UidListRpcResponse::~UidListRpcResponse() throw() {
+}
+
+
+void UidListRpcResponse::__set_baggage(const std::string& val) {
+  this->baggage = val;
+}
+
+void UidListRpcResponse::__set_result(const std::vector<int64_t> & val) {
+  this->result = val;
+}
+std::ostream& operator<<(std::ostream& out, const UidListRpcResponse& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+
+uint32_t UidListRpcResponse::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  ::apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRING) {
+          xfer += iprot->readString(this->baggage);
+          this->__isset.baggage = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_LIST) {
+          {
+            this->result.clear();
+            uint32_t _size50;
+            ::apache::thrift::protocol::TType _etype53;
+            xfer += iprot->readListBegin(_etype53, _size50);
+            this->result.resize(_size50);
+            uint32_t _i54;
+            for (_i54 = 0; _i54 < _size50; ++_i54)
+            {
+              xfer += iprot->readI64(this->result[_i54]);
+            }
+            xfer += iprot->readListEnd();
+          }
+          this->__isset.result = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t UidListRpcResponse::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  ::apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("UidListRpcResponse");
+
+  xfer += oprot->writeFieldBegin("baggage", ::apache::thrift::protocol::T_STRING, 1);
+  xfer += oprot->writeString(this->baggage);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("result", ::apache::thrift::protocol::T_LIST, 2);
+  {
+    xfer += oprot->writeListBegin(::apache::thrift::protocol::T_I64, static_cast<uint32_t>(this->result.size()));
+    std::vector<int64_t> ::const_iterator _iter55;
+    for (_iter55 = this->result.begin(); _iter55 != this->result.end(); ++_iter55)
+    {
+      xfer += oprot->writeI64((*_iter55));
+    }
+    xfer += oprot->writeListEnd();
+  }
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(UidListRpcResponse &a, UidListRpcResponse &b) {
+  using ::std::swap;
+  swap(a.baggage, b.baggage);
+  swap(a.result, b.result);
+  swap(a.__isset, b.__isset);
+}
+
+UidListRpcResponse::UidListRpcResponse(const UidListRpcResponse& other56) {
+  baggage = other56.baggage;
+  result = other56.result;
+  __isset = other56.__isset;
+}
+UidListRpcResponse& UidListRpcResponse::operator=(const UidListRpcResponse& other57) {
+  baggage = other57.baggage;
+  result = other57.result;
+  __isset = other57.__isset;
+  return *this;
+}
+void UidListRpcResponse::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "UidListRpcResponse(";
+  out << "baggage=" << to_string(baggage);
+  out << ", " << "result=" << to_string(result);
+  out << ")";
+}
+
+
+UrlListRpcResponse::~UrlListRpcResponse() throw() {
+}
+
+
+void UrlListRpcResponse::__set_baggage(const std::string& val) {
+  this->baggage = val;
+}
+
+void UrlListRpcResponse::__set_result(const std::vector<std::string> & val) {
+  this->result = val;
+}
+std::ostream& operator<<(std::ostream& out, const UrlListRpcResponse& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+
+uint32_t UrlListRpcResponse::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  ::apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRING) {
+          xfer += iprot->readString(this->baggage);
+          this->__isset.baggage = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_LIST) {
+          {
+            this->result.clear();
+            uint32_t _size58;
+            ::apache::thrift::protocol::TType _etype61;
+            xfer += iprot->readListBegin(_etype61, _size58);
+            this->result.resize(_size58);
+            uint32_t _i62;
+            for (_i62 = 0; _i62 < _size58; ++_i62)
+            {
+              xfer += iprot->readString(this->result[_i62]);
+            }
+            xfer += iprot->readListEnd();
+          }
+          this->__isset.result = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t UrlListRpcResponse::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  ::apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("UrlListRpcResponse");
+
+  xfer += oprot->writeFieldBegin("baggage", ::apache::thrift::protocol::T_STRING, 1);
+  xfer += oprot->writeString(this->baggage);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("result", ::apache::thrift::protocol::T_LIST, 2);
+  {
+    xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->result.size()));
+    std::vector<std::string> ::const_iterator _iter63;
+    for (_iter63 = this->result.begin(); _iter63 != this->result.end(); ++_iter63)
+    {
+      xfer += oprot->writeString((*_iter63));
+    }
+    xfer += oprot->writeListEnd();
+  }
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(UrlListRpcResponse &a, UrlListRpcResponse &b) {
+  using ::std::swap;
+  swap(a.baggage, b.baggage);
+  swap(a.result, b.result);
+  swap(a.__isset, b.__isset);
+}
+
+UrlListRpcResponse::UrlListRpcResponse(const UrlListRpcResponse& other64) {
+  baggage = other64.baggage;
+  result = other64.result;
+  __isset = other64.__isset;
+}
+UrlListRpcResponse& UrlListRpcResponse::operator=(const UrlListRpcResponse& other65) {
+  baggage = other65.baggage;
+  result = other65.result;
+  __isset = other65.__isset;
+  return *this;
+}
+void UrlListRpcResponse::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "UrlListRpcResponse(";
+  out << "baggage=" << to_string(baggage);
+  out << ", " << "result=" << to_string(result);
+  out << ")";
+}
+
 } // namespace

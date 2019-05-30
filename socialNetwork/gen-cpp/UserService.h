@@ -21,12 +21,12 @@ namespace social_network {
 class UserServiceIf {
  public:
   virtual ~UserServiceIf() {}
-  virtual void RegisterUser(const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier) = 0;
-  virtual void RegisterUserWithId(const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const int64_t user_id, const std::map<std::string, std::string> & carrier) = 0;
-  virtual void Login(std::string& _return, const int64_t req_id, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier) = 0;
-  virtual void UploadCreatorWithUserId(const int64_t req_id, const int64_t user_id, const std::string& username, const std::map<std::string, std::string> & carrier) = 0;
-  virtual void UploadCreatorWithUsername(const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier) = 0;
-  virtual int64_t GetUserId(const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier) = 0;
+  virtual void RegisterUser(BaseRpcResponse& _return, const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier) = 0;
+  virtual void RegisterUserWithId(BaseRpcResponse& _return, const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const int64_t user_id, const std::map<std::string, std::string> & carrier) = 0;
+  virtual void Login(LoginRpcResponse& _return, const int64_t req_id, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier) = 0;
+  virtual void UploadCreatorWithUserId(BaseRpcResponse& _return, const int64_t req_id, const int64_t user_id, const std::string& username, const std::map<std::string, std::string> & carrier) = 0;
+  virtual void UploadCreatorWithUsername(BaseRpcResponse& _return, const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier) = 0;
+  virtual void GetUserId(UserIdRpcResponse& _return, const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier) = 0;
 };
 
 class UserServiceIfFactory {
@@ -56,24 +56,23 @@ class UserServiceIfSingletonFactory : virtual public UserServiceIfFactory {
 class UserServiceNull : virtual public UserServiceIf {
  public:
   virtual ~UserServiceNull() {}
-  void RegisterUser(const int64_t /* req_id */, const std::string& /* first_name */, const std::string& /* last_name */, const std::string& /* username */, const std::string& /* password */, const std::map<std::string, std::string> & /* carrier */) {
+  void RegisterUser(BaseRpcResponse& /* _return */, const int64_t /* req_id */, const std::string& /* first_name */, const std::string& /* last_name */, const std::string& /* username */, const std::string& /* password */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
-  void RegisterUserWithId(const int64_t /* req_id */, const std::string& /* first_name */, const std::string& /* last_name */, const std::string& /* username */, const std::string& /* password */, const int64_t /* user_id */, const std::map<std::string, std::string> & /* carrier */) {
+  void RegisterUserWithId(BaseRpcResponse& /* _return */, const int64_t /* req_id */, const std::string& /* first_name */, const std::string& /* last_name */, const std::string& /* username */, const std::string& /* password */, const int64_t /* user_id */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
-  void Login(std::string& /* _return */, const int64_t /* req_id */, const std::string& /* username */, const std::string& /* password */, const std::map<std::string, std::string> & /* carrier */) {
+  void Login(LoginRpcResponse& /* _return */, const int64_t /* req_id */, const std::string& /* username */, const std::string& /* password */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
-  void UploadCreatorWithUserId(const int64_t /* req_id */, const int64_t /* user_id */, const std::string& /* username */, const std::map<std::string, std::string> & /* carrier */) {
+  void UploadCreatorWithUserId(BaseRpcResponse& /* _return */, const int64_t /* req_id */, const int64_t /* user_id */, const std::string& /* username */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
-  void UploadCreatorWithUsername(const int64_t /* req_id */, const std::string& /* username */, const std::map<std::string, std::string> & /* carrier */) {
+  void UploadCreatorWithUsername(BaseRpcResponse& /* _return */, const int64_t /* req_id */, const std::string& /* username */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
-  int64_t GetUserId(const int64_t /* req_id */, const std::string& /* username */, const std::map<std::string, std::string> & /* carrier */) {
-    int64_t _return = 0;
-    return _return;
+  void GetUserId(UserIdRpcResponse& /* _return */, const int64_t /* req_id */, const std::string& /* username */, const std::map<std::string, std::string> & /* carrier */) {
+    return;
   }
 };
 
@@ -162,7 +161,8 @@ class UserService_RegisterUser_pargs {
 };
 
 typedef struct _UserService_RegisterUser_result__isset {
-  _UserService_RegisterUser_result__isset() : se(false) {}
+  _UserService_RegisterUser_result__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _UserService_RegisterUser_result__isset;
 
@@ -175,14 +175,19 @@ class UserService_RegisterUser_result {
   }
 
   virtual ~UserService_RegisterUser_result() throw();
+  BaseRpcResponse success;
   ServiceException se;
 
   _UserService_RegisterUser_result__isset __isset;
+
+  void __set_success(const BaseRpcResponse& val);
 
   void __set_se(const ServiceException& val);
 
   bool operator == (const UserService_RegisterUser_result & rhs) const
   {
+    if (!(success == rhs.success))
+      return false;
     if (!(se == rhs.se))
       return false;
     return true;
@@ -199,7 +204,8 @@ class UserService_RegisterUser_result {
 };
 
 typedef struct _UserService_RegisterUser_presult__isset {
-  _UserService_RegisterUser_presult__isset() : se(false) {}
+  _UserService_RegisterUser_presult__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _UserService_RegisterUser_presult__isset;
 
@@ -208,6 +214,7 @@ class UserService_RegisterUser_presult {
 
 
   virtual ~UserService_RegisterUser_presult() throw();
+  BaseRpcResponse* success;
   ServiceException se;
 
   _UserService_RegisterUser_presult__isset __isset;
@@ -308,7 +315,8 @@ class UserService_RegisterUserWithId_pargs {
 };
 
 typedef struct _UserService_RegisterUserWithId_result__isset {
-  _UserService_RegisterUserWithId_result__isset() : se(false) {}
+  _UserService_RegisterUserWithId_result__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _UserService_RegisterUserWithId_result__isset;
 
@@ -321,14 +329,19 @@ class UserService_RegisterUserWithId_result {
   }
 
   virtual ~UserService_RegisterUserWithId_result() throw();
+  BaseRpcResponse success;
   ServiceException se;
 
   _UserService_RegisterUserWithId_result__isset __isset;
+
+  void __set_success(const BaseRpcResponse& val);
 
   void __set_se(const ServiceException& val);
 
   bool operator == (const UserService_RegisterUserWithId_result & rhs) const
   {
+    if (!(success == rhs.success))
+      return false;
     if (!(se == rhs.se))
       return false;
     return true;
@@ -345,7 +358,8 @@ class UserService_RegisterUserWithId_result {
 };
 
 typedef struct _UserService_RegisterUserWithId_presult__isset {
-  _UserService_RegisterUserWithId_presult__isset() : se(false) {}
+  _UserService_RegisterUserWithId_presult__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _UserService_RegisterUserWithId_presult__isset;
 
@@ -354,6 +368,7 @@ class UserService_RegisterUserWithId_presult {
 
 
   virtual ~UserService_RegisterUserWithId_presult() throw();
+  BaseRpcResponse* success;
   ServiceException se;
 
   _UserService_RegisterUserWithId_presult__isset __isset;
@@ -443,16 +458,16 @@ class UserService_Login_result {
 
   UserService_Login_result(const UserService_Login_result&);
   UserService_Login_result& operator=(const UserService_Login_result&);
-  UserService_Login_result() : success() {
+  UserService_Login_result() {
   }
 
   virtual ~UserService_Login_result() throw();
-  std::string success;
+  LoginRpcResponse success;
   ServiceException se;
 
   _UserService_Login_result__isset __isset;
 
-  void __set_success(const std::string& val);
+  void __set_success(const LoginRpcResponse& val);
 
   void __set_se(const ServiceException& val);
 
@@ -486,7 +501,7 @@ class UserService_Login_presult {
 
 
   virtual ~UserService_Login_presult() throw();
-  std::string* success;
+  LoginRpcResponse* success;
   ServiceException se;
 
   _UserService_Login_presult__isset __isset;
@@ -566,7 +581,8 @@ class UserService_UploadCreatorWithUserId_pargs {
 };
 
 typedef struct _UserService_UploadCreatorWithUserId_result__isset {
-  _UserService_UploadCreatorWithUserId_result__isset() : se(false) {}
+  _UserService_UploadCreatorWithUserId_result__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _UserService_UploadCreatorWithUserId_result__isset;
 
@@ -579,14 +595,19 @@ class UserService_UploadCreatorWithUserId_result {
   }
 
   virtual ~UserService_UploadCreatorWithUserId_result() throw();
+  BaseRpcResponse success;
   ServiceException se;
 
   _UserService_UploadCreatorWithUserId_result__isset __isset;
+
+  void __set_success(const BaseRpcResponse& val);
 
   void __set_se(const ServiceException& val);
 
   bool operator == (const UserService_UploadCreatorWithUserId_result & rhs) const
   {
+    if (!(success == rhs.success))
+      return false;
     if (!(se == rhs.se))
       return false;
     return true;
@@ -603,7 +624,8 @@ class UserService_UploadCreatorWithUserId_result {
 };
 
 typedef struct _UserService_UploadCreatorWithUserId_presult__isset {
-  _UserService_UploadCreatorWithUserId_presult__isset() : se(false) {}
+  _UserService_UploadCreatorWithUserId_presult__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _UserService_UploadCreatorWithUserId_presult__isset;
 
@@ -612,6 +634,7 @@ class UserService_UploadCreatorWithUserId_presult {
 
 
   virtual ~UserService_UploadCreatorWithUserId_presult() throw();
+  BaseRpcResponse* success;
   ServiceException se;
 
   _UserService_UploadCreatorWithUserId_presult__isset __isset;
@@ -684,7 +707,8 @@ class UserService_UploadCreatorWithUsername_pargs {
 };
 
 typedef struct _UserService_UploadCreatorWithUsername_result__isset {
-  _UserService_UploadCreatorWithUsername_result__isset() : se(false) {}
+  _UserService_UploadCreatorWithUsername_result__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _UserService_UploadCreatorWithUsername_result__isset;
 
@@ -697,14 +721,19 @@ class UserService_UploadCreatorWithUsername_result {
   }
 
   virtual ~UserService_UploadCreatorWithUsername_result() throw();
+  BaseRpcResponse success;
   ServiceException se;
 
   _UserService_UploadCreatorWithUsername_result__isset __isset;
+
+  void __set_success(const BaseRpcResponse& val);
 
   void __set_se(const ServiceException& val);
 
   bool operator == (const UserService_UploadCreatorWithUsername_result & rhs) const
   {
+    if (!(success == rhs.success))
+      return false;
     if (!(se == rhs.se))
       return false;
     return true;
@@ -721,7 +750,8 @@ class UserService_UploadCreatorWithUsername_result {
 };
 
 typedef struct _UserService_UploadCreatorWithUsername_presult__isset {
-  _UserService_UploadCreatorWithUsername_presult__isset() : se(false) {}
+  _UserService_UploadCreatorWithUsername_presult__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _UserService_UploadCreatorWithUsername_presult__isset;
 
@@ -730,6 +760,7 @@ class UserService_UploadCreatorWithUsername_presult {
 
 
   virtual ~UserService_UploadCreatorWithUsername_presult() throw();
+  BaseRpcResponse* success;
   ServiceException se;
 
   _UserService_UploadCreatorWithUsername_presult__isset __isset;
@@ -812,16 +843,16 @@ class UserService_GetUserId_result {
 
   UserService_GetUserId_result(const UserService_GetUserId_result&);
   UserService_GetUserId_result& operator=(const UserService_GetUserId_result&);
-  UserService_GetUserId_result() : success(0) {
+  UserService_GetUserId_result() {
   }
 
   virtual ~UserService_GetUserId_result() throw();
-  int64_t success;
+  UserIdRpcResponse success;
   ServiceException se;
 
   _UserService_GetUserId_result__isset __isset;
 
-  void __set_success(const int64_t val);
+  void __set_success(const UserIdRpcResponse& val);
 
   void __set_se(const ServiceException& val);
 
@@ -855,7 +886,7 @@ class UserService_GetUserId_presult {
 
 
   virtual ~UserService_GetUserId_presult() throw();
-  int64_t* success;
+  UserIdRpcResponse* success;
   ServiceException se;
 
   _UserService_GetUserId_presult__isset __isset;
@@ -889,24 +920,24 @@ class UserServiceClient : virtual public UserServiceIf {
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> getOutputProtocol() {
     return poprot_;
   }
-  void RegisterUser(const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier);
+  void RegisterUser(BaseRpcResponse& _return, const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier);
   void send_RegisterUser(const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier);
-  void recv_RegisterUser();
-  void RegisterUserWithId(const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const int64_t user_id, const std::map<std::string, std::string> & carrier);
+  void recv_RegisterUser(BaseRpcResponse& _return);
+  void RegisterUserWithId(BaseRpcResponse& _return, const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const int64_t user_id, const std::map<std::string, std::string> & carrier);
   void send_RegisterUserWithId(const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const int64_t user_id, const std::map<std::string, std::string> & carrier);
-  void recv_RegisterUserWithId();
-  void Login(std::string& _return, const int64_t req_id, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier);
+  void recv_RegisterUserWithId(BaseRpcResponse& _return);
+  void Login(LoginRpcResponse& _return, const int64_t req_id, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier);
   void send_Login(const int64_t req_id, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier);
-  void recv_Login(std::string& _return);
-  void UploadCreatorWithUserId(const int64_t req_id, const int64_t user_id, const std::string& username, const std::map<std::string, std::string> & carrier);
+  void recv_Login(LoginRpcResponse& _return);
+  void UploadCreatorWithUserId(BaseRpcResponse& _return, const int64_t req_id, const int64_t user_id, const std::string& username, const std::map<std::string, std::string> & carrier);
   void send_UploadCreatorWithUserId(const int64_t req_id, const int64_t user_id, const std::string& username, const std::map<std::string, std::string> & carrier);
-  void recv_UploadCreatorWithUserId();
-  void UploadCreatorWithUsername(const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier);
+  void recv_UploadCreatorWithUserId(BaseRpcResponse& _return);
+  void UploadCreatorWithUsername(BaseRpcResponse& _return, const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier);
   void send_UploadCreatorWithUsername(const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier);
-  void recv_UploadCreatorWithUsername();
-  int64_t GetUserId(const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier);
+  void recv_UploadCreatorWithUsername(BaseRpcResponse& _return);
+  void GetUserId(UserIdRpcResponse& _return, const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier);
   void send_GetUserId(const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier);
-  int64_t recv_GetUserId();
+  void recv_GetUserId(UserIdRpcResponse& _return);
  protected:
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;
@@ -965,25 +996,27 @@ class UserServiceMultiface : virtual public UserServiceIf {
     ifaces_.push_back(iface);
   }
  public:
-  void RegisterUser(const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier) {
+  void RegisterUser(BaseRpcResponse& _return, const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
-      ifaces_[i]->RegisterUser(req_id, first_name, last_name, username, password, carrier);
+      ifaces_[i]->RegisterUser(_return, req_id, first_name, last_name, username, password, carrier);
     }
-    ifaces_[i]->RegisterUser(req_id, first_name, last_name, username, password, carrier);
+    ifaces_[i]->RegisterUser(_return, req_id, first_name, last_name, username, password, carrier);
+    return;
   }
 
-  void RegisterUserWithId(const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const int64_t user_id, const std::map<std::string, std::string> & carrier) {
+  void RegisterUserWithId(BaseRpcResponse& _return, const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const int64_t user_id, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
-      ifaces_[i]->RegisterUserWithId(req_id, first_name, last_name, username, password, user_id, carrier);
+      ifaces_[i]->RegisterUserWithId(_return, req_id, first_name, last_name, username, password, user_id, carrier);
     }
-    ifaces_[i]->RegisterUserWithId(req_id, first_name, last_name, username, password, user_id, carrier);
+    ifaces_[i]->RegisterUserWithId(_return, req_id, first_name, last_name, username, password, user_id, carrier);
+    return;
   }
 
-  void Login(std::string& _return, const int64_t req_id, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier) {
+  void Login(LoginRpcResponse& _return, const int64_t req_id, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
@@ -993,31 +1026,34 @@ class UserServiceMultiface : virtual public UserServiceIf {
     return;
   }
 
-  void UploadCreatorWithUserId(const int64_t req_id, const int64_t user_id, const std::string& username, const std::map<std::string, std::string> & carrier) {
+  void UploadCreatorWithUserId(BaseRpcResponse& _return, const int64_t req_id, const int64_t user_id, const std::string& username, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
-      ifaces_[i]->UploadCreatorWithUserId(req_id, user_id, username, carrier);
+      ifaces_[i]->UploadCreatorWithUserId(_return, req_id, user_id, username, carrier);
     }
-    ifaces_[i]->UploadCreatorWithUserId(req_id, user_id, username, carrier);
+    ifaces_[i]->UploadCreatorWithUserId(_return, req_id, user_id, username, carrier);
+    return;
   }
 
-  void UploadCreatorWithUsername(const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier) {
+  void UploadCreatorWithUsername(BaseRpcResponse& _return, const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
-      ifaces_[i]->UploadCreatorWithUsername(req_id, username, carrier);
+      ifaces_[i]->UploadCreatorWithUsername(_return, req_id, username, carrier);
     }
-    ifaces_[i]->UploadCreatorWithUsername(req_id, username, carrier);
+    ifaces_[i]->UploadCreatorWithUsername(_return, req_id, username, carrier);
+    return;
   }
 
-  int64_t GetUserId(const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier) {
+  void GetUserId(UserIdRpcResponse& _return, const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
-      ifaces_[i]->GetUserId(req_id, username, carrier);
+      ifaces_[i]->GetUserId(_return, req_id, username, carrier);
     }
-    return ifaces_[i]->GetUserId(req_id, username, carrier);
+    ifaces_[i]->GetUserId(_return, req_id, username, carrier);
+    return;
   }
 
 };
@@ -1050,24 +1086,24 @@ class UserServiceConcurrentClient : virtual public UserServiceIf {
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> getOutputProtocol() {
     return poprot_;
   }
-  void RegisterUser(const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier);
+  void RegisterUser(BaseRpcResponse& _return, const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier);
   int32_t send_RegisterUser(const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier);
-  void recv_RegisterUser(const int32_t seqid);
-  void RegisterUserWithId(const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const int64_t user_id, const std::map<std::string, std::string> & carrier);
+  void recv_RegisterUser(BaseRpcResponse& _return, const int32_t seqid);
+  void RegisterUserWithId(BaseRpcResponse& _return, const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const int64_t user_id, const std::map<std::string, std::string> & carrier);
   int32_t send_RegisterUserWithId(const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const int64_t user_id, const std::map<std::string, std::string> & carrier);
-  void recv_RegisterUserWithId(const int32_t seqid);
-  void Login(std::string& _return, const int64_t req_id, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier);
+  void recv_RegisterUserWithId(BaseRpcResponse& _return, const int32_t seqid);
+  void Login(LoginRpcResponse& _return, const int64_t req_id, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier);
   int32_t send_Login(const int64_t req_id, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier);
-  void recv_Login(std::string& _return, const int32_t seqid);
-  void UploadCreatorWithUserId(const int64_t req_id, const int64_t user_id, const std::string& username, const std::map<std::string, std::string> & carrier);
+  void recv_Login(LoginRpcResponse& _return, const int32_t seqid);
+  void UploadCreatorWithUserId(BaseRpcResponse& _return, const int64_t req_id, const int64_t user_id, const std::string& username, const std::map<std::string, std::string> & carrier);
   int32_t send_UploadCreatorWithUserId(const int64_t req_id, const int64_t user_id, const std::string& username, const std::map<std::string, std::string> & carrier);
-  void recv_UploadCreatorWithUserId(const int32_t seqid);
-  void UploadCreatorWithUsername(const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier);
+  void recv_UploadCreatorWithUserId(BaseRpcResponse& _return, const int32_t seqid);
+  void UploadCreatorWithUsername(BaseRpcResponse& _return, const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier);
   int32_t send_UploadCreatorWithUsername(const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier);
-  void recv_UploadCreatorWithUsername(const int32_t seqid);
-  int64_t GetUserId(const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier);
+  void recv_UploadCreatorWithUsername(BaseRpcResponse& _return, const int32_t seqid);
+  void GetUserId(UserIdRpcResponse& _return, const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier);
   int32_t send_GetUserId(const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier);
-  int64_t recv_GetUserId(const int32_t seqid);
+  void recv_GetUserId(UserIdRpcResponse& _return, const int32_t seqid);
  protected:
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;

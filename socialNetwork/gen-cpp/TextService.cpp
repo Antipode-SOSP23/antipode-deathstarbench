@@ -54,17 +54,17 @@ uint32_t TextService_UploadText_args::read(::apache::thrift::protocol::TProtocol
         if (ftype == ::apache::thrift::protocol::T_MAP) {
           {
             this->carrier.clear();
-            uint32_t _size44;
-            ::apache::thrift::protocol::TType _ktype45;
-            ::apache::thrift::protocol::TType _vtype46;
-            xfer += iprot->readMapBegin(_ktype45, _vtype46, _size44);
-            uint32_t _i48;
-            for (_i48 = 0; _i48 < _size44; ++_i48)
+            uint32_t _size76;
+            ::apache::thrift::protocol::TType _ktype77;
+            ::apache::thrift::protocol::TType _vtype78;
+            xfer += iprot->readMapBegin(_ktype77, _vtype78, _size76);
+            uint32_t _i80;
+            for (_i80 = 0; _i80 < _size76; ++_i80)
             {
-              std::string _key49;
-              xfer += iprot->readString(_key49);
-              std::string& _val50 = this->carrier[_key49];
-              xfer += iprot->readString(_val50);
+              std::string _key81;
+              xfer += iprot->readString(_key81);
+              std::string& _val82 = this->carrier[_key81];
+              xfer += iprot->readString(_val82);
             }
             xfer += iprot->readMapEnd();
           }
@@ -101,11 +101,11 @@ uint32_t TextService_UploadText_args::write(::apache::thrift::protocol::TProtoco
   xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 3);
   {
     xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->carrier.size()));
-    std::map<std::string, std::string> ::const_iterator _iter51;
-    for (_iter51 = this->carrier.begin(); _iter51 != this->carrier.end(); ++_iter51)
+    std::map<std::string, std::string> ::const_iterator _iter83;
+    for (_iter83 = this->carrier.begin(); _iter83 != this->carrier.end(); ++_iter83)
     {
-      xfer += oprot->writeString(_iter51->first);
-      xfer += oprot->writeString(_iter51->second);
+      xfer += oprot->writeString(_iter83->first);
+      xfer += oprot->writeString(_iter83->second);
     }
     xfer += oprot->writeMapEnd();
   }
@@ -137,11 +137,11 @@ uint32_t TextService_UploadText_pargs::write(::apache::thrift::protocol::TProtoc
   xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 3);
   {
     xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>((*(this->carrier)).size()));
-    std::map<std::string, std::string> ::const_iterator _iter52;
-    for (_iter52 = (*(this->carrier)).begin(); _iter52 != (*(this->carrier)).end(); ++_iter52)
+    std::map<std::string, std::string> ::const_iterator _iter84;
+    for (_iter84 = (*(this->carrier)).begin(); _iter84 != (*(this->carrier)).end(); ++_iter84)
     {
-      xfer += oprot->writeString(_iter52->first);
-      xfer += oprot->writeString(_iter52->second);
+      xfer += oprot->writeString(_iter84->first);
+      xfer += oprot->writeString(_iter84->second);
     }
     xfer += oprot->writeMapEnd();
   }
@@ -178,6 +178,14 @@ uint32_t TextService_UploadText_result::read(::apache::thrift::protocol::TProtoc
     }
     switch (fid)
     {
+      case 0:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->success.read(iprot);
+          this->__isset.success = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
       case 1:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
           xfer += this->se.read(iprot);
@@ -204,7 +212,11 @@ uint32_t TextService_UploadText_result::write(::apache::thrift::protocol::TProto
 
   xfer += oprot->writeStructBegin("TextService_UploadText_result");
 
-  if (this->__isset.se) {
+  if (this->__isset.success) {
+    xfer += oprot->writeFieldBegin("success", ::apache::thrift::protocol::T_STRUCT, 0);
+    xfer += this->success.write(oprot);
+    xfer += oprot->writeFieldEnd();
+  } else if (this->__isset.se) {
     xfer += oprot->writeFieldBegin("se", ::apache::thrift::protocol::T_STRUCT, 1);
     xfer += this->se.write(oprot);
     xfer += oprot->writeFieldEnd();
@@ -240,6 +252,14 @@ uint32_t TextService_UploadText_presult::read(::apache::thrift::protocol::TProto
     }
     switch (fid)
     {
+      case 0:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += (*(this->success)).read(iprot);
+          this->__isset.success = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
       case 1:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
           xfer += this->se.read(iprot);
@@ -260,10 +280,10 @@ uint32_t TextService_UploadText_presult::read(::apache::thrift::protocol::TProto
   return xfer;
 }
 
-void TextServiceClient::UploadText(const int64_t req_id, const std::string& text, const std::map<std::string, std::string> & carrier)
+void TextServiceClient::UploadText(BaseRpcResponse& _return, const int64_t req_id, const std::string& text, const std::map<std::string, std::string> & carrier)
 {
   send_UploadText(req_id, text, carrier);
-  recv_UploadText();
+  recv_UploadText(_return);
 }
 
 void TextServiceClient::send_UploadText(const int64_t req_id, const std::string& text, const std::map<std::string, std::string> & carrier)
@@ -282,7 +302,7 @@ void TextServiceClient::send_UploadText(const int64_t req_id, const std::string&
   oprot_->getTransport()->flush();
 }
 
-void TextServiceClient::recv_UploadText()
+void TextServiceClient::recv_UploadText(BaseRpcResponse& _return)
 {
 
   int32_t rseqid = 0;
@@ -308,14 +328,19 @@ void TextServiceClient::recv_UploadText()
     iprot_->getTransport()->readEnd();
   }
   TextService_UploadText_presult result;
+  result.success = &_return;
   result.read(iprot_);
   iprot_->readMessageEnd();
   iprot_->getTransport()->readEnd();
 
+  if (result.__isset.success) {
+    // _return pointer has now been filled
+    return;
+  }
   if (result.__isset.se) {
     throw result.se;
   }
-  return;
+  throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "UploadText failed: unknown result");
 }
 
 bool TextServiceProcessor::dispatchCall(::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, const std::string& fname, int32_t seqid, void* callContext) {
@@ -360,7 +385,8 @@ void TextServiceProcessor::process_UploadText(int32_t seqid, ::apache::thrift::p
 
   TextService_UploadText_result result;
   try {
-    iface_->UploadText(args.req_id, args.text, args.carrier);
+    iface_->UploadText(result.success, args.req_id, args.text, args.carrier);
+    result.__isset.success = true;
   } catch (ServiceException &se) {
     result.se = se;
     result.__isset.se = true;
@@ -400,10 +426,10 @@ void TextServiceProcessor::process_UploadText(int32_t seqid, ::apache::thrift::p
   return processor;
 }
 
-void TextServiceConcurrentClient::UploadText(const int64_t req_id, const std::string& text, const std::map<std::string, std::string> & carrier)
+void TextServiceConcurrentClient::UploadText(BaseRpcResponse& _return, const int64_t req_id, const std::string& text, const std::map<std::string, std::string> & carrier)
 {
   int32_t seqid = send_UploadText(req_id, text, carrier);
-  recv_UploadText(seqid);
+  recv_UploadText(_return, seqid);
 }
 
 int32_t TextServiceConcurrentClient::send_UploadText(const int64_t req_id, const std::string& text, const std::map<std::string, std::string> & carrier)
@@ -426,7 +452,7 @@ int32_t TextServiceConcurrentClient::send_UploadText(const int64_t req_id, const
   return cseqid;
 }
 
-void TextServiceConcurrentClient::recv_UploadText(const int32_t seqid)
+void TextServiceConcurrentClient::recv_UploadText(BaseRpcResponse& _return, const int32_t seqid)
 {
 
   int32_t rseqid = 0;
@@ -465,16 +491,22 @@ void TextServiceConcurrentClient::recv_UploadText(const int32_t seqid)
         throw TProtocolException(TProtocolException::INVALID_DATA);
       }
       TextService_UploadText_presult result;
+      result.success = &_return;
       result.read(iprot_);
       iprot_->readMessageEnd();
       iprot_->getTransport()->readEnd();
 
+      if (result.__isset.success) {
+        // _return pointer has now been filled
+        sentry.commit();
+        return;
+      }
       if (result.__isset.se) {
         sentry.commit();
         throw result.se;
       }
-      sentry.commit();
-      return;
+      // in a bad state, don't commit
+      throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "UploadText failed: unknown result");
     }
     // seqid != rseqid
     this->sync_.updatePending(fname, mtype, rseqid);

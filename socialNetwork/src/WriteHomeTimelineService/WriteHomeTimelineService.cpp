@@ -81,8 +81,12 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     std::vector<int64_t> followers_id;
     try {
       writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
-      social_graph_client->GetFollowers(followers_id, req_id, user_id,
+      UidListRpcResponse response;
+      social_graph_client->GetFollowers(response, req_id, user_id,
                                         writer_text_map);
+      followers_id = response.result;
+      Baggage b = Baggage::deserialize(response.baggage);
+      JOIN_CURRENT_BAGGAGE(b);
     } catch (...) {
       LOG(error) << "Failed to get followers from social-network-service";
       XTRACE("Failed to get followers from social-network-service");

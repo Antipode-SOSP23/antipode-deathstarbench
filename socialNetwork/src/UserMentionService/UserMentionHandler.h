@@ -26,7 +26,7 @@ class UserMentionHandler : public UserMentionServiceIf {
                      ClientPool<ThriftClient<ComposePostServiceClient>> *);
   ~UserMentionHandler() override = default;
 
-  void UploadUserMentions(int64_t, const std::vector<std::string> &,
+  void UploadUserMentions(BaseRpcResponse& , int64_t, const std::vector<std::string> &,
       const std::map<std::string, std::string> &) override ;
 
  private:
@@ -45,6 +45,7 @@ UserMentionHandler::UserMentionHandler(
 }
 
 void UserMentionHandler::UploadUserMentions(
+    BaseRpcResponse &response,
     int64_t req_id,
     const std::vector<std::string> &usernames,
     const std::map<std::string, std::string> &carrier) {
@@ -252,8 +253,10 @@ void UserMentionHandler::UploadUserMentions(
   auto compose_post_client = compose_post_client_wrapper->GetClient();
   try {
     writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
-    compose_post_client->UploadUserMentions(req_id, user_mentions,
+    compose_post_client->UploadUserMentions(response, req_id, user_mentions,
                                             writer_text_map);
+    Baggage b = Baggage::deserialize(response.baggage);
+    JOIN_CURRENT_BAGGAGE(b);
   } catch (...) {
     _compose_client_pool->Push(compose_post_client_wrapper);
     LOG(error) << "Failed to upload user_mentions to user-mention-service";
@@ -265,6 +268,7 @@ void UserMentionHandler::UploadUserMentions(
 
   XTRACE("UserMentionService::UploadUserMentions");
 
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 

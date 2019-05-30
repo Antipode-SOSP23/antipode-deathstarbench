@@ -21,7 +21,7 @@ namespace social_network {
 class TextServiceIf {
  public:
   virtual ~TextServiceIf() {}
-  virtual void UploadText(const int64_t req_id, const std::string& text, const std::map<std::string, std::string> & carrier) = 0;
+  virtual void UploadText(BaseRpcResponse& _return, const int64_t req_id, const std::string& text, const std::map<std::string, std::string> & carrier) = 0;
 };
 
 class TextServiceIfFactory {
@@ -51,7 +51,7 @@ class TextServiceIfSingletonFactory : virtual public TextServiceIfFactory {
 class TextServiceNull : virtual public TextServiceIf {
  public:
   virtual ~TextServiceNull() {}
-  void UploadText(const int64_t /* req_id */, const std::string& /* text */, const std::map<std::string, std::string> & /* carrier */) {
+  void UploadText(BaseRpcResponse& /* _return */, const int64_t /* req_id */, const std::string& /* text */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
 };
@@ -120,7 +120,8 @@ class TextService_UploadText_pargs {
 };
 
 typedef struct _TextService_UploadText_result__isset {
-  _TextService_UploadText_result__isset() : se(false) {}
+  _TextService_UploadText_result__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _TextService_UploadText_result__isset;
 
@@ -133,14 +134,19 @@ class TextService_UploadText_result {
   }
 
   virtual ~TextService_UploadText_result() throw();
+  BaseRpcResponse success;
   ServiceException se;
 
   _TextService_UploadText_result__isset __isset;
+
+  void __set_success(const BaseRpcResponse& val);
 
   void __set_se(const ServiceException& val);
 
   bool operator == (const TextService_UploadText_result & rhs) const
   {
+    if (!(success == rhs.success))
+      return false;
     if (!(se == rhs.se))
       return false;
     return true;
@@ -157,7 +163,8 @@ class TextService_UploadText_result {
 };
 
 typedef struct _TextService_UploadText_presult__isset {
-  _TextService_UploadText_presult__isset() : se(false) {}
+  _TextService_UploadText_presult__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _TextService_UploadText_presult__isset;
 
@@ -166,6 +173,7 @@ class TextService_UploadText_presult {
 
 
   virtual ~TextService_UploadText_presult() throw();
+  BaseRpcResponse* success;
   ServiceException se;
 
   _TextService_UploadText_presult__isset __isset;
@@ -199,9 +207,9 @@ class TextServiceClient : virtual public TextServiceIf {
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> getOutputProtocol() {
     return poprot_;
   }
-  void UploadText(const int64_t req_id, const std::string& text, const std::map<std::string, std::string> & carrier);
+  void UploadText(BaseRpcResponse& _return, const int64_t req_id, const std::string& text, const std::map<std::string, std::string> & carrier);
   void send_UploadText(const int64_t req_id, const std::string& text, const std::map<std::string, std::string> & carrier);
-  void recv_UploadText();
+  void recv_UploadText(BaseRpcResponse& _return);
  protected:
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;
@@ -250,13 +258,14 @@ class TextServiceMultiface : virtual public TextServiceIf {
     ifaces_.push_back(iface);
   }
  public:
-  void UploadText(const int64_t req_id, const std::string& text, const std::map<std::string, std::string> & carrier) {
+  void UploadText(BaseRpcResponse& _return, const int64_t req_id, const std::string& text, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
-      ifaces_[i]->UploadText(req_id, text, carrier);
+      ifaces_[i]->UploadText(_return, req_id, text, carrier);
     }
-    ifaces_[i]->UploadText(req_id, text, carrier);
+    ifaces_[i]->UploadText(_return, req_id, text, carrier);
+    return;
   }
 
 };
@@ -289,9 +298,9 @@ class TextServiceConcurrentClient : virtual public TextServiceIf {
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> getOutputProtocol() {
     return poprot_;
   }
-  void UploadText(const int64_t req_id, const std::string& text, const std::map<std::string, std::string> & carrier);
+  void UploadText(BaseRpcResponse& _return, const int64_t req_id, const std::string& text, const std::map<std::string, std::string> & carrier);
   int32_t send_UploadText(const int64_t req_id, const std::string& text, const std::map<std::string, std::string> & carrier);
-  void recv_UploadText(const int32_t seqid);
+  void recv_UploadText(BaseRpcResponse& _return, const int32_t seqid);
  protected:
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;

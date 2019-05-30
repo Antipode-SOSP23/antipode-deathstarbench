@@ -28,7 +28,7 @@ class TextHandler : public TextServiceIf {
       ClientPool<ThriftClient<UserMentionServiceClient>> *);
   ~TextHandler() override = default;
 
-  void UploadText(int64_t, const std::string &,
+  void UploadText(BaseRpcResponse& response, int64_t, const std::string &,
       const std::map<std::string, std::string> &) override;
  private:
   ClientPool<ThriftClient<ComposePostServiceClient>> *_compose_client_pool;
@@ -46,6 +46,7 @@ TextHandler::TextHandler(
 }
 
 void TextHandler::UploadText(
+    BaseRpcResponse& response,
     int64_t req_id,
     const std::string &text,
     const std::map<std::string, std::string> & carrier) {
@@ -107,7 +108,11 @@ void TextHandler::UploadText(
         auto url_client = url_client_wrapper->GetClient();
         try {
           writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
-          url_client->UploadUrls(return_urls, req_id, urls, writer_text_map);
+          UrlListRpcResponse url_response;
+          url_client->UploadUrls(url_response, req_id, urls, writer_text_map);
+          Baggage b = Baggage::deserialize(url_response.baggage);
+          JOIN_CURRENT_BAGGAGE(b);
+          return_urls = url_response.result;
         } catch (...) {
           LOG(error) << "Failed to upload urls to url-shorten-service";
           _url_client_pool->Push(url_client_wrapper);
@@ -137,8 +142,10 @@ void TextHandler::UploadText(
         auto user_mention_client = user_mention_client_wrapper->GetClient();
         try {
           writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
-          user_mention_client->UploadUserMentions(req_id, user_mentions,
+          user_mention_client->UploadUserMentions(response, req_id, user_mentions,
                                                   writer_text_map);
+          Baggage b = Baggage::deserialize(response.baggage);
+          JOIN_CURRENT_BAGGAGE(b);
         } catch (...) {
           LOG(error) << "Failed to upload user_mentions to user-mention-service";
           _user_mention_client_pool->Push(user_mention_client_wrapper);
@@ -152,7 +159,8 @@ void TextHandler::UploadText(
   std::vector<std::string> shortened_urls;
   try {
     shortened_urls = shortened_urls_future.get();
-    JOIN_CURRENT_BAGGAGE(shortened_urls_baggage);
+    Baggage b = Baggage::deserialize(response.baggage);
+    JOIN_CURRENT_BAGGAGE(b);
   } catch (...) {
     LOG(error) << "Failed to get shortened urls from url-shorten-service";
     XTRACE("Failed to get shortened urls form url-shorten-service");
@@ -194,7 +202,9 @@ void TextHandler::UploadText(
         auto compose_post_client = compose_post_client_wrapper->GetClient();
         try {
           writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
-          compose_post_client->UploadText(req_id, updated_text, writer_text_map);
+          compose_post_client->UploadText(response, req_id, updated_text, writer_text_map);
+          Baggage b = Baggage::deserialize(response.baggage);
+          JOIN_CURRENT_BAGGAGE(b);
         } catch (...) {
           LOG(error) << "Failed to upload text to compose-post-service";
           _compose_client_pool->Push(compose_post_client_wrapper);
@@ -226,7 +236,7 @@ void TextHandler::UploadText(
 
   XTRACE("TextHandler::UploadText complete");
 
-  // TODO: INCLUDE BAGGAGE IN RESPONSE (POSSIBLY MUST MODIFY THRIFT DEFINITIONS)
+  response.baggage = GET_CURRENT_BAGGAGE().str();
 
   DELETE_CURRENT_BAGGAGE();
 }

@@ -20,7 +20,7 @@ class HomeTimelineServiceHandler : virtual public HomeTimelineServiceIf {
     // Your initialization goes here
   }
 
-  void ReadHomeTimeline(std::vector<Post> & _return, const int64_t req_id, const int64_t user_id, const int32_t start, const int32_t stop, const std::map<std::string, std::string> & carrier) {
+  void ReadHomeTimeline(PostListRpcResponse& _return, const int64_t req_id, const int64_t user_id, const int32_t start, const int32_t stop, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("ReadHomeTimeline\n");
   }

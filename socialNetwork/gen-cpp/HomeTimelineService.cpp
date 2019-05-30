@@ -70,17 +70,17 @@ uint32_t HomeTimelineService_ReadHomeTimeline_args::read(::apache::thrift::proto
         if (ftype == ::apache::thrift::protocol::T_MAP) {
           {
             this->carrier.clear();
-            uint32_t _size228;
-            ::apache::thrift::protocol::TType _ktype229;
-            ::apache::thrift::protocol::TType _vtype230;
-            xfer += iprot->readMapBegin(_ktype229, _vtype230, _size228);
-            uint32_t _i232;
-            for (_i232 = 0; _i232 < _size228; ++_i232)
+            uint32_t _size249;
+            ::apache::thrift::protocol::TType _ktype250;
+            ::apache::thrift::protocol::TType _vtype251;
+            xfer += iprot->readMapBegin(_ktype250, _vtype251, _size249);
+            uint32_t _i253;
+            for (_i253 = 0; _i253 < _size249; ++_i253)
             {
-              std::string _key233;
-              xfer += iprot->readString(_key233);
-              std::string& _val234 = this->carrier[_key233];
-              xfer += iprot->readString(_val234);
+              std::string _key254;
+              xfer += iprot->readString(_key254);
+              std::string& _val255 = this->carrier[_key254];
+              xfer += iprot->readString(_val255);
             }
             xfer += iprot->readMapEnd();
           }
@@ -125,11 +125,11 @@ uint32_t HomeTimelineService_ReadHomeTimeline_args::write(::apache::thrift::prot
   xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 5);
   {
     xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->carrier.size()));
-    std::map<std::string, std::string> ::const_iterator _iter235;
-    for (_iter235 = this->carrier.begin(); _iter235 != this->carrier.end(); ++_iter235)
+    std::map<std::string, std::string> ::const_iterator _iter256;
+    for (_iter256 = this->carrier.begin(); _iter256 != this->carrier.end(); ++_iter256)
     {
-      xfer += oprot->writeString(_iter235->first);
-      xfer += oprot->writeString(_iter235->second);
+      xfer += oprot->writeString(_iter256->first);
+      xfer += oprot->writeString(_iter256->second);
     }
     xfer += oprot->writeMapEnd();
   }
@@ -169,11 +169,11 @@ uint32_t HomeTimelineService_ReadHomeTimeline_pargs::write(::apache::thrift::pro
   xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 5);
   {
     xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>((*(this->carrier)).size()));
-    std::map<std::string, std::string> ::const_iterator _iter236;
-    for (_iter236 = (*(this->carrier)).begin(); _iter236 != (*(this->carrier)).end(); ++_iter236)
+    std::map<std::string, std::string> ::const_iterator _iter257;
+    for (_iter257 = (*(this->carrier)).begin(); _iter257 != (*(this->carrier)).end(); ++_iter257)
     {
-      xfer += oprot->writeString(_iter236->first);
-      xfer += oprot->writeString(_iter236->second);
+      xfer += oprot->writeString(_iter257->first);
+      xfer += oprot->writeString(_iter257->second);
     }
     xfer += oprot->writeMapEnd();
   }
@@ -211,20 +211,8 @@ uint32_t HomeTimelineService_ReadHomeTimeline_result::read(::apache::thrift::pro
     switch (fid)
     {
       case 0:
-        if (ftype == ::apache::thrift::protocol::T_LIST) {
-          {
-            this->success.clear();
-            uint32_t _size237;
-            ::apache::thrift::protocol::TType _etype240;
-            xfer += iprot->readListBegin(_etype240, _size237);
-            this->success.resize(_size237);
-            uint32_t _i241;
-            for (_i241 = 0; _i241 < _size237; ++_i241)
-            {
-              xfer += this->success[_i241].read(iprot);
-            }
-            xfer += iprot->readListEnd();
-          }
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->success.read(iprot);
           this->__isset.success = true;
         } else {
           xfer += iprot->skip(ftype);
@@ -257,16 +245,8 @@ uint32_t HomeTimelineService_ReadHomeTimeline_result::write(::apache::thrift::pr
   xfer += oprot->writeStructBegin("HomeTimelineService_ReadHomeTimeline_result");
 
   if (this->__isset.success) {
-    xfer += oprot->writeFieldBegin("success", ::apache::thrift::protocol::T_LIST, 0);
-    {
-      xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->success.size()));
-      std::vector<Post> ::const_iterator _iter242;
-      for (_iter242 = this->success.begin(); _iter242 != this->success.end(); ++_iter242)
-      {
-        xfer += (*_iter242).write(oprot);
-      }
-      xfer += oprot->writeListEnd();
-    }
+    xfer += oprot->writeFieldBegin("success", ::apache::thrift::protocol::T_STRUCT, 0);
+    xfer += this->success.write(oprot);
     xfer += oprot->writeFieldEnd();
   } else if (this->__isset.se) {
     xfer += oprot->writeFieldBegin("se", ::apache::thrift::protocol::T_STRUCT, 1);
@@ -305,20 +285,8 @@ uint32_t HomeTimelineService_ReadHomeTimeline_presult::read(::apache::thrift::pr
     switch (fid)
     {
       case 0:
-        if (ftype == ::apache::thrift::protocol::T_LIST) {
-          {
-            (*(this->success)).clear();
-            uint32_t _size243;
-            ::apache::thrift::protocol::TType _etype246;
-            xfer += iprot->readListBegin(_etype246, _size243);
-            (*(this->success)).resize(_size243);
-            uint32_t _i247;
-            for (_i247 = 0; _i247 < _size243; ++_i247)
-            {
-              xfer += (*(this->success))[_i247].read(iprot);
-            }
-            xfer += iprot->readListEnd();
-          }
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += (*(this->success)).read(iprot);
           this->__isset.success = true;
         } else {
           xfer += iprot->skip(ftype);
@@ -344,7 +312,7 @@ uint32_t HomeTimelineService_ReadHomeTimeline_presult::read(::apache::thrift::pr
   return xfer;
 }
 
-void HomeTimelineServiceClient::ReadHomeTimeline(std::vector<Post> & _return, const int64_t req_id, const int64_t user_id, const int32_t start, const int32_t stop, const std::map<std::string, std::string> & carrier)
+void HomeTimelineServiceClient::ReadHomeTimeline(PostListRpcResponse& _return, const int64_t req_id, const int64_t user_id, const int32_t start, const int32_t stop, const std::map<std::string, std::string> & carrier)
 {
   send_ReadHomeTimeline(req_id, user_id, start, stop, carrier);
   recv_ReadHomeTimeline(_return);
@@ -368,7 +336,7 @@ void HomeTimelineServiceClient::send_ReadHomeTimeline(const int64_t req_id, cons
   oprot_->getTransport()->flush();
 }
 
-void HomeTimelineServiceClient::recv_ReadHomeTimeline(std::vector<Post> & _return)
+void HomeTimelineServiceClient::recv_ReadHomeTimeline(PostListRpcResponse& _return)
 {
 
   int32_t rseqid = 0;
@@ -492,7 +460,7 @@ void HomeTimelineServiceProcessor::process_ReadHomeTimeline(int32_t seqid, ::apa
   return processor;
 }
 
-void HomeTimelineServiceConcurrentClient::ReadHomeTimeline(std::vector<Post> & _return, const int64_t req_id, const int64_t user_id, const int32_t start, const int32_t stop, const std::map<std::string, std::string> & carrier)
+void HomeTimelineServiceConcurrentClient::ReadHomeTimeline(PostListRpcResponse& _return, const int64_t req_id, const int64_t user_id, const int32_t start, const int32_t stop, const std::map<std::string, std::string> & carrier)
 {
   int32_t seqid = send_ReadHomeTimeline(req_id, user_id, start, stop, carrier);
   recv_ReadHomeTimeline(_return, seqid);
@@ -520,7 +488,7 @@ int32_t HomeTimelineServiceConcurrentClient::send_ReadHomeTimeline(const int64_t
   return cseqid;
 }
 
-void HomeTimelineServiceConcurrentClient::recv_ReadHomeTimeline(std::vector<Post> & _return, const int32_t seqid)
+void HomeTimelineServiceConcurrentClient::recv_ReadHomeTimeline(PostListRpcResponse& _return, const int32_t seqid)
 {
 
   int32_t rseqid = 0;

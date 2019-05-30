@@ -29,11 +29,11 @@ class UrlShortenHandler : public UrlShortenServiceIf {
       ClientPool<ThriftClient<ComposePostServiceClient>> *);
   ~UrlShortenHandler() override = default;
 
-  void UploadUrls(std::vector<std::string> &, int64_t,
+  void UploadUrls(UrlListRpcResponse &, int64_t,
       const std::vector<std::string> &,
       const std::map<std::string, std::string> &) override;
 
-  void GetExtendedUrls(std::vector<std::string> &, int64_t,
+  void GetExtendedUrls(UrlListRpcResponse &, int64_t,
                        const std::vector<std::string> &,
                        const std::map<std::string, std::string> &) override ;
 
@@ -70,11 +70,12 @@ std::string UrlShortenHandler::_GenRandomStr(int length) {
   return return_str;
 }
 void UrlShortenHandler::UploadUrls(
-    std::vector<std::string> &_return,
+    UrlListRpcResponse& response,
     int64_t req_id,
     const std::vector<std::string> &urls,
     const std::map<std::string, std::string> &carrier) {
 
+  std::vector<std::string> _return;
   std::map<std::string, std::string>::const_iterator baggage_it = carrier.find("baggage");
   if (baggage_it != carrier.end()) {
     SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
@@ -180,7 +181,10 @@ void UrlShortenHandler::UploadUrls(
         auto compose_post_client = compose_post_client_wrapper->GetClient();
         try {
           writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
-          compose_post_client->UploadUrls(req_id, target_urls, writer_text_map);
+          BaseRpcResponse cp_response;
+          compose_post_client->UploadUrls(cp_response, req_id, target_urls, writer_text_map);
+          Baggage b = Baggage::deserialize(response.baggage);
+          JOIN_CURRENT_BAGGAGE(b);
         } catch (...) {
           _compose_client_pool->Push(compose_post_client_wrapper);
           LOG(error) << "Failed to upload urls to compose-post-service";
@@ -215,11 +219,13 @@ void UrlShortenHandler::UploadUrls(
 
   XTRACE("TextHandler::UploadText complete");
 
+  response.baggage = GET_CURRENT_BAGGAGE().str();
+  response.result = _return;
   DELETE_CURRENT_BAGGAGE();
 
 }
 void UrlShortenHandler::GetExtendedUrls(
-    std::vector<std::string> &_return,
+    UrlListRpcResponse& response,
     int64_t req_id,
     const std::vector<std::string> &shortened_id,
     const std::map<std::string, std::string> &carrier) {

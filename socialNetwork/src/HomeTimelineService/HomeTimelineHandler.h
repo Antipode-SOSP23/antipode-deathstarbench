@@ -26,7 +26,7 @@ class ReadHomeTimelineHandler : public HomeTimelineServiceIf {
       ClientPool<ThriftClient<PostStorageServiceClient>> *);
   ~ReadHomeTimelineHandler() override = default;
 
-  void ReadHomeTimeline(std::vector<Post> &, int64_t, int64_t, int, int,
+  void ReadHomeTimeline(PostListRpcResponse &, int64_t, int64_t, int, int,
       const std::map<std::string, std::string> &) override ;
 
   ClientPool<RedisClient> *_redis_client_pool;
@@ -41,7 +41,7 @@ ReadHomeTimelineHandler::ReadHomeTimelineHandler(
 }
 
 void ReadHomeTimelineHandler::ReadHomeTimeline(
-    std::vector<Post> & _return,
+    PostListRpcResponse & response,
     int64_t req_id,
     int64_t user_id,
     int start,
@@ -117,7 +117,9 @@ void ReadHomeTimelineHandler::ReadHomeTimeline(
   auto post_client = post_client_wrapper->GetClient();
   try {
     XTRACE("Reading Posts");
-    post_client->ReadPosts(_return, req_id, post_ids, writer_text_map);
+    post_client->ReadPosts(response, req_id, post_ids, writer_text_map);
+    Baggage b = Baggage::deserialize(response.baggage);
+    JOIN_CURRENT_BAGGAGE(b);
   } catch (...) {
     _post_client_pool->Push(post_client_wrapper);
     LOG(error) << "Failed to read posts from post-storage-service";
@@ -128,6 +130,7 @@ void ReadHomeTimelineHandler::ReadHomeTimeline(
   span->Finish();
 
   XTRACE("ReadHomeTimelineHandler::ReadHomeTimeline complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 

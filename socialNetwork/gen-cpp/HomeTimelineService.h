@@ -21,7 +21,7 @@ namespace social_network {
 class HomeTimelineServiceIf {
  public:
   virtual ~HomeTimelineServiceIf() {}
-  virtual void ReadHomeTimeline(std::vector<Post> & _return, const int64_t req_id, const int64_t user_id, const int32_t start, const int32_t stop, const std::map<std::string, std::string> & carrier) = 0;
+  virtual void ReadHomeTimeline(PostListRpcResponse& _return, const int64_t req_id, const int64_t user_id, const int32_t start, const int32_t stop, const std::map<std::string, std::string> & carrier) = 0;
 };
 
 class HomeTimelineServiceIfFactory {
@@ -51,7 +51,7 @@ class HomeTimelineServiceIfSingletonFactory : virtual public HomeTimelineService
 class HomeTimelineServiceNull : virtual public HomeTimelineServiceIf {
  public:
   virtual ~HomeTimelineServiceNull() {}
-  void ReadHomeTimeline(std::vector<Post> & /* _return */, const int64_t /* req_id */, const int64_t /* user_id */, const int32_t /* start */, const int32_t /* stop */, const std::map<std::string, std::string> & /* carrier */) {
+  void ReadHomeTimeline(PostListRpcResponse& /* _return */, const int64_t /* req_id */, const int64_t /* user_id */, const int32_t /* start */, const int32_t /* stop */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
 };
@@ -148,12 +148,12 @@ class HomeTimelineService_ReadHomeTimeline_result {
   }
 
   virtual ~HomeTimelineService_ReadHomeTimeline_result() throw();
-  std::vector<Post>  success;
+  PostListRpcResponse success;
   ServiceException se;
 
   _HomeTimelineService_ReadHomeTimeline_result__isset __isset;
 
-  void __set_success(const std::vector<Post> & val);
+  void __set_success(const PostListRpcResponse& val);
 
   void __set_se(const ServiceException& val);
 
@@ -187,7 +187,7 @@ class HomeTimelineService_ReadHomeTimeline_presult {
 
 
   virtual ~HomeTimelineService_ReadHomeTimeline_presult() throw();
-  std::vector<Post> * success;
+  PostListRpcResponse* success;
   ServiceException se;
 
   _HomeTimelineService_ReadHomeTimeline_presult__isset __isset;
@@ -221,9 +221,9 @@ class HomeTimelineServiceClient : virtual public HomeTimelineServiceIf {
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> getOutputProtocol() {
     return poprot_;
   }
-  void ReadHomeTimeline(std::vector<Post> & _return, const int64_t req_id, const int64_t user_id, const int32_t start, const int32_t stop, const std::map<std::string, std::string> & carrier);
+  void ReadHomeTimeline(PostListRpcResponse& _return, const int64_t req_id, const int64_t user_id, const int32_t start, const int32_t stop, const std::map<std::string, std::string> & carrier);
   void send_ReadHomeTimeline(const int64_t req_id, const int64_t user_id, const int32_t start, const int32_t stop, const std::map<std::string, std::string> & carrier);
-  void recv_ReadHomeTimeline(std::vector<Post> & _return);
+  void recv_ReadHomeTimeline(PostListRpcResponse& _return);
  protected:
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;
@@ -272,7 +272,7 @@ class HomeTimelineServiceMultiface : virtual public HomeTimelineServiceIf {
     ifaces_.push_back(iface);
   }
  public:
-  void ReadHomeTimeline(std::vector<Post> & _return, const int64_t req_id, const int64_t user_id, const int32_t start, const int32_t stop, const std::map<std::string, std::string> & carrier) {
+  void ReadHomeTimeline(PostListRpcResponse& _return, const int64_t req_id, const int64_t user_id, const int32_t start, const int32_t stop, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
@@ -312,9 +312,9 @@ class HomeTimelineServiceConcurrentClient : virtual public HomeTimelineServiceIf
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> getOutputProtocol() {
     return poprot_;
   }
-  void ReadHomeTimeline(std::vector<Post> & _return, const int64_t req_id, const int64_t user_id, const int32_t start, const int32_t stop, const std::map<std::string, std::string> & carrier);
+  void ReadHomeTimeline(PostListRpcResponse& _return, const int64_t req_id, const int64_t user_id, const int32_t start, const int32_t stop, const std::map<std::string, std::string> & carrier);
   int32_t send_ReadHomeTimeline(const int64_t req_id, const int64_t user_id, const int32_t start, const int32_t stop, const std::map<std::string, std::string> & carrier);
-  void recv_ReadHomeTimeline(std::vector<Post> & _return, const int32_t seqid);
+  void recv_ReadHomeTimeline(PostListRpcResponse& _return, const int32_t seqid);
  protected:
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;

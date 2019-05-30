@@ -44,9 +44,9 @@ uint32_t UniqueIdService_UploadUniqueId_args::read(::apache::thrift::protocol::T
         break;
       case 2:
         if (ftype == ::apache::thrift::protocol::T_I32) {
-          int32_t ecast34;
-          xfer += iprot->readI32(ecast34);
-          this->post_type = (PostType::type)ecast34;
+          int32_t ecast66;
+          xfer += iprot->readI32(ecast66);
+          this->post_type = (PostType::type)ecast66;
           this->__isset.post_type = true;
         } else {
           xfer += iprot->skip(ftype);
@@ -56,17 +56,17 @@ uint32_t UniqueIdService_UploadUniqueId_args::read(::apache::thrift::protocol::T
         if (ftype == ::apache::thrift::protocol::T_MAP) {
           {
             this->carrier.clear();
-            uint32_t _size35;
-            ::apache::thrift::protocol::TType _ktype36;
-            ::apache::thrift::protocol::TType _vtype37;
-            xfer += iprot->readMapBegin(_ktype36, _vtype37, _size35);
-            uint32_t _i39;
-            for (_i39 = 0; _i39 < _size35; ++_i39)
+            uint32_t _size67;
+            ::apache::thrift::protocol::TType _ktype68;
+            ::apache::thrift::protocol::TType _vtype69;
+            xfer += iprot->readMapBegin(_ktype68, _vtype69, _size67);
+            uint32_t _i71;
+            for (_i71 = 0; _i71 < _size67; ++_i71)
             {
-              std::string _key40;
-              xfer += iprot->readString(_key40);
-              std::string& _val41 = this->carrier[_key40];
-              xfer += iprot->readString(_val41);
+              std::string _key72;
+              xfer += iprot->readString(_key72);
+              std::string& _val73 = this->carrier[_key72];
+              xfer += iprot->readString(_val73);
             }
             xfer += iprot->readMapEnd();
           }
@@ -103,11 +103,11 @@ uint32_t UniqueIdService_UploadUniqueId_args::write(::apache::thrift::protocol::
   xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 3);
   {
     xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->carrier.size()));
-    std::map<std::string, std::string> ::const_iterator _iter42;
-    for (_iter42 = this->carrier.begin(); _iter42 != this->carrier.end(); ++_iter42)
+    std::map<std::string, std::string> ::const_iterator _iter74;
+    for (_iter74 = this->carrier.begin(); _iter74 != this->carrier.end(); ++_iter74)
     {
-      xfer += oprot->writeString(_iter42->first);
-      xfer += oprot->writeString(_iter42->second);
+      xfer += oprot->writeString(_iter74->first);
+      xfer += oprot->writeString(_iter74->second);
     }
     xfer += oprot->writeMapEnd();
   }
@@ -139,11 +139,11 @@ uint32_t UniqueIdService_UploadUniqueId_pargs::write(::apache::thrift::protocol:
   xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 3);
   {
     xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>((*(this->carrier)).size()));
-    std::map<std::string, std::string> ::const_iterator _iter43;
-    for (_iter43 = (*(this->carrier)).begin(); _iter43 != (*(this->carrier)).end(); ++_iter43)
+    std::map<std::string, std::string> ::const_iterator _iter75;
+    for (_iter75 = (*(this->carrier)).begin(); _iter75 != (*(this->carrier)).end(); ++_iter75)
     {
-      xfer += oprot->writeString(_iter43->first);
-      xfer += oprot->writeString(_iter43->second);
+      xfer += oprot->writeString(_iter75->first);
+      xfer += oprot->writeString(_iter75->second);
     }
     xfer += oprot->writeMapEnd();
   }
@@ -180,6 +180,14 @@ uint32_t UniqueIdService_UploadUniqueId_result::read(::apache::thrift::protocol:
     }
     switch (fid)
     {
+      case 0:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->success.read(iprot);
+          this->__isset.success = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
       case 1:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
           xfer += this->se.read(iprot);
@@ -206,7 +214,11 @@ uint32_t UniqueIdService_UploadUniqueId_result::write(::apache::thrift::protocol
 
   xfer += oprot->writeStructBegin("UniqueIdService_UploadUniqueId_result");
 
-  if (this->__isset.se) {
+  if (this->__isset.success) {
+    xfer += oprot->writeFieldBegin("success", ::apache::thrift::protocol::T_STRUCT, 0);
+    xfer += this->success.write(oprot);
+    xfer += oprot->writeFieldEnd();
+  } else if (this->__isset.se) {
     xfer += oprot->writeFieldBegin("se", ::apache::thrift::protocol::T_STRUCT, 1);
     xfer += this->se.write(oprot);
     xfer += oprot->writeFieldEnd();
@@ -242,6 +254,14 @@ uint32_t UniqueIdService_UploadUniqueId_presult::read(::apache::thrift::protocol
     }
     switch (fid)
     {
+      case 0:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += (*(this->success)).read(iprot);
+          this->__isset.success = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
       case 1:
         if (ftype == ::apache::thrift::protocol::T_STRUCT) {
           xfer += this->se.read(iprot);
@@ -262,10 +282,10 @@ uint32_t UniqueIdService_UploadUniqueId_presult::read(::apache::thrift::protocol
   return xfer;
 }
 
-void UniqueIdServiceClient::UploadUniqueId(const int64_t req_id, const PostType::type post_type, const std::map<std::string, std::string> & carrier)
+void UniqueIdServiceClient::UploadUniqueId(BaseRpcResponse& _return, const int64_t req_id, const PostType::type post_type, const std::map<std::string, std::string> & carrier)
 {
   send_UploadUniqueId(req_id, post_type, carrier);
-  recv_UploadUniqueId();
+  recv_UploadUniqueId(_return);
 }
 
 void UniqueIdServiceClient::send_UploadUniqueId(const int64_t req_id, const PostType::type post_type, const std::map<std::string, std::string> & carrier)
@@ -284,7 +304,7 @@ void UniqueIdServiceClient::send_UploadUniqueId(const int64_t req_id, const Post
   oprot_->getTransport()->flush();
 }
 
-void UniqueIdServiceClient::recv_UploadUniqueId()
+void UniqueIdServiceClient::recv_UploadUniqueId(BaseRpcResponse& _return)
 {
 
   int32_t rseqid = 0;
@@ -310,14 +330,19 @@ void UniqueIdServiceClient::recv_UploadUniqueId()
     iprot_->getTransport()->readEnd();
   }
   UniqueIdService_UploadUniqueId_presult result;
+  result.success = &_return;
   result.read(iprot_);
   iprot_->readMessageEnd();
   iprot_->getTransport()->readEnd();
 
+  if (result.__isset.success) {
+    // _return pointer has now been filled
+    return;
+  }
   if (result.__isset.se) {
     throw result.se;
   }
-  return;
+  throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "UploadUniqueId failed: unknown result");
 }
 
 bool UniqueIdServiceProcessor::dispatchCall(::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, const std::string& fname, int32_t seqid, void* callContext) {
@@ -362,7 +387,8 @@ void UniqueIdServiceProcessor::process_UploadUniqueId(int32_t seqid, ::apache::t
 
   UniqueIdService_UploadUniqueId_result result;
   try {
-    iface_->UploadUniqueId(args.req_id, args.post_type, args.carrier);
+    iface_->UploadUniqueId(result.success, args.req_id, args.post_type, args.carrier);
+    result.__isset.success = true;
   } catch (ServiceException &se) {
     result.se = se;
     result.__isset.se = true;
@@ -402,10 +428,10 @@ void UniqueIdServiceProcessor::process_UploadUniqueId(int32_t seqid, ::apache::t
   return processor;
 }
 
-void UniqueIdServiceConcurrentClient::UploadUniqueId(const int64_t req_id, const PostType::type post_type, const std::map<std::string, std::string> & carrier)
+void UniqueIdServiceConcurrentClient::UploadUniqueId(BaseRpcResponse& _return, const int64_t req_id, const PostType::type post_type, const std::map<std::string, std::string> & carrier)
 {
   int32_t seqid = send_UploadUniqueId(req_id, post_type, carrier);
-  recv_UploadUniqueId(seqid);
+  recv_UploadUniqueId(_return, seqid);
 }
 
 int32_t UniqueIdServiceConcurrentClient::send_UploadUniqueId(const int64_t req_id, const PostType::type post_type, const std::map<std::string, std::string> & carrier)
@@ -428,7 +454,7 @@ int32_t UniqueIdServiceConcurrentClient::send_UploadUniqueId(const int64_t req_i
   return cseqid;
 }
 
-void UniqueIdServiceConcurrentClient::recv_UploadUniqueId(const int32_t seqid)
+void UniqueIdServiceConcurrentClient::recv_UploadUniqueId(BaseRpcResponse& _return, const int32_t seqid)
 {
 
   int32_t rseqid = 0;
@@ -467,16 +493,22 @@ void UniqueIdServiceConcurrentClient::recv_UploadUniqueId(const int32_t seqid)
         throw TProtocolException(TProtocolException::INVALID_DATA);
       }
       UniqueIdService_UploadUniqueId_presult result;
+      result.success = &_return;
       result.read(iprot_);
       iprot_->readMessageEnd();
       iprot_->getTransport()->readEnd();
 
+      if (result.__isset.success) {
+        // _return pointer has now been filled
+        sentry.commit();
+        return;
+      }
       if (result.__isset.se) {
         sentry.commit();
         throw result.se;
       }
-      sentry.commit();
-      return;
+      // in a bad state, don't commit
+      throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "UploadUniqueId failed: unknown result");
     }
     // seqid != rseqid
     this->sync_.updatePending(fname, mtype, rseqid);

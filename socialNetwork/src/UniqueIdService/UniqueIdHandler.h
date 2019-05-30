@@ -57,7 +57,7 @@ class UniqueIdHandler : public UniqueIdServiceIf {
       const std::string &,
       ClientPool<ThriftClient<ComposePostServiceClient>> *);
 
-  void UploadUniqueId(int64_t, PostType::type,
+  void UploadUniqueId(BaseRpcResponse &, int64_t, PostType::type,
       const std::map<std::string, std::string> &) override;
 
  private:
@@ -76,6 +76,7 @@ UniqueIdHandler::UniqueIdHandler(
 }
 
 void UniqueIdHandler::UploadUniqueId(
+    BaseRpcResponse &response,
     int64_t req_id,
     PostType::type post_type,
     const std::map<std::string, std::string> & carrier) {
@@ -146,7 +147,10 @@ void UniqueIdHandler::UploadUniqueId(
   auto compose_post_client = compose_post_client_wrapper->GetClient();
   try {
     writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
-    compose_post_client->UploadUniqueId(req_id, post_id, post_type, writer_text_map);    
+    BaseRpcResponse cp_response;
+    compose_post_client->UploadUniqueId(cp_response, req_id, post_id, post_type, writer_text_map);    
+    Baggage b = Baggage::deserialize(cp_response.baggage);
+    JOIN_CURRENT_BAGGAGE(b);
   } catch (...) {
     _compose_client_pool->Push(compose_post_client_wrapper);
     LOG(error) << "Failed to upload unique-id to compose-post-service";
@@ -158,6 +162,7 @@ void UniqueIdHandler::UploadUniqueId(
   span->Finish();
 
   XTRACE("UniqueIdHandler::UploadUniqueId complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 

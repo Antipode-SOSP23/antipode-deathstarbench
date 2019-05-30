@@ -20,17 +20,17 @@ class PostStorageServiceHandler : virtual public PostStorageServiceIf {
     // Your initialization goes here
   }
 
-  void StorePost(const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier) {
+  void StorePost(BaseRpcResponse& _return, const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("StorePost\n");
   }
 
-  void ReadPost(Post& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier) {
+  void ReadPost(PostRpcResponse& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("ReadPost\n");
   }
 
-  void ReadPosts(std::vector<Post> & _return, const int64_t req_id, const std::vector<int64_t> & post_ids, const std::map<std::string, std::string> & carrier) {
+  void ReadPosts(PostListRpcResponse& _return, const int64_t req_id, const std::vector<int64_t> & post_ids, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("ReadPosts\n");
   }

@@ -21,9 +21,9 @@ namespace social_network {
 class PostStorageServiceIf {
  public:
   virtual ~PostStorageServiceIf() {}
-  virtual void StorePost(const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier) = 0;
-  virtual void ReadPost(Post& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier) = 0;
-  virtual void ReadPosts(std::vector<Post> & _return, const int64_t req_id, const std::vector<int64_t> & post_ids, const std::map<std::string, std::string> & carrier) = 0;
+  virtual void StorePost(BaseRpcResponse& _return, const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier) = 0;
+  virtual void ReadPost(PostRpcResponse& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier) = 0;
+  virtual void ReadPosts(PostListRpcResponse& _return, const int64_t req_id, const std::vector<int64_t> & post_ids, const std::map<std::string, std::string> & carrier) = 0;
 };
 
 class PostStorageServiceIfFactory {
@@ -53,13 +53,13 @@ class PostStorageServiceIfSingletonFactory : virtual public PostStorageServiceIf
 class PostStorageServiceNull : virtual public PostStorageServiceIf {
  public:
   virtual ~PostStorageServiceNull() {}
-  void StorePost(const int64_t /* req_id */, const Post& /* post */, const std::map<std::string, std::string> & /* carrier */) {
+  void StorePost(BaseRpcResponse& /* _return */, const int64_t /* req_id */, const Post& /* post */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
-  void ReadPost(Post& /* _return */, const int64_t /* req_id */, const int64_t /* post_id */, const std::map<std::string, std::string> & /* carrier */) {
+  void ReadPost(PostRpcResponse& /* _return */, const int64_t /* req_id */, const int64_t /* post_id */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
-  void ReadPosts(std::vector<Post> & /* _return */, const int64_t /* req_id */, const std::vector<int64_t> & /* post_ids */, const std::map<std::string, std::string> & /* carrier */) {
+  void ReadPosts(PostListRpcResponse& /* _return */, const int64_t /* req_id */, const std::vector<int64_t> & /* post_ids */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
 };
@@ -128,7 +128,8 @@ class PostStorageService_StorePost_pargs {
 };
 
 typedef struct _PostStorageService_StorePost_result__isset {
-  _PostStorageService_StorePost_result__isset() : se(false) {}
+  _PostStorageService_StorePost_result__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _PostStorageService_StorePost_result__isset;
 
@@ -141,14 +142,19 @@ class PostStorageService_StorePost_result {
   }
 
   virtual ~PostStorageService_StorePost_result() throw();
+  BaseRpcResponse success;
   ServiceException se;
 
   _PostStorageService_StorePost_result__isset __isset;
+
+  void __set_success(const BaseRpcResponse& val);
 
   void __set_se(const ServiceException& val);
 
   bool operator == (const PostStorageService_StorePost_result & rhs) const
   {
+    if (!(success == rhs.success))
+      return false;
     if (!(se == rhs.se))
       return false;
     return true;
@@ -165,7 +171,8 @@ class PostStorageService_StorePost_result {
 };
 
 typedef struct _PostStorageService_StorePost_presult__isset {
-  _PostStorageService_StorePost_presult__isset() : se(false) {}
+  _PostStorageService_StorePost_presult__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _PostStorageService_StorePost_presult__isset;
 
@@ -174,6 +181,7 @@ class PostStorageService_StorePost_presult {
 
 
   virtual ~PostStorageService_StorePost_presult() throw();
+  BaseRpcResponse* success;
   ServiceException se;
 
   _PostStorageService_StorePost_presult__isset __isset;
@@ -260,12 +268,12 @@ class PostStorageService_ReadPost_result {
   }
 
   virtual ~PostStorageService_ReadPost_result() throw();
-  Post success;
+  PostRpcResponse success;
   ServiceException se;
 
   _PostStorageService_ReadPost_result__isset __isset;
 
-  void __set_success(const Post& val);
+  void __set_success(const PostRpcResponse& val);
 
   void __set_se(const ServiceException& val);
 
@@ -299,7 +307,7 @@ class PostStorageService_ReadPost_presult {
 
 
   virtual ~PostStorageService_ReadPost_presult() throw();
-  Post* success;
+  PostRpcResponse* success;
   ServiceException se;
 
   _PostStorageService_ReadPost_presult__isset __isset;
@@ -386,12 +394,12 @@ class PostStorageService_ReadPosts_result {
   }
 
   virtual ~PostStorageService_ReadPosts_result() throw();
-  std::vector<Post>  success;
+  PostListRpcResponse success;
   ServiceException se;
 
   _PostStorageService_ReadPosts_result__isset __isset;
 
-  void __set_success(const std::vector<Post> & val);
+  void __set_success(const PostListRpcResponse& val);
 
   void __set_se(const ServiceException& val);
 
@@ -425,7 +433,7 @@ class PostStorageService_ReadPosts_presult {
 
 
   virtual ~PostStorageService_ReadPosts_presult() throw();
-  std::vector<Post> * success;
+  PostListRpcResponse* success;
   ServiceException se;
 
   _PostStorageService_ReadPosts_presult__isset __isset;
@@ -459,15 +467,15 @@ class PostStorageServiceClient : virtual public PostStorageServiceIf {
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> getOutputProtocol() {
     return poprot_;
   }
-  void StorePost(const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier);
+  void StorePost(BaseRpcResponse& _return, const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier);
   void send_StorePost(const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier);
-  void recv_StorePost();
-  void ReadPost(Post& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier);
+  void recv_StorePost(BaseRpcResponse& _return);
+  void ReadPost(PostRpcResponse& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier);
   void send_ReadPost(const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier);
-  void recv_ReadPost(Post& _return);
-  void ReadPosts(std::vector<Post> & _return, const int64_t req_id, const std::vector<int64_t> & post_ids, const std::map<std::string, std::string> & carrier);
+  void recv_ReadPost(PostRpcResponse& _return);
+  void ReadPosts(PostListRpcResponse& _return, const int64_t req_id, const std::vector<int64_t> & post_ids, const std::map<std::string, std::string> & carrier);
   void send_ReadPosts(const int64_t req_id, const std::vector<int64_t> & post_ids, const std::map<std::string, std::string> & carrier);
-  void recv_ReadPosts(std::vector<Post> & _return);
+  void recv_ReadPosts(PostListRpcResponse& _return);
  protected:
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;
@@ -520,16 +528,17 @@ class PostStorageServiceMultiface : virtual public PostStorageServiceIf {
     ifaces_.push_back(iface);
   }
  public:
-  void StorePost(const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier) {
+  void StorePost(BaseRpcResponse& _return, const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
-      ifaces_[i]->StorePost(req_id, post, carrier);
+      ifaces_[i]->StorePost(_return, req_id, post, carrier);
     }
-    ifaces_[i]->StorePost(req_id, post, carrier);
+    ifaces_[i]->StorePost(_return, req_id, post, carrier);
+    return;
   }
 
-  void ReadPost(Post& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier) {
+  void ReadPost(PostRpcResponse& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
@@ -539,7 +548,7 @@ class PostStorageServiceMultiface : virtual public PostStorageServiceIf {
     return;
   }
 
-  void ReadPosts(std::vector<Post> & _return, const int64_t req_id, const std::vector<int64_t> & post_ids, const std::map<std::string, std::string> & carrier) {
+  void ReadPosts(PostListRpcResponse& _return, const int64_t req_id, const std::vector<int64_t> & post_ids, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
@@ -579,15 +588,15 @@ class PostStorageServiceConcurrentClient : virtual public PostStorageServiceIf {
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> getOutputProtocol() {
     return poprot_;
   }
-  void StorePost(const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier);
+  void StorePost(BaseRpcResponse& _return, const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier);
   int32_t send_StorePost(const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier);
-  void recv_StorePost(const int32_t seqid);
-  void ReadPost(Post& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier);
+  void recv_StorePost(BaseRpcResponse& _return, const int32_t seqid);
+  void ReadPost(PostRpcResponse& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier);
   int32_t send_ReadPost(const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier);
-  void recv_ReadPost(Post& _return, const int32_t seqid);
-  void ReadPosts(std::vector<Post> & _return, const int64_t req_id, const std::vector<int64_t> & post_ids, const std::map<std::string, std::string> & carrier);
+  void recv_ReadPost(PostRpcResponse& _return, const int32_t seqid);
+  void ReadPosts(PostListRpcResponse& _return, const int64_t req_id, const std::vector<int64_t> & post_ids, const std::map<std::string, std::string> & carrier);
   int32_t send_ReadPosts(const int64_t req_id, const std::vector<int64_t> & post_ids, const std::map<std::string, std::string> & carrier);
-  void recv_ReadPosts(std::vector<Post> & _return, const int32_t seqid);
+  void recv_ReadPosts(PostListRpcResponse& _return, const int32_t seqid);
  protected:
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;

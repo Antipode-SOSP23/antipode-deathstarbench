@@ -21,7 +21,7 @@ namespace social_network {
 class MediaServiceIf {
  public:
   virtual ~MediaServiceIf() {}
-  virtual void UploadMedia(const int64_t req_id, const std::vector<std::string> & media_types, const std::vector<int64_t> & media_ids, const std::map<std::string, std::string> & carrier) = 0;
+  virtual void UploadMedia(BaseRpcResponse& _return, const int64_t req_id, const std::vector<std::string> & media_types, const std::vector<int64_t> & media_ids, const std::map<std::string, std::string> & carrier) = 0;
 };
 
 class MediaServiceIfFactory {
@@ -51,7 +51,7 @@ class MediaServiceIfSingletonFactory : virtual public MediaServiceIfFactory {
 class MediaServiceNull : virtual public MediaServiceIf {
  public:
   virtual ~MediaServiceNull() {}
-  void UploadMedia(const int64_t /* req_id */, const std::vector<std::string> & /* media_types */, const std::vector<int64_t> & /* media_ids */, const std::map<std::string, std::string> & /* carrier */) {
+  void UploadMedia(BaseRpcResponse& /* _return */, const int64_t /* req_id */, const std::vector<std::string> & /* media_types */, const std::vector<int64_t> & /* media_ids */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
 };
@@ -127,7 +127,8 @@ class MediaService_UploadMedia_pargs {
 };
 
 typedef struct _MediaService_UploadMedia_result__isset {
-  _MediaService_UploadMedia_result__isset() : se(false) {}
+  _MediaService_UploadMedia_result__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _MediaService_UploadMedia_result__isset;
 
@@ -140,14 +141,19 @@ class MediaService_UploadMedia_result {
   }
 
   virtual ~MediaService_UploadMedia_result() throw();
+  BaseRpcResponse success;
   ServiceException se;
 
   _MediaService_UploadMedia_result__isset __isset;
+
+  void __set_success(const BaseRpcResponse& val);
 
   void __set_se(const ServiceException& val);
 
   bool operator == (const MediaService_UploadMedia_result & rhs) const
   {
+    if (!(success == rhs.success))
+      return false;
     if (!(se == rhs.se))
       return false;
     return true;
@@ -164,7 +170,8 @@ class MediaService_UploadMedia_result {
 };
 
 typedef struct _MediaService_UploadMedia_presult__isset {
-  _MediaService_UploadMedia_presult__isset() : se(false) {}
+  _MediaService_UploadMedia_presult__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _MediaService_UploadMedia_presult__isset;
 
@@ -173,6 +180,7 @@ class MediaService_UploadMedia_presult {
 
 
   virtual ~MediaService_UploadMedia_presult() throw();
+  BaseRpcResponse* success;
   ServiceException se;
 
   _MediaService_UploadMedia_presult__isset __isset;
@@ -206,9 +214,9 @@ class MediaServiceClient : virtual public MediaServiceIf {
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> getOutputProtocol() {
     return poprot_;
   }
-  void UploadMedia(const int64_t req_id, const std::vector<std::string> & media_types, const std::vector<int64_t> & media_ids, const std::map<std::string, std::string> & carrier);
+  void UploadMedia(BaseRpcResponse& _return, const int64_t req_id, const std::vector<std::string> & media_types, const std::vector<int64_t> & media_ids, const std::map<std::string, std::string> & carrier);
   void send_UploadMedia(const int64_t req_id, const std::vector<std::string> & media_types, const std::vector<int64_t> & media_ids, const std::map<std::string, std::string> & carrier);
-  void recv_UploadMedia();
+  void recv_UploadMedia(BaseRpcResponse& _return);
  protected:
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;
@@ -257,13 +265,14 @@ class MediaServiceMultiface : virtual public MediaServiceIf {
     ifaces_.push_back(iface);
   }
  public:
-  void UploadMedia(const int64_t req_id, const std::vector<std::string> & media_types, const std::vector<int64_t> & media_ids, const std::map<std::string, std::string> & carrier) {
+  void UploadMedia(BaseRpcResponse& _return, const int64_t req_id, const std::vector<std::string> & media_types, const std::vector<int64_t> & media_ids, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
-      ifaces_[i]->UploadMedia(req_id, media_types, media_ids, carrier);
+      ifaces_[i]->UploadMedia(_return, req_id, media_types, media_ids, carrier);
     }
-    ifaces_[i]->UploadMedia(req_id, media_types, media_ids, carrier);
+    ifaces_[i]->UploadMedia(_return, req_id, media_types, media_ids, carrier);
+    return;
   }
 
 };
@@ -296,9 +305,9 @@ class MediaServiceConcurrentClient : virtual public MediaServiceIf {
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> getOutputProtocol() {
     return poprot_;
   }
-  void UploadMedia(const int64_t req_id, const std::vector<std::string> & media_types, const std::vector<int64_t> & media_ids, const std::map<std::string, std::string> & carrier);
+  void UploadMedia(BaseRpcResponse& _return, const int64_t req_id, const std::vector<std::string> & media_types, const std::vector<int64_t> & media_ids, const std::map<std::string, std::string> & carrier);
   int32_t send_UploadMedia(const int64_t req_id, const std::vector<std::string> & media_types, const std::vector<int64_t> & media_ids, const std::map<std::string, std::string> & carrier);
-  void recv_UploadMedia(const int32_t seqid);
+  void recv_UploadMedia(BaseRpcResponse& _return, const int32_t seqid);
  protected:
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;

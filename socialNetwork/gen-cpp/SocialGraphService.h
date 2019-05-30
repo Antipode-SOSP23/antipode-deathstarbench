@@ -21,13 +21,13 @@ namespace social_network {
 class SocialGraphServiceIf {
  public:
   virtual ~SocialGraphServiceIf() {}
-  virtual void GetFollowers(std::vector<int64_t> & _return, const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier) = 0;
-  virtual void GetFollowees(std::vector<int64_t> & _return, const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier) = 0;
-  virtual void Follow(const int64_t req_id, const int64_t user_id, const int64_t followee_id, const std::map<std::string, std::string> & carrier) = 0;
-  virtual void Unfollow(const int64_t req_id, const int64_t user_id, const int64_t followee_id, const std::map<std::string, std::string> & carrier) = 0;
-  virtual void FollowWithUsername(const int64_t req_id, const std::string& user_usernmae, const std::string& followee_username, const std::map<std::string, std::string> & carrier) = 0;
-  virtual void UnfollowWithUsername(const int64_t req_id, const std::string& user_usernmae, const std::string& followee_username, const std::map<std::string, std::string> & carrier) = 0;
-  virtual void InsertUser(const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier) = 0;
+  virtual void GetFollowers(UidListRpcResponse& _return, const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier) = 0;
+  virtual void GetFollowees(UidListRpcResponse& _return, const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier) = 0;
+  virtual void Follow(BaseRpcResponse& _return, const int64_t req_id, const int64_t user_id, const int64_t followee_id, const std::map<std::string, std::string> & carrier) = 0;
+  virtual void Unfollow(BaseRpcResponse& _return, const int64_t req_id, const int64_t user_id, const int64_t followee_id, const std::map<std::string, std::string> & carrier) = 0;
+  virtual void FollowWithUsername(BaseRpcResponse& _return, const int64_t req_id, const std::string& user_usernmae, const std::string& followee_username, const std::map<std::string, std::string> & carrier) = 0;
+  virtual void UnfollowWithUsername(BaseRpcResponse& _return, const int64_t req_id, const std::string& user_usernmae, const std::string& followee_username, const std::map<std::string, std::string> & carrier) = 0;
+  virtual void InsertUser(BaseRpcResponse& _return, const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier) = 0;
 };
 
 class SocialGraphServiceIfFactory {
@@ -57,25 +57,25 @@ class SocialGraphServiceIfSingletonFactory : virtual public SocialGraphServiceIf
 class SocialGraphServiceNull : virtual public SocialGraphServiceIf {
  public:
   virtual ~SocialGraphServiceNull() {}
-  void GetFollowers(std::vector<int64_t> & /* _return */, const int64_t /* req_id */, const int64_t /* user_id */, const std::map<std::string, std::string> & /* carrier */) {
+  void GetFollowers(UidListRpcResponse& /* _return */, const int64_t /* req_id */, const int64_t /* user_id */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
-  void GetFollowees(std::vector<int64_t> & /* _return */, const int64_t /* req_id */, const int64_t /* user_id */, const std::map<std::string, std::string> & /* carrier */) {
+  void GetFollowees(UidListRpcResponse& /* _return */, const int64_t /* req_id */, const int64_t /* user_id */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
-  void Follow(const int64_t /* req_id */, const int64_t /* user_id */, const int64_t /* followee_id */, const std::map<std::string, std::string> & /* carrier */) {
+  void Follow(BaseRpcResponse& /* _return */, const int64_t /* req_id */, const int64_t /* user_id */, const int64_t /* followee_id */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
-  void Unfollow(const int64_t /* req_id */, const int64_t /* user_id */, const int64_t /* followee_id */, const std::map<std::string, std::string> & /* carrier */) {
+  void Unfollow(BaseRpcResponse& /* _return */, const int64_t /* req_id */, const int64_t /* user_id */, const int64_t /* followee_id */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
-  void FollowWithUsername(const int64_t /* req_id */, const std::string& /* user_usernmae */, const std::string& /* followee_username */, const std::map<std::string, std::string> & /* carrier */) {
+  void FollowWithUsername(BaseRpcResponse& /* _return */, const int64_t /* req_id */, const std::string& /* user_usernmae */, const std::string& /* followee_username */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
-  void UnfollowWithUsername(const int64_t /* req_id */, const std::string& /* user_usernmae */, const std::string& /* followee_username */, const std::map<std::string, std::string> & /* carrier */) {
+  void UnfollowWithUsername(BaseRpcResponse& /* _return */, const int64_t /* req_id */, const std::string& /* user_usernmae */, const std::string& /* followee_username */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
-  void InsertUser(const int64_t /* req_id */, const int64_t /* user_id */, const std::map<std::string, std::string> & /* carrier */) {
+  void InsertUser(BaseRpcResponse& /* _return */, const int64_t /* req_id */, const int64_t /* user_id */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
 };
@@ -158,12 +158,12 @@ class SocialGraphService_GetFollowers_result {
   }
 
   virtual ~SocialGraphService_GetFollowers_result() throw();
-  std::vector<int64_t>  success;
+  UidListRpcResponse success;
   ServiceException se;
 
   _SocialGraphService_GetFollowers_result__isset __isset;
 
-  void __set_success(const std::vector<int64_t> & val);
+  void __set_success(const UidListRpcResponse& val);
 
   void __set_se(const ServiceException& val);
 
@@ -197,7 +197,7 @@ class SocialGraphService_GetFollowers_presult {
 
 
   virtual ~SocialGraphService_GetFollowers_presult() throw();
-  std::vector<int64_t> * success;
+  UidListRpcResponse* success;
   ServiceException se;
 
   _SocialGraphService_GetFollowers_presult__isset __isset;
@@ -284,12 +284,12 @@ class SocialGraphService_GetFollowees_result {
   }
 
   virtual ~SocialGraphService_GetFollowees_result() throw();
-  std::vector<int64_t>  success;
+  UidListRpcResponse success;
   ServiceException se;
 
   _SocialGraphService_GetFollowees_result__isset __isset;
 
-  void __set_success(const std::vector<int64_t> & val);
+  void __set_success(const UidListRpcResponse& val);
 
   void __set_se(const ServiceException& val);
 
@@ -323,7 +323,7 @@ class SocialGraphService_GetFollowees_presult {
 
 
   virtual ~SocialGraphService_GetFollowees_presult() throw();
-  std::vector<int64_t> * success;
+  UidListRpcResponse* success;
   ServiceException se;
 
   _SocialGraphService_GetFollowees_presult__isset __isset;
@@ -403,7 +403,8 @@ class SocialGraphService_Follow_pargs {
 };
 
 typedef struct _SocialGraphService_Follow_result__isset {
-  _SocialGraphService_Follow_result__isset() : se(false) {}
+  _SocialGraphService_Follow_result__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _SocialGraphService_Follow_result__isset;
 
@@ -416,14 +417,19 @@ class SocialGraphService_Follow_result {
   }
 
   virtual ~SocialGraphService_Follow_result() throw();
+  BaseRpcResponse success;
   ServiceException se;
 
   _SocialGraphService_Follow_result__isset __isset;
+
+  void __set_success(const BaseRpcResponse& val);
 
   void __set_se(const ServiceException& val);
 
   bool operator == (const SocialGraphService_Follow_result & rhs) const
   {
+    if (!(success == rhs.success))
+      return false;
     if (!(se == rhs.se))
       return false;
     return true;
@@ -440,7 +446,8 @@ class SocialGraphService_Follow_result {
 };
 
 typedef struct _SocialGraphService_Follow_presult__isset {
-  _SocialGraphService_Follow_presult__isset() : se(false) {}
+  _SocialGraphService_Follow_presult__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _SocialGraphService_Follow_presult__isset;
 
@@ -449,6 +456,7 @@ class SocialGraphService_Follow_presult {
 
 
   virtual ~SocialGraphService_Follow_presult() throw();
+  BaseRpcResponse* success;
   ServiceException se;
 
   _SocialGraphService_Follow_presult__isset __isset;
@@ -528,7 +536,8 @@ class SocialGraphService_Unfollow_pargs {
 };
 
 typedef struct _SocialGraphService_Unfollow_result__isset {
-  _SocialGraphService_Unfollow_result__isset() : se(false) {}
+  _SocialGraphService_Unfollow_result__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _SocialGraphService_Unfollow_result__isset;
 
@@ -541,14 +550,19 @@ class SocialGraphService_Unfollow_result {
   }
 
   virtual ~SocialGraphService_Unfollow_result() throw();
+  BaseRpcResponse success;
   ServiceException se;
 
   _SocialGraphService_Unfollow_result__isset __isset;
+
+  void __set_success(const BaseRpcResponse& val);
 
   void __set_se(const ServiceException& val);
 
   bool operator == (const SocialGraphService_Unfollow_result & rhs) const
   {
+    if (!(success == rhs.success))
+      return false;
     if (!(se == rhs.se))
       return false;
     return true;
@@ -565,7 +579,8 @@ class SocialGraphService_Unfollow_result {
 };
 
 typedef struct _SocialGraphService_Unfollow_presult__isset {
-  _SocialGraphService_Unfollow_presult__isset() : se(false) {}
+  _SocialGraphService_Unfollow_presult__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _SocialGraphService_Unfollow_presult__isset;
 
@@ -574,6 +589,7 @@ class SocialGraphService_Unfollow_presult {
 
 
   virtual ~SocialGraphService_Unfollow_presult() throw();
+  BaseRpcResponse* success;
   ServiceException se;
 
   _SocialGraphService_Unfollow_presult__isset __isset;
@@ -653,7 +669,8 @@ class SocialGraphService_FollowWithUsername_pargs {
 };
 
 typedef struct _SocialGraphService_FollowWithUsername_result__isset {
-  _SocialGraphService_FollowWithUsername_result__isset() : se(false) {}
+  _SocialGraphService_FollowWithUsername_result__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _SocialGraphService_FollowWithUsername_result__isset;
 
@@ -666,14 +683,19 @@ class SocialGraphService_FollowWithUsername_result {
   }
 
   virtual ~SocialGraphService_FollowWithUsername_result() throw();
+  BaseRpcResponse success;
   ServiceException se;
 
   _SocialGraphService_FollowWithUsername_result__isset __isset;
+
+  void __set_success(const BaseRpcResponse& val);
 
   void __set_se(const ServiceException& val);
 
   bool operator == (const SocialGraphService_FollowWithUsername_result & rhs) const
   {
+    if (!(success == rhs.success))
+      return false;
     if (!(se == rhs.se))
       return false;
     return true;
@@ -690,7 +712,8 @@ class SocialGraphService_FollowWithUsername_result {
 };
 
 typedef struct _SocialGraphService_FollowWithUsername_presult__isset {
-  _SocialGraphService_FollowWithUsername_presult__isset() : se(false) {}
+  _SocialGraphService_FollowWithUsername_presult__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _SocialGraphService_FollowWithUsername_presult__isset;
 
@@ -699,6 +722,7 @@ class SocialGraphService_FollowWithUsername_presult {
 
 
   virtual ~SocialGraphService_FollowWithUsername_presult() throw();
+  BaseRpcResponse* success;
   ServiceException se;
 
   _SocialGraphService_FollowWithUsername_presult__isset __isset;
@@ -778,7 +802,8 @@ class SocialGraphService_UnfollowWithUsername_pargs {
 };
 
 typedef struct _SocialGraphService_UnfollowWithUsername_result__isset {
-  _SocialGraphService_UnfollowWithUsername_result__isset() : se(false) {}
+  _SocialGraphService_UnfollowWithUsername_result__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _SocialGraphService_UnfollowWithUsername_result__isset;
 
@@ -791,14 +816,19 @@ class SocialGraphService_UnfollowWithUsername_result {
   }
 
   virtual ~SocialGraphService_UnfollowWithUsername_result() throw();
+  BaseRpcResponse success;
   ServiceException se;
 
   _SocialGraphService_UnfollowWithUsername_result__isset __isset;
+
+  void __set_success(const BaseRpcResponse& val);
 
   void __set_se(const ServiceException& val);
 
   bool operator == (const SocialGraphService_UnfollowWithUsername_result & rhs) const
   {
+    if (!(success == rhs.success))
+      return false;
     if (!(se == rhs.se))
       return false;
     return true;
@@ -815,7 +845,8 @@ class SocialGraphService_UnfollowWithUsername_result {
 };
 
 typedef struct _SocialGraphService_UnfollowWithUsername_presult__isset {
-  _SocialGraphService_UnfollowWithUsername_presult__isset() : se(false) {}
+  _SocialGraphService_UnfollowWithUsername_presult__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _SocialGraphService_UnfollowWithUsername_presult__isset;
 
@@ -824,6 +855,7 @@ class SocialGraphService_UnfollowWithUsername_presult {
 
 
   virtual ~SocialGraphService_UnfollowWithUsername_presult() throw();
+  BaseRpcResponse* success;
   ServiceException se;
 
   _SocialGraphService_UnfollowWithUsername_presult__isset __isset;
@@ -896,7 +928,8 @@ class SocialGraphService_InsertUser_pargs {
 };
 
 typedef struct _SocialGraphService_InsertUser_result__isset {
-  _SocialGraphService_InsertUser_result__isset() : se(false) {}
+  _SocialGraphService_InsertUser_result__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _SocialGraphService_InsertUser_result__isset;
 
@@ -909,14 +942,19 @@ class SocialGraphService_InsertUser_result {
   }
 
   virtual ~SocialGraphService_InsertUser_result() throw();
+  BaseRpcResponse success;
   ServiceException se;
 
   _SocialGraphService_InsertUser_result__isset __isset;
+
+  void __set_success(const BaseRpcResponse& val);
 
   void __set_se(const ServiceException& val);
 
   bool operator == (const SocialGraphService_InsertUser_result & rhs) const
   {
+    if (!(success == rhs.success))
+      return false;
     if (!(se == rhs.se))
       return false;
     return true;
@@ -933,7 +971,8 @@ class SocialGraphService_InsertUser_result {
 };
 
 typedef struct _SocialGraphService_InsertUser_presult__isset {
-  _SocialGraphService_InsertUser_presult__isset() : se(false) {}
+  _SocialGraphService_InsertUser_presult__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _SocialGraphService_InsertUser_presult__isset;
 
@@ -942,6 +981,7 @@ class SocialGraphService_InsertUser_presult {
 
 
   virtual ~SocialGraphService_InsertUser_presult() throw();
+  BaseRpcResponse* success;
   ServiceException se;
 
   _SocialGraphService_InsertUser_presult__isset __isset;
@@ -975,27 +1015,27 @@ class SocialGraphServiceClient : virtual public SocialGraphServiceIf {
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> getOutputProtocol() {
     return poprot_;
   }
-  void GetFollowers(std::vector<int64_t> & _return, const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier);
+  void GetFollowers(UidListRpcResponse& _return, const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier);
   void send_GetFollowers(const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier);
-  void recv_GetFollowers(std::vector<int64_t> & _return);
-  void GetFollowees(std::vector<int64_t> & _return, const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier);
+  void recv_GetFollowers(UidListRpcResponse& _return);
+  void GetFollowees(UidListRpcResponse& _return, const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier);
   void send_GetFollowees(const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier);
-  void recv_GetFollowees(std::vector<int64_t> & _return);
-  void Follow(const int64_t req_id, const int64_t user_id, const int64_t followee_id, const std::map<std::string, std::string> & carrier);
+  void recv_GetFollowees(UidListRpcResponse& _return);
+  void Follow(BaseRpcResponse& _return, const int64_t req_id, const int64_t user_id, const int64_t followee_id, const std::map<std::string, std::string> & carrier);
   void send_Follow(const int64_t req_id, const int64_t user_id, const int64_t followee_id, const std::map<std::string, std::string> & carrier);
-  void recv_Follow();
-  void Unfollow(const int64_t req_id, const int64_t user_id, const int64_t followee_id, const std::map<std::string, std::string> & carrier);
+  void recv_Follow(BaseRpcResponse& _return);
+  void Unfollow(BaseRpcResponse& _return, const int64_t req_id, const int64_t user_id, const int64_t followee_id, const std::map<std::string, std::string> & carrier);
   void send_Unfollow(const int64_t req_id, const int64_t user_id, const int64_t followee_id, const std::map<std::string, std::string> & carrier);
-  void recv_Unfollow();
-  void FollowWithUsername(const int64_t req_id, const std::string& user_usernmae, const std::string& followee_username, const std::map<std::string, std::string> & carrier);
+  void recv_Unfollow(BaseRpcResponse& _return);
+  void FollowWithUsername(BaseRpcResponse& _return, const int64_t req_id, const std::string& user_usernmae, const std::string& followee_username, const std::map<std::string, std::string> & carrier);
   void send_FollowWithUsername(const int64_t req_id, const std::string& user_usernmae, const std::string& followee_username, const std::map<std::string, std::string> & carrier);
-  void recv_FollowWithUsername();
-  void UnfollowWithUsername(const int64_t req_id, const std::string& user_usernmae, const std::string& followee_username, const std::map<std::string, std::string> & carrier);
+  void recv_FollowWithUsername(BaseRpcResponse& _return);
+  void UnfollowWithUsername(BaseRpcResponse& _return, const int64_t req_id, const std::string& user_usernmae, const std::string& followee_username, const std::map<std::string, std::string> & carrier);
   void send_UnfollowWithUsername(const int64_t req_id, const std::string& user_usernmae, const std::string& followee_username, const std::map<std::string, std::string> & carrier);
-  void recv_UnfollowWithUsername();
-  void InsertUser(const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier);
+  void recv_UnfollowWithUsername(BaseRpcResponse& _return);
+  void InsertUser(BaseRpcResponse& _return, const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier);
   void send_InsertUser(const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier);
-  void recv_InsertUser();
+  void recv_InsertUser(BaseRpcResponse& _return);
  protected:
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;
@@ -1056,7 +1096,7 @@ class SocialGraphServiceMultiface : virtual public SocialGraphServiceIf {
     ifaces_.push_back(iface);
   }
  public:
-  void GetFollowers(std::vector<int64_t> & _return, const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier) {
+  void GetFollowers(UidListRpcResponse& _return, const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
@@ -1066,7 +1106,7 @@ class SocialGraphServiceMultiface : virtual public SocialGraphServiceIf {
     return;
   }
 
-  void GetFollowees(std::vector<int64_t> & _return, const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier) {
+  void GetFollowees(UidListRpcResponse& _return, const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
@@ -1076,49 +1116,54 @@ class SocialGraphServiceMultiface : virtual public SocialGraphServiceIf {
     return;
   }
 
-  void Follow(const int64_t req_id, const int64_t user_id, const int64_t followee_id, const std::map<std::string, std::string> & carrier) {
+  void Follow(BaseRpcResponse& _return, const int64_t req_id, const int64_t user_id, const int64_t followee_id, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
-      ifaces_[i]->Follow(req_id, user_id, followee_id, carrier);
+      ifaces_[i]->Follow(_return, req_id, user_id, followee_id, carrier);
     }
-    ifaces_[i]->Follow(req_id, user_id, followee_id, carrier);
+    ifaces_[i]->Follow(_return, req_id, user_id, followee_id, carrier);
+    return;
   }
 
-  void Unfollow(const int64_t req_id, const int64_t user_id, const int64_t followee_id, const std::map<std::string, std::string> & carrier) {
+  void Unfollow(BaseRpcResponse& _return, const int64_t req_id, const int64_t user_id, const int64_t followee_id, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
-      ifaces_[i]->Unfollow(req_id, user_id, followee_id, carrier);
+      ifaces_[i]->Unfollow(_return, req_id, user_id, followee_id, carrier);
     }
-    ifaces_[i]->Unfollow(req_id, user_id, followee_id, carrier);
+    ifaces_[i]->Unfollow(_return, req_id, user_id, followee_id, carrier);
+    return;
   }
 
-  void FollowWithUsername(const int64_t req_id, const std::string& user_usernmae, const std::string& followee_username, const std::map<std::string, std::string> & carrier) {
+  void FollowWithUsername(BaseRpcResponse& _return, const int64_t req_id, const std::string& user_usernmae, const std::string& followee_username, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
-      ifaces_[i]->FollowWithUsername(req_id, user_usernmae, followee_username, carrier);
+      ifaces_[i]->FollowWithUsername(_return, req_id, user_usernmae, followee_username, carrier);
     }
-    ifaces_[i]->FollowWithUsername(req_id, user_usernmae, followee_username, carrier);
+    ifaces_[i]->FollowWithUsername(_return, req_id, user_usernmae, followee_username, carrier);
+    return;
   }
 
-  void UnfollowWithUsername(const int64_t req_id, const std::string& user_usernmae, const std::string& followee_username, const std::map<std::string, std::string> & carrier) {
+  void UnfollowWithUsername(BaseRpcResponse& _return, const int64_t req_id, const std::string& user_usernmae, const std::string& followee_username, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
-      ifaces_[i]->UnfollowWithUsername(req_id, user_usernmae, followee_username, carrier);
+      ifaces_[i]->UnfollowWithUsername(_return, req_id, user_usernmae, followee_username, carrier);
     }
-    ifaces_[i]->UnfollowWithUsername(req_id, user_usernmae, followee_username, carrier);
+    ifaces_[i]->UnfollowWithUsername(_return, req_id, user_usernmae, followee_username, carrier);
+    return;
   }
 
-  void InsertUser(const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier) {
+  void InsertUser(BaseRpcResponse& _return, const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
-      ifaces_[i]->InsertUser(req_id, user_id, carrier);
+      ifaces_[i]->InsertUser(_return, req_id, user_id, carrier);
     }
-    ifaces_[i]->InsertUser(req_id, user_id, carrier);
+    ifaces_[i]->InsertUser(_return, req_id, user_id, carrier);
+    return;
   }
 
 };
@@ -1151,27 +1196,27 @@ class SocialGraphServiceConcurrentClient : virtual public SocialGraphServiceIf {
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> getOutputProtocol() {
     return poprot_;
   }
-  void GetFollowers(std::vector<int64_t> & _return, const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier);
+  void GetFollowers(UidListRpcResponse& _return, const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier);
   int32_t send_GetFollowers(const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier);
-  void recv_GetFollowers(std::vector<int64_t> & _return, const int32_t seqid);
-  void GetFollowees(std::vector<int64_t> & _return, const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier);
+  void recv_GetFollowers(UidListRpcResponse& _return, const int32_t seqid);
+  void GetFollowees(UidListRpcResponse& _return, const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier);
   int32_t send_GetFollowees(const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier);
-  void recv_GetFollowees(std::vector<int64_t> & _return, const int32_t seqid);
-  void Follow(const int64_t req_id, const int64_t user_id, const int64_t followee_id, const std::map<std::string, std::string> & carrier);
+  void recv_GetFollowees(UidListRpcResponse& _return, const int32_t seqid);
+  void Follow(BaseRpcResponse& _return, const int64_t req_id, const int64_t user_id, const int64_t followee_id, const std::map<std::string, std::string> & carrier);
   int32_t send_Follow(const int64_t req_id, const int64_t user_id, const int64_t followee_id, const std::map<std::string, std::string> & carrier);
-  void recv_Follow(const int32_t seqid);
-  void Unfollow(const int64_t req_id, const int64_t user_id, const int64_t followee_id, const std::map<std::string, std::string> & carrier);
+  void recv_Follow(BaseRpcResponse& _return, const int32_t seqid);
+  void Unfollow(BaseRpcResponse& _return, const int64_t req_id, const int64_t user_id, const int64_t followee_id, const std::map<std::string, std::string> & carrier);
   int32_t send_Unfollow(const int64_t req_id, const int64_t user_id, const int64_t followee_id, const std::map<std::string, std::string> & carrier);
-  void recv_Unfollow(const int32_t seqid);
-  void FollowWithUsername(const int64_t req_id, const std::string& user_usernmae, const std::string& followee_username, const std::map<std::string, std::string> & carrier);
+  void recv_Unfollow(BaseRpcResponse& _return, const int32_t seqid);
+  void FollowWithUsername(BaseRpcResponse& _return, const int64_t req_id, const std::string& user_usernmae, const std::string& followee_username, const std::map<std::string, std::string> & carrier);
   int32_t send_FollowWithUsername(const int64_t req_id, const std::string& user_usernmae, const std::string& followee_username, const std::map<std::string, std::string> & carrier);
-  void recv_FollowWithUsername(const int32_t seqid);
-  void UnfollowWithUsername(const int64_t req_id, const std::string& user_usernmae, const std::string& followee_username, const std::map<std::string, std::string> & carrier);
+  void recv_FollowWithUsername(BaseRpcResponse& _return, const int32_t seqid);
+  void UnfollowWithUsername(BaseRpcResponse& _return, const int64_t req_id, const std::string& user_usernmae, const std::string& followee_username, const std::map<std::string, std::string> & carrier);
   int32_t send_UnfollowWithUsername(const int64_t req_id, const std::string& user_usernmae, const std::string& followee_username, const std::map<std::string, std::string> & carrier);
-  void recv_UnfollowWithUsername(const int32_t seqid);
-  void InsertUser(const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier);
+  void recv_UnfollowWithUsername(BaseRpcResponse& _return, const int32_t seqid);
+  void InsertUser(BaseRpcResponse& _return, const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier);
   int32_t send_InsertUser(const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier);
-  void recv_InsertUser(const int32_t seqid);
+  void recv_InsertUser(BaseRpcResponse& _return, const int32_t seqid);
  protected:
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;

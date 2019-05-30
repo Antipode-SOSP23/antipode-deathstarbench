@@ -20,32 +20,32 @@ class UserServiceHandler : virtual public UserServiceIf {
     // Your initialization goes here
   }
 
-  void RegisterUser(const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier) {
+  void RegisterUser(BaseRpcResponse& _return, const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("RegisterUser\n");
   }
 
-  void RegisterUserWithId(const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const int64_t user_id, const std::map<std::string, std::string> & carrier) {
+  void RegisterUserWithId(BaseRpcResponse& _return, const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const int64_t user_id, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("RegisterUserWithId\n");
   }
 
-  void Login(std::string& _return, const int64_t req_id, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier) {
+  void Login(LoginRpcResponse& _return, const int64_t req_id, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("Login\n");
   }
 
-  void UploadCreatorWithUserId(const int64_t req_id, const int64_t user_id, const std::string& username, const std::map<std::string, std::string> & carrier) {
+  void UploadCreatorWithUserId(BaseRpcResponse& _return, const int64_t req_id, const int64_t user_id, const std::string& username, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("UploadCreatorWithUserId\n");
   }
 
-  void UploadCreatorWithUsername(const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier) {
+  void UploadCreatorWithUsername(BaseRpcResponse& _return, const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("UploadCreatorWithUsername\n");
   }
 
-  int64_t GetUserId(const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier) {
+  void GetUserId(UserIdRpcResponse& _return, const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("GetUserId\n");
   }

@@ -64,6 +64,20 @@ class Creator;
 
 class Post;
 
+class BaseRpcResponse;
+
+class LoginRpcResponse;
+
+class UserIdRpcResponse;
+
+class PostRpcResponse;
+
+class PostListRpcResponse;
+
+class UidListRpcResponse;
+
+class UrlListRpcResponse;
+
 typedef struct _User__isset {
   _User__isset() : user_id(false), first_name(false), last_name(false), username(false), password_hashed(false), salt(false) {}
   bool user_id :1;
@@ -467,6 +481,336 @@ class Post : public virtual ::apache::thrift::TBase {
 void swap(Post &a, Post &b);
 
 std::ostream& operator<<(std::ostream& out, const Post& obj);
+
+typedef struct _BaseRpcResponse__isset {
+  _BaseRpcResponse__isset() : baggage(false) {}
+  bool baggage :1;
+} _BaseRpcResponse__isset;
+
+class BaseRpcResponse : public virtual ::apache::thrift::TBase {
+ public:
+
+  BaseRpcResponse(const BaseRpcResponse&);
+  BaseRpcResponse& operator=(const BaseRpcResponse&);
+  BaseRpcResponse() : baggage() {
+  }
+
+  virtual ~BaseRpcResponse() throw();
+  std::string baggage;
+
+  _BaseRpcResponse__isset __isset;
+
+  void __set_baggage(const std::string& val);
+
+  bool operator == (const BaseRpcResponse & rhs) const
+  {
+    if (!(baggage == rhs.baggage))
+      return false;
+    return true;
+  }
+  bool operator != (const BaseRpcResponse &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const BaseRpcResponse & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(BaseRpcResponse &a, BaseRpcResponse &b);
+
+std::ostream& operator<<(std::ostream& out, const BaseRpcResponse& obj);
+
+typedef struct _LoginRpcResponse__isset {
+  _LoginRpcResponse__isset() : baggage(false), result(false) {}
+  bool baggage :1;
+  bool result :1;
+} _LoginRpcResponse__isset;
+
+class LoginRpcResponse : public virtual ::apache::thrift::TBase {
+ public:
+
+  LoginRpcResponse(const LoginRpcResponse&);
+  LoginRpcResponse& operator=(const LoginRpcResponse&);
+  LoginRpcResponse() : baggage(), result() {
+  }
+
+  virtual ~LoginRpcResponse() throw();
+  std::string baggage;
+  std::string result;
+
+  _LoginRpcResponse__isset __isset;
+
+  void __set_baggage(const std::string& val);
+
+  void __set_result(const std::string& val);
+
+  bool operator == (const LoginRpcResponse & rhs) const
+  {
+    if (!(baggage == rhs.baggage))
+      return false;
+    if (!(result == rhs.result))
+      return false;
+    return true;
+  }
+  bool operator != (const LoginRpcResponse &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const LoginRpcResponse & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(LoginRpcResponse &a, LoginRpcResponse &b);
+
+std::ostream& operator<<(std::ostream& out, const LoginRpcResponse& obj);
+
+typedef struct _UserIdRpcResponse__isset {
+  _UserIdRpcResponse__isset() : baggage(false), result(false) {}
+  bool baggage :1;
+  bool result :1;
+} _UserIdRpcResponse__isset;
+
+class UserIdRpcResponse : public virtual ::apache::thrift::TBase {
+ public:
+
+  UserIdRpcResponse(const UserIdRpcResponse&);
+  UserIdRpcResponse& operator=(const UserIdRpcResponse&);
+  UserIdRpcResponse() : baggage(), result(0) {
+  }
+
+  virtual ~UserIdRpcResponse() throw();
+  std::string baggage;
+  int64_t result;
+
+  _UserIdRpcResponse__isset __isset;
+
+  void __set_baggage(const std::string& val);
+
+  void __set_result(const int64_t val);
+
+  bool operator == (const UserIdRpcResponse & rhs) const
+  {
+    if (!(baggage == rhs.baggage))
+      return false;
+    if (!(result == rhs.result))
+      return false;
+    return true;
+  }
+  bool operator != (const UserIdRpcResponse &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const UserIdRpcResponse & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(UserIdRpcResponse &a, UserIdRpcResponse &b);
+
+std::ostream& operator<<(std::ostream& out, const UserIdRpcResponse& obj);
+
+typedef struct _PostRpcResponse__isset {
+  _PostRpcResponse__isset() : baggage(false), result(false) {}
+  bool baggage :1;
+  bool result :1;
+} _PostRpcResponse__isset;
+
+class PostRpcResponse : public virtual ::apache::thrift::TBase {
+ public:
+
+  PostRpcResponse(const PostRpcResponse&);
+  PostRpcResponse& operator=(const PostRpcResponse&);
+  PostRpcResponse() : baggage() {
+  }
+
+  virtual ~PostRpcResponse() throw();
+  std::string baggage;
+  Post result;
+
+  _PostRpcResponse__isset __isset;
+
+  void __set_baggage(const std::string& val);
+
+  void __set_result(const Post& val);
+
+  bool operator == (const PostRpcResponse & rhs) const
+  {
+    if (!(baggage == rhs.baggage))
+      return false;
+    if (!(result == rhs.result))
+      return false;
+    return true;
+  }
+  bool operator != (const PostRpcResponse &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const PostRpcResponse & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(PostRpcResponse &a, PostRpcResponse &b);
+
+std::ostream& operator<<(std::ostream& out, const PostRpcResponse& obj);
+
+typedef struct _PostListRpcResponse__isset {
+  _PostListRpcResponse__isset() : baggage(false), result(false) {}
+  bool baggage :1;
+  bool result :1;
+} _PostListRpcResponse__isset;
+
+class PostListRpcResponse : public virtual ::apache::thrift::TBase {
+ public:
+
+  PostListRpcResponse(const PostListRpcResponse&);
+  PostListRpcResponse& operator=(const PostListRpcResponse&);
+  PostListRpcResponse() : baggage() {
+  }
+
+  virtual ~PostListRpcResponse() throw();
+  std::string baggage;
+  std::vector<Post>  result;
+
+  _PostListRpcResponse__isset __isset;
+
+  void __set_baggage(const std::string& val);
+
+  void __set_result(const std::vector<Post> & val);
+
+  bool operator == (const PostListRpcResponse & rhs) const
+  {
+    if (!(baggage == rhs.baggage))
+      return false;
+    if (!(result == rhs.result))
+      return false;
+    return true;
+  }
+  bool operator != (const PostListRpcResponse &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const PostListRpcResponse & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(PostListRpcResponse &a, PostListRpcResponse &b);
+
+std::ostream& operator<<(std::ostream& out, const PostListRpcResponse& obj);
+
+typedef struct _UidListRpcResponse__isset {
+  _UidListRpcResponse__isset() : baggage(false), result(false) {}
+  bool baggage :1;
+  bool result :1;
+} _UidListRpcResponse__isset;
+
+class UidListRpcResponse : public virtual ::apache::thrift::TBase {
+ public:
+
+  UidListRpcResponse(const UidListRpcResponse&);
+  UidListRpcResponse& operator=(const UidListRpcResponse&);
+  UidListRpcResponse() : baggage() {
+  }
+
+  virtual ~UidListRpcResponse() throw();
+  std::string baggage;
+  std::vector<int64_t>  result;
+
+  _UidListRpcResponse__isset __isset;
+
+  void __set_baggage(const std::string& val);
+
+  void __set_result(const std::vector<int64_t> & val);
+
+  bool operator == (const UidListRpcResponse & rhs) const
+  {
+    if (!(baggage == rhs.baggage))
+      return false;
+    if (!(result == rhs.result))
+      return false;
+    return true;
+  }
+  bool operator != (const UidListRpcResponse &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const UidListRpcResponse & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(UidListRpcResponse &a, UidListRpcResponse &b);
+
+std::ostream& operator<<(std::ostream& out, const UidListRpcResponse& obj);
+
+typedef struct _UrlListRpcResponse__isset {
+  _UrlListRpcResponse__isset() : baggage(false), result(false) {}
+  bool baggage :1;
+  bool result :1;
+} _UrlListRpcResponse__isset;
+
+class UrlListRpcResponse : public virtual ::apache::thrift::TBase {
+ public:
+
+  UrlListRpcResponse(const UrlListRpcResponse&);
+  UrlListRpcResponse& operator=(const UrlListRpcResponse&);
+  UrlListRpcResponse() : baggage() {
+  }
+
+  virtual ~UrlListRpcResponse() throw();
+  std::string baggage;
+  std::vector<std::string>  result;
+
+  _UrlListRpcResponse__isset __isset;
+
+  void __set_baggage(const std::string& val);
+
+  void __set_result(const std::vector<std::string> & val);
+
+  bool operator == (const UrlListRpcResponse & rhs) const
+  {
+    if (!(baggage == rhs.baggage))
+      return false;
+    if (!(result == rhs.result))
+      return false;
+    return true;
+  }
+  bool operator != (const UrlListRpcResponse &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const UrlListRpcResponse & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(UrlListRpcResponse &a, UrlListRpcResponse &b);
+
+std::ostream& operator<<(std::ostream& out, const UrlListRpcResponse& obj);
 
 } // namespace
 

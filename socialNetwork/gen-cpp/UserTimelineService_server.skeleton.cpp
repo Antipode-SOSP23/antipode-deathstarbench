@@ -20,12 +20,12 @@ class UserTimelineServiceHandler : virtual public UserTimelineServiceIf {
     // Your initialization goes here
   }
 
-  void WriteUserTimeline(const int64_t req_id, const int64_t post_id, const int64_t user_id, const int64_t timestamp, const std::map<std::string, std::string> & carrier) {
+  void WriteUserTimeline(BaseRpcResponse& _return, const int64_t req_id, const int64_t post_id, const int64_t user_id, const int64_t timestamp, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("WriteUserTimeline\n");
   }
 
-  void ReadUserTimeline(std::vector<Post> & _return, const int64_t req_id, const int64_t user_id, const int32_t start, const int32_t stop, const std::map<std::string, std::string> & carrier) {
+  void ReadUserTimeline(PostListRpcResponse& _return, const int64_t req_id, const int64_t user_id, const int32_t start, const int32_t stop, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("ReadUserTimeline\n");
   }

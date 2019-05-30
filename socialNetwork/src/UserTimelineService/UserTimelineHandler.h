@@ -27,11 +27,11 @@ class UserTimelineHandler : public UserTimelineServiceIf {
       ClientPool<ThriftClient<PostStorageServiceClient>> *);
   ~UserTimelineHandler() override = default;
 
-  void WriteUserTimeline(int64_t req_id, int64_t post_id, int64_t user_id,
+  void WriteUserTimeline(BaseRpcResponse&, int64_t req_id, int64_t post_id, int64_t user_id,
       int64_t timestamp, const std::map<std::string, std::string> &carrier)
       override;
 
-  void ReadUserTimeline(std::vector<Post> &, int64_t, int64_t, int, int,
+  void ReadUserTimeline(PostListRpcResponse&, int64_t, int64_t, int, int,
                         const std::map<std::string, std::string> &) override ;
 
  private:
@@ -50,6 +50,7 @@ UserTimelineHandler::UserTimelineHandler(
 }
 
 void UserTimelineHandler::WriteUserTimeline(
+    BaseRpcResponse &response,
     int64_t req_id,
     int64_t post_id,
     int64_t user_id,
@@ -204,16 +205,19 @@ void UserTimelineHandler::WriteUserTimeline(
   span->Finish();
 
   XTRACE("UserTimelineHandler::WriteUserTimeline complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
+
 void UserTimelineHandler::ReadUserTimeline(
-    std::vector<Post> &_return,
+    PostListRpcResponse &response,
     int64_t req_id,
     int64_t user_id,
     int start,
     int stop,
     const std::map<std::string, std::string> &carrier) {
 
+  std::vector<Post> _return;
   auto baggage_it = carrier.find("baggage");
   if (baggage_it != carrier.end()) {
     SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
@@ -367,7 +371,10 @@ void UserTimelineHandler::ReadUserTimeline(
           try {
             writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
             post_client->ReadPosts(
-                _return_posts, req_id, post_ids, writer_text_map);
+                response, req_id, post_ids, writer_text_map);
+            _return_posts = response.result;
+            Baggage b = Baggage::deserialize(response.baggage);
+            JOIN_CURRENT_BAGGAGE(b);
           } catch (...) {
             _post_client_pool->Push(post_client_wrapper);
             LOG(error) << "Failed to read post from post-storage-service";
@@ -436,6 +443,8 @@ void UserTimelineHandler::ReadUserTimeline(
 
   span->Finish();
   XTRACE("UserTimelineHandler::ReadUserTimeline complete");
+  response.result = _return;
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 
 }

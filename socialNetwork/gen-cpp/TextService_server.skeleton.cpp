@@ -20,7 +20,7 @@ class TextServiceHandler : virtual public TextServiceIf {
     // Your initialization goes here
   }
 
-  void UploadText(const int64_t req_id, const std::string& text, const std::map<std::string, std::string> & carrier) {
+  void UploadText(BaseRpcResponse& _return, const int64_t req_id, const std::string& text, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("UploadText\n");
   }

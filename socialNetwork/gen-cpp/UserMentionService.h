@@ -21,7 +21,7 @@ namespace social_network {
 class UserMentionServiceIf {
  public:
   virtual ~UserMentionServiceIf() {}
-  virtual void UploadUserMentions(const int64_t req_id, const std::vector<std::string> & usernames, const std::map<std::string, std::string> & carrier) = 0;
+  virtual void UploadUserMentions(BaseRpcResponse& _return, const int64_t req_id, const std::vector<std::string> & usernames, const std::map<std::string, std::string> & carrier) = 0;
 };
 
 class UserMentionServiceIfFactory {
@@ -51,7 +51,7 @@ class UserMentionServiceIfSingletonFactory : virtual public UserMentionServiceIf
 class UserMentionServiceNull : virtual public UserMentionServiceIf {
  public:
   virtual ~UserMentionServiceNull() {}
-  void UploadUserMentions(const int64_t /* req_id */, const std::vector<std::string> & /* usernames */, const std::map<std::string, std::string> & /* carrier */) {
+  void UploadUserMentions(BaseRpcResponse& /* _return */, const int64_t /* req_id */, const std::vector<std::string> & /* usernames */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
 };
@@ -120,7 +120,8 @@ class UserMentionService_UploadUserMentions_pargs {
 };
 
 typedef struct _UserMentionService_UploadUserMentions_result__isset {
-  _UserMentionService_UploadUserMentions_result__isset() : se(false) {}
+  _UserMentionService_UploadUserMentions_result__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _UserMentionService_UploadUserMentions_result__isset;
 
@@ -133,14 +134,19 @@ class UserMentionService_UploadUserMentions_result {
   }
 
   virtual ~UserMentionService_UploadUserMentions_result() throw();
+  BaseRpcResponse success;
   ServiceException se;
 
   _UserMentionService_UploadUserMentions_result__isset __isset;
+
+  void __set_success(const BaseRpcResponse& val);
 
   void __set_se(const ServiceException& val);
 
   bool operator == (const UserMentionService_UploadUserMentions_result & rhs) const
   {
+    if (!(success == rhs.success))
+      return false;
     if (!(se == rhs.se))
       return false;
     return true;
@@ -157,7 +163,8 @@ class UserMentionService_UploadUserMentions_result {
 };
 
 typedef struct _UserMentionService_UploadUserMentions_presult__isset {
-  _UserMentionService_UploadUserMentions_presult__isset() : se(false) {}
+  _UserMentionService_UploadUserMentions_presult__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _UserMentionService_UploadUserMentions_presult__isset;
 
@@ -166,6 +173,7 @@ class UserMentionService_UploadUserMentions_presult {
 
 
   virtual ~UserMentionService_UploadUserMentions_presult() throw();
+  BaseRpcResponse* success;
   ServiceException se;
 
   _UserMentionService_UploadUserMentions_presult__isset __isset;
@@ -199,9 +207,9 @@ class UserMentionServiceClient : virtual public UserMentionServiceIf {
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> getOutputProtocol() {
     return poprot_;
   }
-  void UploadUserMentions(const int64_t req_id, const std::vector<std::string> & usernames, const std::map<std::string, std::string> & carrier);
+  void UploadUserMentions(BaseRpcResponse& _return, const int64_t req_id, const std::vector<std::string> & usernames, const std::map<std::string, std::string> & carrier);
   void send_UploadUserMentions(const int64_t req_id, const std::vector<std::string> & usernames, const std::map<std::string, std::string> & carrier);
-  void recv_UploadUserMentions();
+  void recv_UploadUserMentions(BaseRpcResponse& _return);
  protected:
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;
@@ -250,13 +258,14 @@ class UserMentionServiceMultiface : virtual public UserMentionServiceIf {
     ifaces_.push_back(iface);
   }
  public:
-  void UploadUserMentions(const int64_t req_id, const std::vector<std::string> & usernames, const std::map<std::string, std::string> & carrier) {
+  void UploadUserMentions(BaseRpcResponse& _return, const int64_t req_id, const std::vector<std::string> & usernames, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
-      ifaces_[i]->UploadUserMentions(req_id, usernames, carrier);
+      ifaces_[i]->UploadUserMentions(_return, req_id, usernames, carrier);
     }
-    ifaces_[i]->UploadUserMentions(req_id, usernames, carrier);
+    ifaces_[i]->UploadUserMentions(_return, req_id, usernames, carrier);
+    return;
   }
 
 };
@@ -289,9 +298,9 @@ class UserMentionServiceConcurrentClient : virtual public UserMentionServiceIf {
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> getOutputProtocol() {
     return poprot_;
   }
-  void UploadUserMentions(const int64_t req_id, const std::vector<std::string> & usernames, const std::map<std::string, std::string> & carrier);
+  void UploadUserMentions(BaseRpcResponse& _return, const int64_t req_id, const std::vector<std::string> & usernames, const std::map<std::string, std::string> & carrier);
   int32_t send_UploadUserMentions(const int64_t req_id, const std::vector<std::string> & usernames, const std::map<std::string, std::string> & carrier);
-  void recv_UploadUserMentions(const int32_t seqid);
+  void recv_UploadUserMentions(BaseRpcResponse& _return, const int32_t seqid);
  protected:
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;

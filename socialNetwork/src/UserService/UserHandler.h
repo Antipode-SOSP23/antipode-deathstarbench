@@ -84,6 +84,7 @@ class UserHandler : public UserServiceIf {
       ClientPool<ThriftClient<SocialGraphServiceClient>> *);
   ~UserHandler() override = default;
   void RegisterUser(
+      BaseRpcResponse &,
       int64_t,
       const std::string &,
       const std::string &,
@@ -91,6 +92,7 @@ class UserHandler : public UserServiceIf {
       const std::string &,
       const std::map<std::string, std::string> &) override;
   void RegisterUserWithId(
+      BaseRpcResponse &,
       int64_t,
       const std::string &,
       const std::string &,
@@ -100,21 +102,24 @@ class UserHandler : public UserServiceIf {
       const std::map<std::string, std::string> &) override;
 
   void UploadCreatorWithUserId(
+      BaseRpcResponse &,
       int64_t,
       int64_t,
       const std::string &,
       const std::map<std::string, std::string> &) override;
   void UploadCreatorWithUsername(
+      BaseRpcResponse &,
       int64_t,
       const std::string &,
       const std::map<std::string, std::string> &) override;
   void Login(
-      std::string &,
+      LoginRpcResponse&,
       int64_t,
       const std::string &,
       const std::string &,
       const std::map<std::string, std::string> &) override;
-  int64_t GetUserId(
+  void GetUserId(
+      UserIdRpcResponse&,
       int64_t,
       const std::string &,
       const std::map<std::string, std::string> &) override;
@@ -148,6 +153,7 @@ UserHandler::UserHandler(
 }
 
 void UserHandler::RegisterUserWithId(
+    BaseRpcResponse &response,
     const int64_t req_id,
     const std::string &first_name,
     const std::string &last_name,
@@ -271,7 +277,9 @@ void UserHandler::RegisterUserWithId(
     auto social_graph_client = social_graph_client_wrapper->GetClient();
     try {
       writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
-      social_graph_client->InsertUser(req_id, user_id, writer_text_map);
+      social_graph_client->InsertUser(response, req_id, user_id, writer_text_map);
+      Baggage b = Baggage::deserialize(response.baggage);
+      JOIN_CURRENT_BAGGAGE(b);
     } catch (...) {
       _social_graph_client_pool->Push(social_graph_client_wrapper);
       LOG(error) << "Failed to insert user to social-graph-client";
@@ -283,10 +291,12 @@ void UserHandler::RegisterUserWithId(
   
   span->Finish();
   XTRACE("UserHandler::RegisterUserWithUserId complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 
 void UserHandler::RegisterUser(
+    BaseRpcResponse &response,
     const int64_t req_id,
     const std::string &first_name,
     const std::string &last_name,
@@ -441,7 +451,9 @@ void UserHandler::RegisterUser(
     auto social_graph_client = social_graph_client_wrapper->GetClient();
     try {
       writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
-      social_graph_client->InsertUser(req_id, user_id, writer_text_map);
+      social_graph_client->InsertUser(response, req_id, user_id, writer_text_map);
+      Baggage b = Baggage::deserialize(response.baggage);
+      JOIN_CURRENT_BAGGAGE(b);
     } catch (...) {
       _social_graph_client_pool->Push(social_graph_client_wrapper);
       LOG(error) << "Failed to insert user to social-graph-service";
@@ -454,10 +466,12 @@ void UserHandler::RegisterUser(
 
   span->Finish();
   XTRACE("UserService::RegisterUser complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 
 void UserHandler::UploadCreatorWithUsername(
+    BaseRpcResponse &response,
     const int64_t req_id,
     const std::string &username,
     const std::map<std::string, std::string> & carrier) {
@@ -624,7 +638,9 @@ void UserHandler::UploadCreatorWithUsername(
     auto compose_post_client = compose_post_client_wrapper->GetClient();
     try {
       writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
-      compose_post_client->UploadCreator(req_id, creator, writer_text_map);
+      compose_post_client->UploadCreator(response, req_id, creator, writer_text_map);
+      Baggage b = Baggage::deserialize(response.baggage);
+      JOIN_CURRENT_BAGGAGE(b);
     } catch (...) {
       _compose_client_pool->Push(compose_post_client_wrapper);
       LOG(error) << "Failed to upload creator to compose-post-service";
@@ -669,10 +685,12 @@ void UserHandler::UploadCreatorWithUsername(
   }
   span->Finish();
   XTRACE("UserHandler::UploadCreatorWithUsername complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 
 void UserHandler::UploadCreatorWithUserId(
+    BaseRpcResponse &response,
     int64_t req_id,
     int64_t user_id,
     const std::string &username,
@@ -712,7 +730,9 @@ void UserHandler::UploadCreatorWithUserId(
   auto compose_post_client = compose_post_client_wrapper->GetClient();
   try {
     writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
-    compose_post_client->UploadCreator(req_id, creator, writer_text_map);
+    compose_post_client->UploadCreator(response, req_id, creator, writer_text_map);
+    Baggage b = Baggage::deserialize(response.baggage);
+    JOIN_CURRENT_BAGGAGE(b);
   } catch (...) {
     _compose_client_pool->Push(compose_post_client_wrapper);
     LOG(error) << "Failed to upload creator to compose-post-service";
@@ -724,17 +744,19 @@ void UserHandler::UploadCreatorWithUserId(
 
   span->Finish();
   XTRACE("UploadCreatorWithUserId complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 
 
 void UserHandler::Login(
-    std::string & _return,
+    LoginRpcResponse& response,
     int64_t req_id,
     const std::string &username,
     const std::string &password,
     const std::map<std::string, std::string> &carrier) {
 
+  std::string _return;
   auto baggage_it = carrier.find("baggage");
   if (baggage_it != carrier.end()) {
     SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
@@ -964,10 +986,12 @@ void UserHandler::Login(
   }
   span->Finish();
   XTRACE("UserService::Login complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 
-int64_t UserHandler::GetUserId(
+void UserHandler::GetUserId(
+    UserIdRpcResponse& response,
     int64_t req_id,
     const std::string &username,
     const std::map<std::string, std::string> &carrier) {
@@ -1150,8 +1174,8 @@ int64_t UserHandler::GetUserId(
 
   span->Finish();
   XTRACE("UserHandler::GetUserId complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
-  return user_id;
 }
 
 /*

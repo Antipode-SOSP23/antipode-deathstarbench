@@ -20,7 +20,7 @@ class MediaServiceHandler : virtual public MediaServiceIf {
     // Your initialization goes here
   }
 
-  void UploadMedia(const int64_t req_id, const std::vector<std::string> & media_types, const std::vector<int64_t> & media_ids, const std::map<std::string, std::string> & carrier) {
+  void UploadMedia(BaseRpcResponse& _return, const int64_t req_id, const std::vector<std::string> & media_types, const std::vector<int64_t> & media_ids, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("UploadMedia\n");
   }

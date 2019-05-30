@@ -25,13 +25,13 @@ class PostStorageHandler : public PostStorageServiceIf {
   PostStorageHandler(memcached_pool_st *, mongoc_client_pool_t *);
   ~PostStorageHandler() override = default;
 
-  void StorePost(int64_t req_id, const Post &post,
+  void StorePost(BaseRpcResponse& response, int64_t req_id, const Post &post,
       const std::map<std::string, std::string> &carrier) override;
 
-  void ReadPost(Post &_return, int64_t req_id, int64_t post_id,
+  void ReadPost(PostRpcResponse& response, int64_t req_id, int64_t post_id,
                  const std::map<std::string, std::string> &carrier) override;
 
-  void ReadPosts(std::vector<Post> &_return, int64_t req_id,
+  void ReadPosts(PostListRpcResponse& response, int64_t req_id,
       const std::vector<int64_t> &post_ids,
       const std::map<std::string, std::string> &carrier) override;
 
@@ -48,6 +48,7 @@ PostStorageHandler::PostStorageHandler(
 }
 
 void PostStorageHandler::StorePost(
+    BaseRpcResponse &response,
     int64_t req_id, const social_network::Post &post,
     const std::map<std::string, std::string> &carrier) {
 
@@ -180,16 +181,18 @@ void PostStorageHandler::StorePost(
 
   span->Finish();
   XTRACE("PostStorageHandler::ReadPost complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 
 
 void PostStorageHandler::ReadPost(
-    Post &_return,
+    PostRpcResponse& response,
     int64_t req_id,
     int64_t post_id,
     const std::map<std::string, std::string> &carrier) {
 
+  Post _return;
   auto baggage_it = carrier.find("baggage");
   if (baggage_it != carrier.end()) {
     SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
@@ -410,14 +413,17 @@ void PostStorageHandler::ReadPost(
   span->Finish();
 
   XTRACE("PostStorageHandler::ReadPost complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
+  response.result = _return;
   DELETE_CURRENT_BAGGAGE();
 }
 void PostStorageHandler::ReadPosts(
-    std::vector<Post> &_return,
+    PostListRpcResponse& response,
     int64_t req_id,
     const std::vector<int64_t> &post_ids,
     const std::map<std::string, std::string> &carrier) {
 
+  std::vector<Post> _return;
   auto baggage_it = carrier.find("baggage");
   if (baggage_it != carrier.end()) {
     SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
@@ -731,6 +737,8 @@ void PostStorageHandler::ReadPosts(
   }
 
   XTRACE("PostStorageHandler::ReadPosts complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
+  response.result = _return;
   DELETE_CURRENT_BAGGAGE();
 }
 

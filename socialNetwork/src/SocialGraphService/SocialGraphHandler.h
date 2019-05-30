@@ -34,19 +34,19 @@ class SocialGraphHandler : public SocialGraphServiceIf {
       ClientPool<RedisClient> *,
       ClientPool<ThriftClient<UserServiceClient>> *);
   ~SocialGraphHandler() override = default;
-  void GetFollowers(std::vector<int64_t> &, int64_t, int64_t,
+  void GetFollowers(UidListRpcResponse &, int64_t, int64_t,
                     const std::map<std::string, std::string> &) override;
-  void GetFollowees(std::vector<int64_t> &, int64_t, int64_t,
+  void GetFollowees(UidListRpcResponse &, int64_t, int64_t,
                     const std::map<std::string, std::string> &) override;
-  void Follow(int64_t, int64_t, int64_t,
+  void Follow(BaseRpcResponse &, int64_t, int64_t, int64_t,
               const std::map<std::string, std::string> &) override;
-  void Unfollow(int64_t, int64_t, int64_t,
+  void Unfollow(BaseRpcResponse &, int64_t, int64_t, int64_t,
                 const std::map<std::string, std::string> &) override;
-  void FollowWithUsername(int64_t, const std::string &, const std::string &,
+  void FollowWithUsername(BaseRpcResponse &, int64_t, const std::string &, const std::string &,
               const std::map<std::string, std::string> &) override;
-  void UnfollowWithUsername(int64_t, const std::string &, const std::string &,
+  void UnfollowWithUsername(BaseRpcResponse &, int64_t, const std::string &, const std::string &,
                 const std::map<std::string, std::string> &) override;
-  void InsertUser(int64_t, int64_t,
+  void InsertUser(BaseRpcResponse&, int64_t, int64_t,
                   const std::map<std::string, std::string> &) override;
 
 
@@ -66,6 +66,7 @@ SocialGraphHandler::SocialGraphHandler(
 }
 
 void SocialGraphHandler::Follow(
+    BaseRpcResponse &response,
     int64_t req_id,
     int64_t user_id,
     int64_t followee_id,
@@ -300,10 +301,12 @@ void SocialGraphHandler::Follow(
 
   span->Finish();
   XTRACE("SocialGraphHandler::Follow complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 
 void SocialGraphHandler::Unfollow(
+    BaseRpcResponse& response,
     int64_t req_id,
     int64_t user_id,
     int64_t followee_id,
@@ -507,13 +510,15 @@ void SocialGraphHandler::Unfollow(
 
   span->Finish();
   XTRACE("SocialGraphHandler::Unfollow complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 
 void SocialGraphHandler::GetFollowers(
-    std::vector<int64_t> &_return, const int64_t req_id, const int64_t user_id,
+    UidListRpcResponse &response, const int64_t req_id, const int64_t user_id,
     const std::map<std::string, std::string> &carrier) {
 
+  std::vector<int64_t> _return;
   auto baggage_it = carrier.find("baggage");
   if (baggage_it != carrier.end()) {
     SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
@@ -667,13 +672,16 @@ void SocialGraphHandler::GetFollowers(
   }
   span->Finish();
   XTRACE("SocialGraphHandler::GetFollowers complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
+  response.result = _return;
   DELETE_CURRENT_BAGGAGE();
 }
 
 void SocialGraphHandler::GetFollowees(
-    std::vector<int64_t> &_return, const int64_t req_id, const int64_t user_id,
+    UidListRpcResponse& response, const int64_t req_id, const int64_t user_id,
     const std::map<std::string, std::string> &carrier) {
 
+  std::vector<int64_t> _return;
   auto baggage_it = carrier.find("baggage");
   if (baggage_it != carrier.end()) {
     SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
@@ -828,10 +836,13 @@ void SocialGraphHandler::GetFollowees(
   }
   span->Finish();
   XTRACE("SocialGraphHandler::GetFollowees complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
+  response.result = _return;
   DELETE_CURRENT_BAGGAGE();
 }
 
 void SocialGraphHandler::InsertUser(
+    BaseRpcResponse& response,
     int64_t req_id, int64_t user_id,
     const std::map<std::string, std::string> &carrier) {
 
@@ -906,10 +917,12 @@ void SocialGraphHandler::InsertUser(
 
   span->Finish();
   XTRACE("SocialGraphHandler::InsertUser complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 
 void SocialGraphHandler::FollowWithUsername(
+    BaseRpcResponse &response,
     int64_t req_id,
     const std::string &user_name,
     const std::string &followee_name,
@@ -951,7 +964,11 @@ void SocialGraphHandler::FollowWithUsername(
         int64_t _return;
         try {
           writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
-          _return = user_client->GetUserId(req_id, user_name, writer_text_map);
+          UserIdRpcResponse uid_response;
+          user_client->GetUserId(uid_response, req_id, user_name, writer_text_map);
+          Baggage b = Baggage::deserialize(uid_response.baggage);
+          JOIN_CURRENT_BAGGAGE(b);
+          _return = uid_response.result;
         } catch (...) {
           _user_service_client_pool->Push(user_client_wrapper);
           LOG(error) << "Failed to get user_id from user-service";
@@ -978,7 +995,11 @@ void SocialGraphHandler::FollowWithUsername(
         int64_t _return;
         try {
           writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
-          _return = user_client->GetUserId(req_id, followee_name, writer_text_map);
+          UserIdRpcResponse uid_response;
+          user_client->GetUserId(uid_response,req_id, followee_name, writer_text_map);
+          Baggage b = Baggage::deserialize(uid_response.baggage);
+          JOIN_CURRENT_BAGGAGE(b);
+          _return = uid_response.result;
         } catch (...) {
           _user_service_client_pool->Push(user_client_wrapper);
           LOG(error) << "Failed to get user_id from user-service";
@@ -1003,17 +1024,21 @@ void SocialGraphHandler::FollowWithUsername(
   if (user_id >= 0 && followee_id >= 0) {
     try {
       writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
-      Follow(req_id, user_id, followee_id, writer_text_map);
+      Follow(response, req_id, user_id, followee_id, writer_text_map);
+      Baggage b = Baggage::deserialize(response.baggage);
+      JOIN_CURRENT_BAGGAGE(b);
     } catch (...) {
       throw;
     }
   }
   span->Finish();
   XTRACE("SocialGraphHandler::FollowWithUsername complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 
 void SocialGraphHandler::UnfollowWithUsername(
+    BaseRpcResponse& response,
     int64_t req_id,
     const std::string &user_name,
     const std::string &followee_name,
@@ -1055,7 +1080,11 @@ void SocialGraphHandler::UnfollowWithUsername(
         int64_t _return;
         try {
           writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
-          _return = user_client->GetUserId(req_id, user_name, writer_text_map);
+          UserIdRpcResponse uid_response;
+          user_client->GetUserId(uid_response, req_id, user_name, writer_text_map);
+          Baggage b = Baggage::deserialize(uid_response.baggage);
+          JOIN_CURRENT_BAGGAGE(b);
+          _return = uid_response.result;
         } catch (...) {
           _user_service_client_pool->Push(user_client_wrapper);
           LOG(error) << "Failed to get user_id from user-service";
@@ -1082,7 +1111,11 @@ void SocialGraphHandler::UnfollowWithUsername(
         int64_t _return;
         try {
           writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
-          _return = user_client->GetUserId(req_id, followee_name, writer_text_map);
+          UserIdRpcResponse uid_response;
+          user_client->GetUserId(uid_response, req_id, followee_name, writer_text_map);
+          Baggage b = Baggage::deserialize(uid_response.baggage);
+          JOIN_CURRENT_BAGGAGE(b);
+          _return = uid_response.result;
         } catch (...) {
           _user_service_client_pool->Push(user_client_wrapper);
           LOG(error) << "Failed to get user_id from user-service";
@@ -1107,13 +1140,16 @@ void SocialGraphHandler::UnfollowWithUsername(
   if (user_id >= 0 && followee_id >= 0) {
     try {
       writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
-      Unfollow(req_id, user_id, followee_id, writer_text_map);
+      Unfollow(response, req_id, user_id, followee_id, writer_text_map);
+      Baggage b = Baggage::deserialize(response.baggage);
+      JOIN_CURRENT_BAGGAGE(b);
     } catch (...) {
       throw;
     }
   }
   span->Finish();
   XTRACE("SocialGraphService::UnfollowWithUsername complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 

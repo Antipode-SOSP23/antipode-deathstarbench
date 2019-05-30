@@ -35,7 +35,7 @@ class MediaHandler : public MediaServiceIf {
   explicit MediaHandler(ClientPool<ThriftClient<ComposePostServiceClient>> *);
   ~MediaHandler() override = default;
 
-  void UploadMedia(int64_t, const std::vector<std::string> &,
+  void UploadMedia(BaseRpcResponse& , int64_t, const std::vector<std::string> &,
       const std::vector<int64_t> &, const std::map<std::string,
       std::string> &) override;
 
@@ -49,6 +49,7 @@ MediaHandler::MediaHandler(
 }
 
 void MediaHandler::UploadMedia(
+    BaseRpcResponse& response,
     int64_t req_id,
     const std::vector<std::string> &media_types,
     const std::vector<int64_t> &media_ids,
@@ -103,7 +104,10 @@ void MediaHandler::UploadMedia(
   auto compose_post_client = compose_post_client_wrapper->GetClient();
   try {
     writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
-    compose_post_client->UploadMedia(req_id, media, writer_text_map);
+    BaseRpcResponse cp_response;
+    compose_post_client->UploadMedia(cp_response, req_id, media, writer_text_map);
+    Baggage b = Baggage::deserialize(cp_response.baggage);
+    JOIN_CURRENT_BAGGAGE(b);
   } catch (...) {
     _compose_client_pool->Push(compose_post_client_wrapper);
     LOG(error) << "Failed to upload media to compose-post-service";
@@ -114,6 +118,7 @@ void MediaHandler::UploadMedia(
   span->Finish();
 
   XTRACE("MediaHandler::UploadMedia complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 

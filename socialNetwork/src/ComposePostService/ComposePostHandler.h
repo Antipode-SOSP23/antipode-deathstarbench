@@ -39,23 +39,23 @@ class ComposePostHandler : public ComposePostServiceIf {
       ClientPool<RabbitmqClient> *rabbitmq_client_pool);
   ~ComposePostHandler() override = default;
 
-  void UploadText(int64_t req_id, const std::string& text,
+  void UploadText(BaseRpcResponse& response, int64_t req_id, const std::string& text,
       const std::map<std::string, std::string> & carrier) override;
 
-  void UploadMedia(int64_t req_id, const std::vector<Media>& media,
+  void UploadMedia(BaseRpcResponse& response, int64_t req_id, const std::vector<Media>& media,
       const std::map<std::string, std::string> & carrier) override;
 
-  void UploadUniqueId(int64_t req_id, const int64_t post_id,
+  void UploadUniqueId(BaseRpcResponse& response, int64_t req_id, const int64_t post_id,
       const PostType::type post_type,
       const std::map<std::string, std::string> & carrier) override;
 
-  void UploadCreator(int64_t req_id, const Creator& creator,
+  void UploadCreator(BaseRpcResponse& response, int64_t req_id, const Creator& creator,
       const std::map<std::string, std::string> & carrier) override;
 
-  void UploadUrls(int64_t req_id, const std::vector<Url> & urls,
+  void UploadUrls(BaseRpcResponse& response, int64_t req_id, const std::vector<Url> & urls,
       const std::map<std::string, std::string> & carrier) override;
 
-  void UploadUserMentions(const int64_t req_id,
+  void UploadUserMentions(BaseRpcResponse& response, const int64_t req_id,
       const std::vector<UserMention> & user_mentions,
       const std::map<std::string, std::string> & carrier) override;
 
@@ -107,6 +107,7 @@ ComposePostHandler::ComposePostHandler(
 }
 
 void ComposePostHandler::UploadCreator(
+    BaseRpcResponse& response,
     int64_t req_id,
     const Creator &creator,
     const std::map<std::string, std::string> &carrier) {
@@ -175,10 +176,12 @@ void ComposePostHandler::UploadCreator(
   span->Finish();
   XTRACE("ComposePostHandler::Upload Creator complete");
 
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 
 void ComposePostHandler::UploadText(
+    BaseRpcResponse& response,
     int64_t req_id,
     const std::string &text,
     const std::map<std::string, std::string> &carrier) {
@@ -242,10 +245,12 @@ void ComposePostHandler::UploadText(
   span->Finish();
 
   XTRACE("ComposePostHandler::UploadText Complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 
 void ComposePostHandler::UploadMedia(
+    BaseRpcResponse& response,
     int64_t req_id,
     const std::vector<Media> &media,
     const std::map<std::string, std::string> &carrier) {
@@ -320,10 +325,12 @@ void ComposePostHandler::UploadMedia(
   span->Finish();
 
   XTRACE("ComposePostService::UploadMedia complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 
 void ComposePostHandler::UploadUniqueId(
+    BaseRpcResponse& response,
     int64_t req_id,
     const int64_t post_id,
     const PostType::type post_type,
@@ -392,10 +399,12 @@ void ComposePostHandler::UploadUniqueId(
   span->Finish();
 
   XTRACE("ComposePostService::UploadUniqueId complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 
 void ComposePostHandler::UploadUrls(
+    BaseRpcResponse& response,
     int64_t req_id,
     const std::vector<Url> &urls,
     const std::map<std::string, std::string> &carrier) {
@@ -470,10 +479,12 @@ void ComposePostHandler::UploadUrls(
   span->Finish();
 
   XTRACE("ComposePostService::UploadUrls complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 
 void ComposePostHandler::UploadUserMentions(
+    BaseRpcResponse& response,
     const int64_t req_id,
     const std::vector<UserMention> &user_mentions,
     const std::map<std::string, std::string> &carrier) {
@@ -550,6 +561,7 @@ void ComposePostHandler::UploadUserMentions(
   span->Finish();
 
   XTRACE("ComposePostService::UploadUserMentions complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 
@@ -755,7 +767,10 @@ void ComposePostHandler::_UploadPostHelper(
     auto post_storage_client = post_storage_client_wrapper->GetClient();
     try {
       writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
-      post_storage_client->StorePost(req_id, post, writer_text_map);
+      BaseRpcResponse response;
+      post_storage_client->StorePost(response,req_id, post, writer_text_map);
+      Baggage b = Baggage::deserialize(response.baggage);
+      JOIN_CURRENT_BAGGAGE(b);
     } catch (...) {
       _post_storage_client_pool->Push(post_storage_client_wrapper);
       LOG(error) << "Failed to store post to post-storage-service";
@@ -768,6 +783,8 @@ void ComposePostHandler::_UploadPostHelper(
     XTRACE("Failed to connect to post-storage-service");
     _post_storage_teptr = std::current_exception();
   }
+  baggage = GET_CURRENT_BAGGAGE();
+  DELETE_CURRENT_BAGGAGE();
 }
 
 void ComposePostHandler::_UploadUserTimelineHelper(
@@ -793,8 +810,11 @@ void ComposePostHandler::_UploadUserTimelineHelper(
     auto user_timeline_client = user_timeline_client_wrapper->GetClient();
     try {
       writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
-      user_timeline_client->WriteUserTimeline(req_id, post_id, user_id,
+      BaseRpcResponse response;
+      user_timeline_client->WriteUserTimeline(response, req_id, post_id, user_id,
                                               timestamp, writer_text_map);
+      Baggage b = Baggage::deserialize(response.baggage);
+      JOIN_CURRENT_BAGGAGE(b);
     } catch (...) {
       _user_timeline_client_pool->Push(user_timeline_client_wrapper);
       throw;
@@ -805,6 +825,8 @@ void ComposePostHandler::_UploadUserTimelineHelper(
     XTRACE("Failed to write user-timeline to user-timeline-service");
     _user_timeline_teptr = std::current_exception();
   }
+  baggage = GET_CURRENT_BAGGAGE();
+  DELETE_CURRENT_BAGGAGE();
 }
 
 void ComposePostHandler::_UploadHomeTimelineHelper(
@@ -858,6 +880,8 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
     XTRACE("Failed to connect to home-timeline-rabbitmq");
     _rabbitmq_teptr = std::current_exception();
   }
+  baggage = GET_CURRENT_BAGGAGE();
+  DELETE_CURRENT_BAGGAGE();
 }
 
 
