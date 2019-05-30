@@ -62,7 +62,7 @@ class Client(Iface):
 
         """
         self.send_WriteUserTimeline(req_id, post_id, user_id, timestamp, carrier)
-        self.recv_WriteUserTimeline()
+        return self.recv_WriteUserTimeline()
 
     def send_WriteUserTimeline(self, req_id, post_id, user_id, timestamp, carrier):
         self._oprot.writeMessageBegin('WriteUserTimeline', TMessageType.CALL, self._seqid)
@@ -87,9 +87,11 @@ class Client(Iface):
         result = WriteUserTimeline_result()
         result.read(iprot)
         iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
         if result.se is not None:
             raise result.se
-        return
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "WriteUserTimeline failed: unknown result")
 
     def ReadUserTimeline(self, req_id, user_id, start, stop, carrier):
         """
@@ -162,7 +164,7 @@ class Processor(Iface, TProcessor):
         iprot.readMessageEnd()
         result = WriteUserTimeline_result()
         try:
-            self._handler.WriteUserTimeline(args.req_id, args.post_id, args.user_id, args.timestamp, args.carrier)
+            result.success = self._handler.WriteUserTimeline(args.req_id, args.post_id, args.user_id, args.timestamp, args.carrier)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -262,11 +264,11 @@ class WriteUserTimeline_args(object):
             elif fid == 5:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype226, _vtype227, _size225) = iprot.readMapBegin()
-                    for _i229 in range(_size225):
-                        _key230 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val231 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key230] = _val231
+                    (_ktype233, _vtype234, _size232) = iprot.readMapBegin()
+                    for _i236 in range(_size232):
+                        _key237 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val238 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key237] = _val238
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -299,9 +301,9 @@ class WriteUserTimeline_args(object):
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 5)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter232, viter233 in self.carrier.items():
-                oprot.writeString(kiter232.encode('utf-8') if sys.version_info[0] == 2 else kiter232)
-                oprot.writeString(viter233.encode('utf-8') if sys.version_info[0] == 2 else viter233)
+            for kiter239, viter240 in self.carrier.items():
+                oprot.writeString(kiter239.encode('utf-8') if sys.version_info[0] == 2 else kiter239)
+                oprot.writeString(viter240.encode('utf-8') if sys.version_info[0] == 2 else viter240)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -334,12 +336,14 @@ WriteUserTimeline_args.thrift_spec = (
 class WriteUserTimeline_result(object):
     """
     Attributes:
+     - success
      - se
 
     """
 
 
-    def __init__(self, se=None,):
+    def __init__(self, success=None, se=None,):
+        self.success = success
         self.se = se
 
     def read(self, iprot):
@@ -351,7 +355,13 @@ class WriteUserTimeline_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = BaseRpcResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
                 if ftype == TType.STRUCT:
                     self.se = ServiceException()
                     self.se.read(iprot)
@@ -367,6 +377,10 @@ class WriteUserTimeline_result(object):
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
         oprot.writeStructBegin('WriteUserTimeline_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
             self.se.write(oprot)
@@ -389,7 +403,7 @@ class WriteUserTimeline_result(object):
         return not (self == other)
 all_structs.append(WriteUserTimeline_result)
 WriteUserTimeline_result.thrift_spec = (
-    None,  # 0
+    (0, TType.STRUCT, 'success', [BaseRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 
@@ -445,11 +459,11 @@ class ReadUserTimeline_args(object):
             elif fid == 5:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype235, _vtype236, _size234) = iprot.readMapBegin()
-                    for _i238 in range(_size234):
-                        _key239 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val240 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key239] = _val240
+                    (_ktype242, _vtype243, _size241) = iprot.readMapBegin()
+                    for _i245 in range(_size241):
+                        _key246 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val247 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key246] = _val247
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -482,9 +496,9 @@ class ReadUserTimeline_args(object):
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 5)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter241, viter242 in self.carrier.items():
-                oprot.writeString(kiter241.encode('utf-8') if sys.version_info[0] == 2 else kiter241)
-                oprot.writeString(viter242.encode('utf-8') if sys.version_info[0] == 2 else viter242)
+            for kiter248, viter249 in self.carrier.items():
+                oprot.writeString(kiter248.encode('utf-8') if sys.version_info[0] == 2 else kiter248)
+                oprot.writeString(viter249.encode('utf-8') if sys.version_info[0] == 2 else viter249)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -537,14 +551,9 @@ class ReadUserTimeline_result(object):
             if ftype == TType.STOP:
                 break
             if fid == 0:
-                if ftype == TType.LIST:
-                    self.success = []
-                    (_etype246, _size243) = iprot.readListBegin()
-                    for _i247 in range(_size243):
-                        _elem248 = Post()
-                        _elem248.read(iprot)
-                        self.success.append(_elem248)
-                    iprot.readListEnd()
+                if ftype == TType.STRUCT:
+                    self.success = PostListRpcResponse()
+                    self.success.read(iprot)
                 else:
                     iprot.skip(ftype)
             elif fid == 1:
@@ -564,11 +573,8 @@ class ReadUserTimeline_result(object):
             return
         oprot.writeStructBegin('ReadUserTimeline_result')
         if self.success is not None:
-            oprot.writeFieldBegin('success', TType.LIST, 0)
-            oprot.writeListBegin(TType.STRUCT, len(self.success))
-            for iter249 in self.success:
-                iter249.write(oprot)
-            oprot.writeListEnd()
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
             oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
@@ -592,7 +598,7 @@ class ReadUserTimeline_result(object):
         return not (self == other)
 all_structs.append(ReadUserTimeline_result)
 ReadUserTimeline_result.thrift_spec = (
-    (0, TType.LIST, 'success', (TType.STRUCT, [Post, None], False), None, ),  # 0
+    (0, TType.STRUCT, 'success', [PostListRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 fix_spec(all_structs)

@@ -15,125 +15,15 @@ local __TClient = Thrift[6]
 local __TProcessor = Thrift[7]
 local ttype = Thrift[8]
 local ttable_size = Thrift[10]
-local social_network_ttypes = require 'social_network_ttypes'
-local ServiceException = social_network_ttypes[4]
+require 'social_network_ttypes'
 
--- HELPER FUNCTIONS AND STRUCTURES
-
-local UploadUniqueId_args = __TObject:new{
-  req_id,
-  post_type,
-  carrier
-}
-
-function UploadUniqueId_args:read(iprot)
-  iprot:readStructBegin()
-  while true do
-    local fname, ftype, fid = iprot:readFieldBegin()
-    if ftype == TType.STOP then
-      break
-    elseif fid == 1 then
-      if ftype == TType.I64 then
-        self.req_id = iprot:readI64()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 2 then
-      if ftype == TType.I32 then
-        self.post_type = iprot:readI32()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 3 then
-      if ftype == TType.MAP then
-        self.carrier = {}
-        local _ktype19, _vtype20, _size18 = iprot:readMapBegin()
-        for _i=1,_size18 do
-          local _key22 = iprot:readString()
-          local _val23 = iprot:readString()
-          self.carrier[_key22] = _val23
-        end
-        iprot:readMapEnd()
-      else
-        iprot:skip(ftype)
-      end
-    else
-      iprot:skip(ftype)
-    end
-    iprot:readFieldEnd()
-  end
-  iprot:readStructEnd()
-end
-
-function UploadUniqueId_args:write(oprot)
-  oprot:writeStructBegin('UploadUniqueId_args')
-  if self.req_id ~= nil then
-    oprot:writeFieldBegin('req_id', TType.I64, 1)
-    oprot:writeI64(self.req_id)
-    oprot:writeFieldEnd()
-  end
-  if self.post_type ~= nil then
-    oprot:writeFieldBegin('post_type', TType.I32, 2)
-    oprot:writeI32(self.post_type)
-    oprot:writeFieldEnd()
-  end
-  if self.carrier ~= nil then
-    oprot:writeFieldBegin('carrier', TType.MAP, 3)
-    oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
-    for kiter24,viter25 in pairs(self.carrier) do
-      oprot:writeString(kiter24)
-      oprot:writeString(viter25)
-    end
-    oprot:writeMapEnd()
-    oprot:writeFieldEnd()
-  end
-  oprot:writeFieldStop()
-  oprot:writeStructEnd()
-end
-
-local UploadUniqueId_result = __TObject:new{
-  se
-}
-
-function UploadUniqueId_result:read(iprot)
-  iprot:readStructBegin()
-  while true do
-    local fname, ftype, fid = iprot:readFieldBegin()
-    if ftype == TType.STOP then
-      break
-    elseif fid == 1 then
-      if ftype == TType.STRUCT then
-        self.se = ServiceException:new{}
-        self.se:read(iprot)
-      else
-        iprot:skip(ftype)
-      end
-    else
-      iprot:skip(ftype)
-    end
-    iprot:readFieldEnd()
-  end
-  iprot:readStructEnd()
-end
-
-function UploadUniqueId_result:write(oprot)
-  oprot:writeStructBegin('UploadUniqueId_result')
-  if self.se ~= nil then
-    oprot:writeFieldBegin('se', TType.STRUCT, 1)
-    self.se:write(oprot)
-    oprot:writeFieldEnd()
-  end
-  oprot:writeFieldStop()
-  oprot:writeStructEnd()
-end
-
-local UniqueIdServiceClient = __TObject.new(__TClient, {
+UniqueIdServiceClient = __TObject.new(__TClient, {
   __type = 'UniqueIdServiceClient'
 })
 
 function UniqueIdServiceClient:UploadUniqueId(req_id, post_type, carrier)
   self:send_UploadUniqueId(req_id, post_type, carrier)
-  self:recv_UploadUniqueId(req_id, post_type, carrier)
+  return self:recv_UploadUniqueId(req_id, post_type, carrier)
 end
 
 function UniqueIdServiceClient:send_UploadUniqueId(req_id, post_type, carrier)
@@ -158,16 +48,19 @@ function UniqueIdServiceClient:recv_UploadUniqueId(req_id, post_type, carrier)
   local result = UploadUniqueId_result:new{}
   result:read(self.iprot)
   self.iprot:readMessageEnd()
-  if result.se then
+  if result.success ~= nil then
+    return result.success
+  elseif result.se then
     error(result.se)
   end
+  error(TApplicationException:new{errorCode = TApplicationException.MISSING_RESULT})
 end
-local UniqueIdServiceIface = __TObject:new{
+UniqueIdServiceIface = __TObject:new{
   __type = 'UniqueIdServiceIface'
 }
 
 
-local UniqueIdServiceProcessor = __TObject.new(__TProcessor
+UniqueIdServiceProcessor = __TObject.new(__TProcessor
 , {
  __type = 'UniqueIdServiceProcessor'
 })
@@ -209,6 +102,128 @@ function UniqueIdServiceProcessor:process_UploadUniqueId(seqid, iprot, oprot, se
   result:write(oprot)
   oprot:writeMessageEnd()
   oprot.trans:flush()
+end
+
+-- HELPER FUNCTIONS AND STRUCTURES
+
+UploadUniqueId_args = __TObject:new{
+  req_id,
+  post_type,
+  carrier
+}
+
+function UploadUniqueId_args:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 1 then
+      if ftype == TType.I64 then
+        self.req_id = iprot:readI64()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 2 then
+      if ftype == TType.I32 then
+        self.post_type = iprot:readI32()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 3 then
+      if ftype == TType.MAP then
+        self.carrier = {}
+        local _ktype37, _vtype38, _size36 = iprot:readMapBegin() 
+        for _i=1,_size36 do
+          local _key40 = iprot:readString()
+          local _val41 = iprot:readString()
+          self.carrier[_key40] = _val41
+        end
+        iprot:readMapEnd()
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function UploadUniqueId_args:write(oprot)
+  oprot:writeStructBegin('UploadUniqueId_args')
+  if self.req_id ~= nil then
+    oprot:writeFieldBegin('req_id', TType.I64, 1)
+    oprot:writeI64(self.req_id)
+    oprot:writeFieldEnd()
+  end
+  if self.post_type ~= nil then
+    oprot:writeFieldBegin('post_type', TType.I32, 2)
+    oprot:writeI32(self.post_type)
+    oprot:writeFieldEnd()
+  end
+  if self.carrier ~= nil then
+    oprot:writeFieldBegin('carrier', TType.MAP, 3)
+    oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
+    for kiter42,viter43 in pairs(self.carrier) do
+      oprot:writeString(kiter42)
+      oprot:writeString(viter43)
+    end
+    oprot:writeMapEnd()
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+UploadUniqueId_result = __TObject:new{
+  success,
+  se
+}
+
+function UploadUniqueId_result:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 0 then
+      if ftype == TType.STRUCT then
+        self.success = BaseRpcResponse:new{}
+        self.success:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 1 then
+      if ftype == TType.STRUCT then
+        self.se = ServiceException:new{}
+        self.se:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function UploadUniqueId_result:write(oprot)
+  oprot:writeStructBegin('UploadUniqueId_result')
+  if self.success ~= nil then
+    oprot:writeFieldBegin('success', TType.STRUCT, 0)
+    self.success:write(oprot)
+    oprot:writeFieldEnd()
+  end
+  if self.se ~= nil then
+    oprot:writeFieldBegin('se', TType.STRUCT, 1)
+    self.se:write(oprot)
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
 end
 
 return UniqueIdServiceClient

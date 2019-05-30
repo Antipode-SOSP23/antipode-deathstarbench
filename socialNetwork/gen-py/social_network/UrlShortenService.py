@@ -233,21 +233,21 @@ class UploadUrls_args(object):
             elif fid == 2:
                 if ftype == TType.LIST:
                     self.urls = []
-                    (_etype346, _size343) = iprot.readListBegin()
-                    for _i347 in range(_size343):
-                        _elem348 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.urls.append(_elem348)
+                    (_etype332, _size329) = iprot.readListBegin()
+                    for _i333 in range(_size329):
+                        _elem334 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.urls.append(_elem334)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
             elif fid == 3:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype350, _vtype351, _size349) = iprot.readMapBegin()
-                    for _i353 in range(_size349):
-                        _key354 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val355 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key354] = _val355
+                    (_ktype336, _vtype337, _size335) = iprot.readMapBegin()
+                    for _i339 in range(_size335):
+                        _key340 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val341 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key340] = _val341
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -268,16 +268,16 @@ class UploadUrls_args(object):
         if self.urls is not None:
             oprot.writeFieldBegin('urls', TType.LIST, 2)
             oprot.writeListBegin(TType.STRING, len(self.urls))
-            for iter356 in self.urls:
-                oprot.writeString(iter356.encode('utf-8') if sys.version_info[0] == 2 else iter356)
+            for iter342 in self.urls:
+                oprot.writeString(iter342.encode('utf-8') if sys.version_info[0] == 2 else iter342)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 3)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter357, viter358 in self.carrier.items():
-                oprot.writeString(kiter357.encode('utf-8') if sys.version_info[0] == 2 else kiter357)
-                oprot.writeString(viter358.encode('utf-8') if sys.version_info[0] == 2 else viter358)
+            for kiter343, viter344 in self.carrier.items():
+                oprot.writeString(kiter343.encode('utf-8') if sys.version_info[0] == 2 else kiter343)
+                oprot.writeString(viter344.encode('utf-8') if sys.version_info[0] == 2 else viter344)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -328,13 +328,9 @@ class UploadUrls_result(object):
             if ftype == TType.STOP:
                 break
             if fid == 0:
-                if ftype == TType.LIST:
-                    self.success = []
-                    (_etype362, _size359) = iprot.readListBegin()
-                    for _i363 in range(_size359):
-                        _elem364 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.success.append(_elem364)
-                    iprot.readListEnd()
+                if ftype == TType.STRUCT:
+                    self.success = UrlListRpcResponse()
+                    self.success.read(iprot)
                 else:
                     iprot.skip(ftype)
             elif fid == 1:
@@ -354,11 +350,8 @@ class UploadUrls_result(object):
             return
         oprot.writeStructBegin('UploadUrls_result')
         if self.success is not None:
-            oprot.writeFieldBegin('success', TType.LIST, 0)
-            oprot.writeListBegin(TType.STRING, len(self.success))
-            for iter365 in self.success:
-                oprot.writeString(iter365.encode('utf-8') if sys.version_info[0] == 2 else iter365)
-            oprot.writeListEnd()
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
             oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
@@ -382,7 +375,7 @@ class UploadUrls_result(object):
         return not (self == other)
 all_structs.append(UploadUrls_result)
 UploadUrls_result.thrift_spec = (
-    (0, TType.LIST, 'success', (TType.STRING, 'UTF8', False), None, ),  # 0
+    (0, TType.STRUCT, 'success', [UrlListRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 
@@ -419,21 +412,21 @@ class GetExtendedUrls_args(object):
             elif fid == 2:
                 if ftype == TType.LIST:
                     self.shortened_urls = []
-                    (_etype369, _size366) = iprot.readListBegin()
-                    for _i370 in range(_size366):
-                        _elem371 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.shortened_urls.append(_elem371)
+                    (_etype348, _size345) = iprot.readListBegin()
+                    for _i349 in range(_size345):
+                        _elem350 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.shortened_urls.append(_elem350)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
             elif fid == 3:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype373, _vtype374, _size372) = iprot.readMapBegin()
-                    for _i376 in range(_size372):
-                        _key377 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val378 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key377] = _val378
+                    (_ktype352, _vtype353, _size351) = iprot.readMapBegin()
+                    for _i355 in range(_size351):
+                        _key356 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val357 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key356] = _val357
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -454,16 +447,16 @@ class GetExtendedUrls_args(object):
         if self.shortened_urls is not None:
             oprot.writeFieldBegin('shortened_urls', TType.LIST, 2)
             oprot.writeListBegin(TType.STRING, len(self.shortened_urls))
-            for iter379 in self.shortened_urls:
-                oprot.writeString(iter379.encode('utf-8') if sys.version_info[0] == 2 else iter379)
+            for iter358 in self.shortened_urls:
+                oprot.writeString(iter358.encode('utf-8') if sys.version_info[0] == 2 else iter358)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 3)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter380, viter381 in self.carrier.items():
-                oprot.writeString(kiter380.encode('utf-8') if sys.version_info[0] == 2 else kiter380)
-                oprot.writeString(viter381.encode('utf-8') if sys.version_info[0] == 2 else viter381)
+            for kiter359, viter360 in self.carrier.items():
+                oprot.writeString(kiter359.encode('utf-8') if sys.version_info[0] == 2 else kiter359)
+                oprot.writeString(viter360.encode('utf-8') if sys.version_info[0] == 2 else viter360)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -514,13 +507,9 @@ class GetExtendedUrls_result(object):
             if ftype == TType.STOP:
                 break
             if fid == 0:
-                if ftype == TType.LIST:
-                    self.success = []
-                    (_etype385, _size382) = iprot.readListBegin()
-                    for _i386 in range(_size382):
-                        _elem387 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.success.append(_elem387)
-                    iprot.readListEnd()
+                if ftype == TType.STRUCT:
+                    self.success = UrlListRpcResponse()
+                    self.success.read(iprot)
                 else:
                     iprot.skip(ftype)
             elif fid == 1:
@@ -540,11 +529,8 @@ class GetExtendedUrls_result(object):
             return
         oprot.writeStructBegin('GetExtendedUrls_result')
         if self.success is not None:
-            oprot.writeFieldBegin('success', TType.LIST, 0)
-            oprot.writeListBegin(TType.STRING, len(self.success))
-            for iter388 in self.success:
-                oprot.writeString(iter388.encode('utf-8') if sys.version_info[0] == 2 else iter388)
-            oprot.writeListEnd()
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
             oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
@@ -568,7 +554,7 @@ class GetExtendedUrls_result(object):
         return not (self == other)
 all_structs.append(GetExtendedUrls_result)
 GetExtendedUrls_result.thrift_spec = (
-    (0, TType.LIST, 'success', (TType.STRING, 'UTF8', False), None, ),  # 0
+    (0, TType.STRUCT, 'success', [UrlListRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 fix_spec(all_structs)

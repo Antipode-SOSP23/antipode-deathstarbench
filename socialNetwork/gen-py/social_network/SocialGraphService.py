@@ -187,7 +187,7 @@ class Client(Iface):
 
         """
         self.send_Follow(req_id, user_id, followee_id, carrier)
-        self.recv_Follow()
+        return self.recv_Follow()
 
     def send_Follow(self, req_id, user_id, followee_id, carrier):
         self._oprot.writeMessageBegin('Follow', TMessageType.CALL, self._seqid)
@@ -211,9 +211,11 @@ class Client(Iface):
         result = Follow_result()
         result.read(iprot)
         iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
         if result.se is not None:
             raise result.se
-        return
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "Follow failed: unknown result")
 
     def Unfollow(self, req_id, user_id, followee_id, carrier):
         """
@@ -225,7 +227,7 @@ class Client(Iface):
 
         """
         self.send_Unfollow(req_id, user_id, followee_id, carrier)
-        self.recv_Unfollow()
+        return self.recv_Unfollow()
 
     def send_Unfollow(self, req_id, user_id, followee_id, carrier):
         self._oprot.writeMessageBegin('Unfollow', TMessageType.CALL, self._seqid)
@@ -249,9 +251,11 @@ class Client(Iface):
         result = Unfollow_result()
         result.read(iprot)
         iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
         if result.se is not None:
             raise result.se
-        return
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "Unfollow failed: unknown result")
 
     def FollowWithUsername(self, req_id, user_usernmae, followee_username, carrier):
         """
@@ -263,7 +267,7 @@ class Client(Iface):
 
         """
         self.send_FollowWithUsername(req_id, user_usernmae, followee_username, carrier)
-        self.recv_FollowWithUsername()
+        return self.recv_FollowWithUsername()
 
     def send_FollowWithUsername(self, req_id, user_usernmae, followee_username, carrier):
         self._oprot.writeMessageBegin('FollowWithUsername', TMessageType.CALL, self._seqid)
@@ -287,9 +291,11 @@ class Client(Iface):
         result = FollowWithUsername_result()
         result.read(iprot)
         iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
         if result.se is not None:
             raise result.se
-        return
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "FollowWithUsername failed: unknown result")
 
     def UnfollowWithUsername(self, req_id, user_usernmae, followee_username, carrier):
         """
@@ -301,7 +307,7 @@ class Client(Iface):
 
         """
         self.send_UnfollowWithUsername(req_id, user_usernmae, followee_username, carrier)
-        self.recv_UnfollowWithUsername()
+        return self.recv_UnfollowWithUsername()
 
     def send_UnfollowWithUsername(self, req_id, user_usernmae, followee_username, carrier):
         self._oprot.writeMessageBegin('UnfollowWithUsername', TMessageType.CALL, self._seqid)
@@ -325,9 +331,11 @@ class Client(Iface):
         result = UnfollowWithUsername_result()
         result.read(iprot)
         iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
         if result.se is not None:
             raise result.se
-        return
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "UnfollowWithUsername failed: unknown result")
 
     def InsertUser(self, req_id, user_id, carrier):
         """
@@ -338,7 +346,7 @@ class Client(Iface):
 
         """
         self.send_InsertUser(req_id, user_id, carrier)
-        self.recv_InsertUser()
+        return self.recv_InsertUser()
 
     def send_InsertUser(self, req_id, user_id, carrier):
         self._oprot.writeMessageBegin('InsertUser', TMessageType.CALL, self._seqid)
@@ -361,9 +369,11 @@ class Client(Iface):
         result = InsertUser_result()
         result.read(iprot)
         iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
         if result.se is not None:
             raise result.se
-        return
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "InsertUser failed: unknown result")
 
 
 class Processor(Iface, TProcessor):
@@ -451,7 +461,7 @@ class Processor(Iface, TProcessor):
         iprot.readMessageEnd()
         result = Follow_result()
         try:
-            self._handler.Follow(args.req_id, args.user_id, args.followee_id, args.carrier)
+            result.success = self._handler.Follow(args.req_id, args.user_id, args.followee_id, args.carrier)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -477,7 +487,7 @@ class Processor(Iface, TProcessor):
         iprot.readMessageEnd()
         result = Unfollow_result()
         try:
-            self._handler.Unfollow(args.req_id, args.user_id, args.followee_id, args.carrier)
+            result.success = self._handler.Unfollow(args.req_id, args.user_id, args.followee_id, args.carrier)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -503,7 +513,7 @@ class Processor(Iface, TProcessor):
         iprot.readMessageEnd()
         result = FollowWithUsername_result()
         try:
-            self._handler.FollowWithUsername(args.req_id, args.user_usernmae, args.followee_username, args.carrier)
+            result.success = self._handler.FollowWithUsername(args.req_id, args.user_usernmae, args.followee_username, args.carrier)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -529,7 +539,7 @@ class Processor(Iface, TProcessor):
         iprot.readMessageEnd()
         result = UnfollowWithUsername_result()
         try:
-            self._handler.UnfollowWithUsername(args.req_id, args.user_usernmae, args.followee_username, args.carrier)
+            result.success = self._handler.UnfollowWithUsername(args.req_id, args.user_usernmae, args.followee_username, args.carrier)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -555,7 +565,7 @@ class Processor(Iface, TProcessor):
         iprot.readMessageEnd()
         result = InsertUser_result()
         try:
-            self._handler.InsertUser(args.req_id, args.user_id, args.carrier)
+            result.success = self._handler.InsertUser(args.req_id, args.user_id, args.carrier)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -697,13 +707,9 @@ class GetFollowers_result(object):
             if ftype == TType.STOP:
                 break
             if fid == 0:
-                if ftype == TType.LIST:
-                    self.success = []
-                    (_etype262, _size259) = iprot.readListBegin()
-                    for _i263 in range(_size259):
-                        _elem264 = iprot.readI64()
-                        self.success.append(_elem264)
-                    iprot.readListEnd()
+                if ftype == TType.STRUCT:
+                    self.success = UidListRpcResponse()
+                    self.success.read(iprot)
                 else:
                     iprot.skip(ftype)
             elif fid == 1:
@@ -723,11 +729,8 @@ class GetFollowers_result(object):
             return
         oprot.writeStructBegin('GetFollowers_result')
         if self.success is not None:
-            oprot.writeFieldBegin('success', TType.LIST, 0)
-            oprot.writeListBegin(TType.I64, len(self.success))
-            for iter265 in self.success:
-                oprot.writeI64(iter265)
-            oprot.writeListEnd()
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
             oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
@@ -751,7 +754,7 @@ class GetFollowers_result(object):
         return not (self == other)
 all_structs.append(GetFollowers_result)
 GetFollowers_result.thrift_spec = (
-    (0, TType.LIST, 'success', (TType.I64, None, False), None, ),  # 0
+    (0, TType.STRUCT, 'success', [UidListRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 
@@ -793,11 +796,11 @@ class GetFollowees_args(object):
             elif fid == 3:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype267, _vtype268, _size266) = iprot.readMapBegin()
-                    for _i270 in range(_size266):
-                        _key271 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val272 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key271] = _val272
+                    (_ktype260, _vtype261, _size259) = iprot.readMapBegin()
+                    for _i263 in range(_size259):
+                        _key264 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val265 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key264] = _val265
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -822,9 +825,9 @@ class GetFollowees_args(object):
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 3)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter273, viter274 in self.carrier.items():
-                oprot.writeString(kiter273.encode('utf-8') if sys.version_info[0] == 2 else kiter273)
-                oprot.writeString(viter274.encode('utf-8') if sys.version_info[0] == 2 else viter274)
+            for kiter266, viter267 in self.carrier.items():
+                oprot.writeString(kiter266.encode('utf-8') if sys.version_info[0] == 2 else kiter266)
+                oprot.writeString(viter267.encode('utf-8') if sys.version_info[0] == 2 else viter267)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -875,13 +878,9 @@ class GetFollowees_result(object):
             if ftype == TType.STOP:
                 break
             if fid == 0:
-                if ftype == TType.LIST:
-                    self.success = []
-                    (_etype278, _size275) = iprot.readListBegin()
-                    for _i279 in range(_size275):
-                        _elem280 = iprot.readI64()
-                        self.success.append(_elem280)
-                    iprot.readListEnd()
+                if ftype == TType.STRUCT:
+                    self.success = UidListRpcResponse()
+                    self.success.read(iprot)
                 else:
                     iprot.skip(ftype)
             elif fid == 1:
@@ -901,11 +900,8 @@ class GetFollowees_result(object):
             return
         oprot.writeStructBegin('GetFollowees_result')
         if self.success is not None:
-            oprot.writeFieldBegin('success', TType.LIST, 0)
-            oprot.writeListBegin(TType.I64, len(self.success))
-            for iter281 in self.success:
-                oprot.writeI64(iter281)
-            oprot.writeListEnd()
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
             oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
@@ -929,7 +925,7 @@ class GetFollowees_result(object):
         return not (self == other)
 all_structs.append(GetFollowees_result)
 GetFollowees_result.thrift_spec = (
-    (0, TType.LIST, 'success', (TType.I64, None, False), None, ),  # 0
+    (0, TType.STRUCT, 'success', [UidListRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 
@@ -978,11 +974,11 @@ class Follow_args(object):
             elif fid == 4:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype283, _vtype284, _size282) = iprot.readMapBegin()
-                    for _i286 in range(_size282):
-                        _key287 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val288 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key287] = _val288
+                    (_ktype269, _vtype270, _size268) = iprot.readMapBegin()
+                    for _i272 in range(_size268):
+                        _key273 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val274 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key273] = _val274
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -1011,9 +1007,9 @@ class Follow_args(object):
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 4)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter289, viter290 in self.carrier.items():
-                oprot.writeString(kiter289.encode('utf-8') if sys.version_info[0] == 2 else kiter289)
-                oprot.writeString(viter290.encode('utf-8') if sys.version_info[0] == 2 else viter290)
+            for kiter275, viter276 in self.carrier.items():
+                oprot.writeString(kiter275.encode('utf-8') if sys.version_info[0] == 2 else kiter275)
+                oprot.writeString(viter276.encode('utf-8') if sys.version_info[0] == 2 else viter276)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -1045,12 +1041,14 @@ Follow_args.thrift_spec = (
 class Follow_result(object):
     """
     Attributes:
+     - success
      - se
 
     """
 
 
-    def __init__(self, se=None,):
+    def __init__(self, success=None, se=None,):
+        self.success = success
         self.se = se
 
     def read(self, iprot):
@@ -1062,7 +1060,13 @@ class Follow_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = BaseRpcResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
                 if ftype == TType.STRUCT:
                     self.se = ServiceException()
                     self.se.read(iprot)
@@ -1078,6 +1082,10 @@ class Follow_result(object):
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
         oprot.writeStructBegin('Follow_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
             self.se.write(oprot)
@@ -1100,7 +1108,7 @@ class Follow_result(object):
         return not (self == other)
 all_structs.append(Follow_result)
 Follow_result.thrift_spec = (
-    None,  # 0
+    (0, TType.STRUCT, 'success', [BaseRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 
@@ -1149,11 +1157,11 @@ class Unfollow_args(object):
             elif fid == 4:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype292, _vtype293, _size291) = iprot.readMapBegin()
-                    for _i295 in range(_size291):
-                        _key296 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val297 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key296] = _val297
+                    (_ktype278, _vtype279, _size277) = iprot.readMapBegin()
+                    for _i281 in range(_size277):
+                        _key282 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val283 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key282] = _val283
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -1182,9 +1190,9 @@ class Unfollow_args(object):
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 4)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter298, viter299 in self.carrier.items():
-                oprot.writeString(kiter298.encode('utf-8') if sys.version_info[0] == 2 else kiter298)
-                oprot.writeString(viter299.encode('utf-8') if sys.version_info[0] == 2 else viter299)
+            for kiter284, viter285 in self.carrier.items():
+                oprot.writeString(kiter284.encode('utf-8') if sys.version_info[0] == 2 else kiter284)
+                oprot.writeString(viter285.encode('utf-8') if sys.version_info[0] == 2 else viter285)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -1216,12 +1224,14 @@ Unfollow_args.thrift_spec = (
 class Unfollow_result(object):
     """
     Attributes:
+     - success
      - se
 
     """
 
 
-    def __init__(self, se=None,):
+    def __init__(self, success=None, se=None,):
+        self.success = success
         self.se = se
 
     def read(self, iprot):
@@ -1233,7 +1243,13 @@ class Unfollow_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = BaseRpcResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
                 if ftype == TType.STRUCT:
                     self.se = ServiceException()
                     self.se.read(iprot)
@@ -1249,6 +1265,10 @@ class Unfollow_result(object):
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
         oprot.writeStructBegin('Unfollow_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
             self.se.write(oprot)
@@ -1271,7 +1291,7 @@ class Unfollow_result(object):
         return not (self == other)
 all_structs.append(Unfollow_result)
 Unfollow_result.thrift_spec = (
-    None,  # 0
+    (0, TType.STRUCT, 'success', [BaseRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 
@@ -1320,11 +1340,11 @@ class FollowWithUsername_args(object):
             elif fid == 4:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype301, _vtype302, _size300) = iprot.readMapBegin()
-                    for _i304 in range(_size300):
-                        _key305 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val306 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key305] = _val306
+                    (_ktype287, _vtype288, _size286) = iprot.readMapBegin()
+                    for _i290 in range(_size286):
+                        _key291 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val292 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key291] = _val292
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -1353,9 +1373,9 @@ class FollowWithUsername_args(object):
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 4)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter307, viter308 in self.carrier.items():
-                oprot.writeString(kiter307.encode('utf-8') if sys.version_info[0] == 2 else kiter307)
-                oprot.writeString(viter308.encode('utf-8') if sys.version_info[0] == 2 else viter308)
+            for kiter293, viter294 in self.carrier.items():
+                oprot.writeString(kiter293.encode('utf-8') if sys.version_info[0] == 2 else kiter293)
+                oprot.writeString(viter294.encode('utf-8') if sys.version_info[0] == 2 else viter294)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -1387,12 +1407,14 @@ FollowWithUsername_args.thrift_spec = (
 class FollowWithUsername_result(object):
     """
     Attributes:
+     - success
      - se
 
     """
 
 
-    def __init__(self, se=None,):
+    def __init__(self, success=None, se=None,):
+        self.success = success
         self.se = se
 
     def read(self, iprot):
@@ -1404,7 +1426,13 @@ class FollowWithUsername_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = BaseRpcResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
                 if ftype == TType.STRUCT:
                     self.se = ServiceException()
                     self.se.read(iprot)
@@ -1420,6 +1448,10 @@ class FollowWithUsername_result(object):
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
         oprot.writeStructBegin('FollowWithUsername_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
             self.se.write(oprot)
@@ -1442,7 +1474,7 @@ class FollowWithUsername_result(object):
         return not (self == other)
 all_structs.append(FollowWithUsername_result)
 FollowWithUsername_result.thrift_spec = (
-    None,  # 0
+    (0, TType.STRUCT, 'success', [BaseRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 
@@ -1491,11 +1523,11 @@ class UnfollowWithUsername_args(object):
             elif fid == 4:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype310, _vtype311, _size309) = iprot.readMapBegin()
-                    for _i313 in range(_size309):
-                        _key314 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val315 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key314] = _val315
+                    (_ktype296, _vtype297, _size295) = iprot.readMapBegin()
+                    for _i299 in range(_size295):
+                        _key300 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val301 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key300] = _val301
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -1524,9 +1556,9 @@ class UnfollowWithUsername_args(object):
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 4)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter316, viter317 in self.carrier.items():
-                oprot.writeString(kiter316.encode('utf-8') if sys.version_info[0] == 2 else kiter316)
-                oprot.writeString(viter317.encode('utf-8') if sys.version_info[0] == 2 else viter317)
+            for kiter302, viter303 in self.carrier.items():
+                oprot.writeString(kiter302.encode('utf-8') if sys.version_info[0] == 2 else kiter302)
+                oprot.writeString(viter303.encode('utf-8') if sys.version_info[0] == 2 else viter303)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -1558,12 +1590,14 @@ UnfollowWithUsername_args.thrift_spec = (
 class UnfollowWithUsername_result(object):
     """
     Attributes:
+     - success
      - se
 
     """
 
 
-    def __init__(self, se=None,):
+    def __init__(self, success=None, se=None,):
+        self.success = success
         self.se = se
 
     def read(self, iprot):
@@ -1575,7 +1609,13 @@ class UnfollowWithUsername_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = BaseRpcResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
                 if ftype == TType.STRUCT:
                     self.se = ServiceException()
                     self.se.read(iprot)
@@ -1591,6 +1631,10 @@ class UnfollowWithUsername_result(object):
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
         oprot.writeStructBegin('UnfollowWithUsername_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
             self.se.write(oprot)
@@ -1613,7 +1657,7 @@ class UnfollowWithUsername_result(object):
         return not (self == other)
 all_structs.append(UnfollowWithUsername_result)
 UnfollowWithUsername_result.thrift_spec = (
-    None,  # 0
+    (0, TType.STRUCT, 'success', [BaseRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 
@@ -1655,11 +1699,11 @@ class InsertUser_args(object):
             elif fid == 3:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype319, _vtype320, _size318) = iprot.readMapBegin()
-                    for _i322 in range(_size318):
-                        _key323 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val324 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key323] = _val324
+                    (_ktype305, _vtype306, _size304) = iprot.readMapBegin()
+                    for _i308 in range(_size304):
+                        _key309 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val310 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key309] = _val310
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -1684,9 +1728,9 @@ class InsertUser_args(object):
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 3)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter325, viter326 in self.carrier.items():
-                oprot.writeString(kiter325.encode('utf-8') if sys.version_info[0] == 2 else kiter325)
-                oprot.writeString(viter326.encode('utf-8') if sys.version_info[0] == 2 else viter326)
+            for kiter311, viter312 in self.carrier.items():
+                oprot.writeString(kiter311.encode('utf-8') if sys.version_info[0] == 2 else kiter311)
+                oprot.writeString(viter312.encode('utf-8') if sys.version_info[0] == 2 else viter312)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -1717,12 +1761,14 @@ InsertUser_args.thrift_spec = (
 class InsertUser_result(object):
     """
     Attributes:
+     - success
      - se
 
     """
 
 
-    def __init__(self, se=None,):
+    def __init__(self, success=None, se=None,):
+        self.success = success
         self.se = se
 
     def read(self, iprot):
@@ -1734,7 +1780,13 @@ class InsertUser_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = BaseRpcResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
                 if ftype == TType.STRUCT:
                     self.se = ServiceException()
                     self.se.read(iprot)
@@ -1750,6 +1802,10 @@ class InsertUser_result(object):
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
         oprot.writeStructBegin('InsertUser_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
             self.se.write(oprot)
@@ -1772,7 +1828,7 @@ class InsertUser_result(object):
         return not (self == other)
 all_structs.append(InsertUser_result)
 InsertUser_result.thrift_spec = (
-    None,  # 0
+    (0, TType.STRUCT, 'success', [BaseRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 fix_spec(all_structs)

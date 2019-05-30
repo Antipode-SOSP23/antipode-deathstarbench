@@ -61,9 +61,10 @@ function _M.Login()
     xtracer.DeleteBaggage()
     ngx.exit(ngx.HTTP_OK)
   else
+    xtracer.JoinBaggage(ret.baggage)
     xtracer.LogXTrace("Login Successful")
     ngx.header.content_type = "text/plain"
-    ngx.header["Set-Cookie"] = "login_token=" .. ret .. "; Path=/; Expires="
+    ngx.header["Set-Cookie"] = "login_token=" .. ret.result .. "; Path=/; Expires="
         .. ngx.cookie_time(ngx.time() + ngx.shared.config:get("cookie_ttl"))
     ngx.redirect("../../index.html")
     ngx.exit(ngx.HTTP_OK)

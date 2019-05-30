@@ -15,7 +15,7 @@ ComposePostServiceClient = __TObject.new(__TClient, {
 
 function ComposePostServiceClient:UploadText(req_id, text, carrier)
   self:send_UploadText(req_id, text, carrier)
-  self:recv_UploadText(req_id, text, carrier)
+  return self:recv_UploadText(req_id, text, carrier)
 end
 
 function ComposePostServiceClient:send_UploadText(req_id, text, carrier)
@@ -40,11 +40,17 @@ function ComposePostServiceClient:recv_UploadText(req_id, text, carrier)
   local result = UploadText_result:new{}
   result:read(self.iprot)
   self.iprot:readMessageEnd()
+  if result.success ~= nil then
+    return result.success
+  elseif result.se then
+    error(result.se)
+  end
+  error(TApplicationException:new{errorCode = TApplicationException.MISSING_RESULT})
 end
 
 function ComposePostServiceClient:UploadMedia(req_id, media, carrier)
   self:send_UploadMedia(req_id, media, carrier)
-  self:recv_UploadMedia(req_id, media, carrier)
+  return self:recv_UploadMedia(req_id, media, carrier)
 end
 
 function ComposePostServiceClient:send_UploadMedia(req_id, media, carrier)
@@ -69,11 +75,17 @@ function ComposePostServiceClient:recv_UploadMedia(req_id, media, carrier)
   local result = UploadMedia_result:new{}
   result:read(self.iprot)
   self.iprot:readMessageEnd()
+  if result.success ~= nil then
+    return result.success
+  elseif result.se then
+    error(result.se)
+  end
+  error(TApplicationException:new{errorCode = TApplicationException.MISSING_RESULT})
 end
 
 function ComposePostServiceClient:UploadUniqueId(req_id, post_id, post_type, carrier)
   self:send_UploadUniqueId(req_id, post_id, post_type, carrier)
-  self:recv_UploadUniqueId(req_id, post_id, post_type, carrier)
+  return self:recv_UploadUniqueId(req_id, post_id, post_type, carrier)
 end
 
 function ComposePostServiceClient:send_UploadUniqueId(req_id, post_id, post_type, carrier)
@@ -99,11 +111,17 @@ function ComposePostServiceClient:recv_UploadUniqueId(req_id, post_id, post_type
   local result = UploadUniqueId_result:new{}
   result:read(self.iprot)
   self.iprot:readMessageEnd()
+  if result.success ~= nil then
+    return result.success
+  elseif result.se then
+    error(result.se)
+  end
+  error(TApplicationException:new{errorCode = TApplicationException.MISSING_RESULT})
 end
 
 function ComposePostServiceClient:UploadCreator(req_id, creator, carrier)
   self:send_UploadCreator(req_id, creator, carrier)
-  self:recv_UploadCreator(req_id, creator, carrier)
+  return self:recv_UploadCreator(req_id, creator, carrier)
 end
 
 function ComposePostServiceClient:send_UploadCreator(req_id, creator, carrier)
@@ -128,11 +146,17 @@ function ComposePostServiceClient:recv_UploadCreator(req_id, creator, carrier)
   local result = UploadCreator_result:new{}
   result:read(self.iprot)
   self.iprot:readMessageEnd()
+  if result.success ~= nil then
+    return result.success
+  elseif result.se then
+    error(result.se)
+  end
+  error(TApplicationException:new{errorCode = TApplicationException.MISSING_RESULT})
 end
 
 function ComposePostServiceClient:UploadUrls(req_id, urls, carrier)
   self:send_UploadUrls(req_id, urls, carrier)
-  self:recv_UploadUrls(req_id, urls, carrier)
+  return self:recv_UploadUrls(req_id, urls, carrier)
 end
 
 function ComposePostServiceClient:send_UploadUrls(req_id, urls, carrier)
@@ -157,11 +181,17 @@ function ComposePostServiceClient:recv_UploadUrls(req_id, urls, carrier)
   local result = UploadUrls_result:new{}
   result:read(self.iprot)
   self.iprot:readMessageEnd()
+  if result.success ~= nil then
+    return result.success
+  elseif result.se then
+    error(result.se)
+  end
+  error(TApplicationException:new{errorCode = TApplicationException.MISSING_RESULT})
 end
 
 function ComposePostServiceClient:UploadUserMentions(req_id, user_mentions, carrier)
   self:send_UploadUserMentions(req_id, user_mentions, carrier)
-  self:recv_UploadUserMentions(req_id, user_mentions, carrier)
+  return self:recv_UploadUserMentions(req_id, user_mentions, carrier)
 end
 
 function ComposePostServiceClient:send_UploadUserMentions(req_id, user_mentions, carrier)
@@ -186,6 +216,12 @@ function ComposePostServiceClient:recv_UploadUserMentions(req_id, user_mentions,
   local result = UploadUserMentions_result:new{}
   result:read(self.iprot)
   self.iprot:readMessageEnd()
+  if result.success ~= nil then
+    return result.success
+  elseif result.se then
+    error(result.se)
+  end
+  error(TApplicationException:new{errorCode = TApplicationException.MISSING_RESULT})
 end
 ComposePostServiceIface = __TObject:new{
   __type = 'ComposePostServiceIface'
@@ -370,11 +406,11 @@ function UploadText_args:read(iprot)
     elseif fid == 3 then
       if ftype == TType.MAP then
         self.carrier = {}
-        local _ktype75, _vtype76, _size74 = iprot:readMapBegin() 
-        for _i=1,_size74 do
-          local _key78 = iprot:readString()
-          local _val79 = iprot:readString()
-          self.carrier[_key78] = _val79
+        local _ktype101, _vtype102, _size100 = iprot:readMapBegin() 
+        for _i=1,_size100 do
+          local _key104 = iprot:readString()
+          local _val105 = iprot:readString()
+          self.carrier[_key104] = _val105
         end
         iprot:readMapEnd()
       else
@@ -403,9 +439,9 @@ function UploadText_args:write(oprot)
   if self.carrier ~= nil then
     oprot:writeFieldBegin('carrier', TType.MAP, 3)
     oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
-    for kiter80,viter81 in pairs(self.carrier) do
-      oprot:writeString(kiter80)
-      oprot:writeString(viter81)
+    for kiter106,viter107 in pairs(self.carrier) do
+      oprot:writeString(kiter106)
+      oprot:writeString(viter107)
     end
     oprot:writeMapEnd()
     oprot:writeFieldEnd()
@@ -415,6 +451,7 @@ function UploadText_args:write(oprot)
 end
 
 UploadText_result = __TObject:new{
+  success,
   se
 }
 
@@ -424,6 +461,13 @@ function UploadText_result:read(iprot)
     local fname, ftype, fid = iprot:readFieldBegin()
     if ftype == TType.STOP then
       break
+    elseif fid == 0 then
+      if ftype == TType.STRUCT then
+        self.success = BaseRpcResponse:new{}
+        self.success:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
     elseif fid == 1 then
       if ftype == TType.STRUCT then
         self.se = ServiceException:new{}
@@ -441,6 +485,11 @@ end
 
 function UploadText_result:write(oprot)
   oprot:writeStructBegin('UploadText_result')
+  if self.success ~= nil then
+    oprot:writeFieldBegin('success', TType.STRUCT, 0)
+    self.success:write(oprot)
+    oprot:writeFieldEnd()
+  end
   if self.se ~= nil then
     oprot:writeFieldBegin('se', TType.STRUCT, 1)
     self.se:write(oprot)
@@ -471,11 +520,11 @@ function UploadMedia_args:read(iprot)
     elseif fid == 2 then
       if ftype == TType.LIST then
         self.media = {}
-        local _etype85, _size82 = iprot:readListBegin()
-        for _i=1,_size82 do
-          local _elem86 = Media:new{}
-          _elem86:read(iprot)
-          table.insert(self.media, _elem86)
+        local _etype111, _size108 = iprot:readListBegin()
+        for _i=1,_size108 do
+          local _elem112 = Media:new{}
+          _elem112:read(iprot)
+          table.insert(self.media, _elem112)
         end
         iprot:readListEnd()
       else
@@ -484,11 +533,11 @@ function UploadMedia_args:read(iprot)
     elseif fid == 3 then
       if ftype == TType.MAP then
         self.carrier = {}
-        local _ktype88, _vtype89, _size87 = iprot:readMapBegin() 
-        for _i=1,_size87 do
-          local _key91 = iprot:readString()
-          local _val92 = iprot:readString()
-          self.carrier[_key91] = _val92
+        local _ktype114, _vtype115, _size113 = iprot:readMapBegin() 
+        for _i=1,_size113 do
+          local _key117 = iprot:readString()
+          local _val118 = iprot:readString()
+          self.carrier[_key117] = _val118
         end
         iprot:readMapEnd()
       else
@@ -512,8 +561,8 @@ function UploadMedia_args:write(oprot)
   if self.media ~= nil then
     oprot:writeFieldBegin('media', TType.LIST, 2)
     oprot:writeListBegin(TType.STRUCT, #self.media)
-    for _,iter93 in ipairs(self.media) do
-      iter93:write(oprot)
+    for _,iter119 in ipairs(self.media) do
+      iter119:write(oprot)
     end
     oprot:writeListEnd()
     oprot:writeFieldEnd()
@@ -521,9 +570,9 @@ function UploadMedia_args:write(oprot)
   if self.carrier ~= nil then
     oprot:writeFieldBegin('carrier', TType.MAP, 3)
     oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
-    for kiter94,viter95 in pairs(self.carrier) do
-      oprot:writeString(kiter94)
-      oprot:writeString(viter95)
+    for kiter120,viter121 in pairs(self.carrier) do
+      oprot:writeString(kiter120)
+      oprot:writeString(viter121)
     end
     oprot:writeMapEnd()
     oprot:writeFieldEnd()
@@ -533,6 +582,7 @@ function UploadMedia_args:write(oprot)
 end
 
 UploadMedia_result = __TObject:new{
+  success,
   se
 }
 
@@ -542,6 +592,13 @@ function UploadMedia_result:read(iprot)
     local fname, ftype, fid = iprot:readFieldBegin()
     if ftype == TType.STOP then
       break
+    elseif fid == 0 then
+      if ftype == TType.STRUCT then
+        self.success = BaseRpcResponse:new{}
+        self.success:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
     elseif fid == 1 then
       if ftype == TType.STRUCT then
         self.se = ServiceException:new{}
@@ -559,6 +616,11 @@ end
 
 function UploadMedia_result:write(oprot)
   oprot:writeStructBegin('UploadMedia_result')
+  if self.success ~= nil then
+    oprot:writeFieldBegin('success', TType.STRUCT, 0)
+    self.success:write(oprot)
+    oprot:writeFieldEnd()
+  end
   if self.se ~= nil then
     oprot:writeFieldBegin('se', TType.STRUCT, 1)
     self.se:write(oprot)
@@ -602,11 +664,11 @@ function UploadUniqueId_args:read(iprot)
     elseif fid == 4 then
       if ftype == TType.MAP then
         self.carrier = {}
-        local _ktype97, _vtype98, _size96 = iprot:readMapBegin() 
-        for _i=1,_size96 do
-          local _key100 = iprot:readString()
-          local _val101 = iprot:readString()
-          self.carrier[_key100] = _val101
+        local _ktype123, _vtype124, _size122 = iprot:readMapBegin() 
+        for _i=1,_size122 do
+          local _key126 = iprot:readString()
+          local _val127 = iprot:readString()
+          self.carrier[_key126] = _val127
         end
         iprot:readMapEnd()
       else
@@ -640,9 +702,9 @@ function UploadUniqueId_args:write(oprot)
   if self.carrier ~= nil then
     oprot:writeFieldBegin('carrier', TType.MAP, 4)
     oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
-    for kiter102,viter103 in pairs(self.carrier) do
-      oprot:writeString(kiter102)
-      oprot:writeString(viter103)
+    for kiter128,viter129 in pairs(self.carrier) do
+      oprot:writeString(kiter128)
+      oprot:writeString(viter129)
     end
     oprot:writeMapEnd()
     oprot:writeFieldEnd()
@@ -652,6 +714,7 @@ function UploadUniqueId_args:write(oprot)
 end
 
 UploadUniqueId_result = __TObject:new{
+  success,
   se
 }
 
@@ -661,6 +724,13 @@ function UploadUniqueId_result:read(iprot)
     local fname, ftype, fid = iprot:readFieldBegin()
     if ftype == TType.STOP then
       break
+    elseif fid == 0 then
+      if ftype == TType.STRUCT then
+        self.success = BaseRpcResponse:new{}
+        self.success:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
     elseif fid == 1 then
       if ftype == TType.STRUCT then
         self.se = ServiceException:new{}
@@ -678,6 +748,11 @@ end
 
 function UploadUniqueId_result:write(oprot)
   oprot:writeStructBegin('UploadUniqueId_result')
+  if self.success ~= nil then
+    oprot:writeFieldBegin('success', TType.STRUCT, 0)
+    self.success:write(oprot)
+    oprot:writeFieldEnd()
+  end
   if self.se ~= nil then
     oprot:writeFieldBegin('se', TType.STRUCT, 1)
     self.se:write(oprot)
@@ -715,11 +790,11 @@ function UploadCreator_args:read(iprot)
     elseif fid == 3 then
       if ftype == TType.MAP then
         self.carrier = {}
-        local _ktype105, _vtype106, _size104 = iprot:readMapBegin() 
-        for _i=1,_size104 do
-          local _key108 = iprot:readString()
-          local _val109 = iprot:readString()
-          self.carrier[_key108] = _val109
+        local _ktype131, _vtype132, _size130 = iprot:readMapBegin() 
+        for _i=1,_size130 do
+          local _key134 = iprot:readString()
+          local _val135 = iprot:readString()
+          self.carrier[_key134] = _val135
         end
         iprot:readMapEnd()
       else
@@ -748,9 +823,9 @@ function UploadCreator_args:write(oprot)
   if self.carrier ~= nil then
     oprot:writeFieldBegin('carrier', TType.MAP, 3)
     oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
-    for kiter110,viter111 in pairs(self.carrier) do
-      oprot:writeString(kiter110)
-      oprot:writeString(viter111)
+    for kiter136,viter137 in pairs(self.carrier) do
+      oprot:writeString(kiter136)
+      oprot:writeString(viter137)
     end
     oprot:writeMapEnd()
     oprot:writeFieldEnd()
@@ -760,6 +835,7 @@ function UploadCreator_args:write(oprot)
 end
 
 UploadCreator_result = __TObject:new{
+  success,
   se
 }
 
@@ -769,6 +845,13 @@ function UploadCreator_result:read(iprot)
     local fname, ftype, fid = iprot:readFieldBegin()
     if ftype == TType.STOP then
       break
+    elseif fid == 0 then
+      if ftype == TType.STRUCT then
+        self.success = BaseRpcResponse:new{}
+        self.success:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
     elseif fid == 1 then
       if ftype == TType.STRUCT then
         self.se = ServiceException:new{}
@@ -786,6 +869,11 @@ end
 
 function UploadCreator_result:write(oprot)
   oprot:writeStructBegin('UploadCreator_result')
+  if self.success ~= nil then
+    oprot:writeFieldBegin('success', TType.STRUCT, 0)
+    self.success:write(oprot)
+    oprot:writeFieldEnd()
+  end
   if self.se ~= nil then
     oprot:writeFieldBegin('se', TType.STRUCT, 1)
     self.se:write(oprot)
@@ -816,11 +904,11 @@ function UploadUrls_args:read(iprot)
     elseif fid == 2 then
       if ftype == TType.LIST then
         self.urls = {}
-        local _etype115, _size112 = iprot:readListBegin()
-        for _i=1,_size112 do
-          local _elem116 = Url:new{}
-          _elem116:read(iprot)
-          table.insert(self.urls, _elem116)
+        local _etype141, _size138 = iprot:readListBegin()
+        for _i=1,_size138 do
+          local _elem142 = Url:new{}
+          _elem142:read(iprot)
+          table.insert(self.urls, _elem142)
         end
         iprot:readListEnd()
       else
@@ -829,11 +917,11 @@ function UploadUrls_args:read(iprot)
     elseif fid == 3 then
       if ftype == TType.MAP then
         self.carrier = {}
-        local _ktype118, _vtype119, _size117 = iprot:readMapBegin() 
-        for _i=1,_size117 do
-          local _key121 = iprot:readString()
-          local _val122 = iprot:readString()
-          self.carrier[_key121] = _val122
+        local _ktype144, _vtype145, _size143 = iprot:readMapBegin() 
+        for _i=1,_size143 do
+          local _key147 = iprot:readString()
+          local _val148 = iprot:readString()
+          self.carrier[_key147] = _val148
         end
         iprot:readMapEnd()
       else
@@ -857,8 +945,8 @@ function UploadUrls_args:write(oprot)
   if self.urls ~= nil then
     oprot:writeFieldBegin('urls', TType.LIST, 2)
     oprot:writeListBegin(TType.STRUCT, #self.urls)
-    for _,iter123 in ipairs(self.urls) do
-      iter123:write(oprot)
+    for _,iter149 in ipairs(self.urls) do
+      iter149:write(oprot)
     end
     oprot:writeListEnd()
     oprot:writeFieldEnd()
@@ -866,9 +954,9 @@ function UploadUrls_args:write(oprot)
   if self.carrier ~= nil then
     oprot:writeFieldBegin('carrier', TType.MAP, 3)
     oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
-    for kiter124,viter125 in pairs(self.carrier) do
-      oprot:writeString(kiter124)
-      oprot:writeString(viter125)
+    for kiter150,viter151 in pairs(self.carrier) do
+      oprot:writeString(kiter150)
+      oprot:writeString(viter151)
     end
     oprot:writeMapEnd()
     oprot:writeFieldEnd()
@@ -878,6 +966,7 @@ function UploadUrls_args:write(oprot)
 end
 
 UploadUrls_result = __TObject:new{
+  success,
   se
 }
 
@@ -887,6 +976,13 @@ function UploadUrls_result:read(iprot)
     local fname, ftype, fid = iprot:readFieldBegin()
     if ftype == TType.STOP then
       break
+    elseif fid == 0 then
+      if ftype == TType.STRUCT then
+        self.success = BaseRpcResponse:new{}
+        self.success:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
     elseif fid == 1 then
       if ftype == TType.STRUCT then
         self.se = ServiceException:new{}
@@ -904,6 +1000,11 @@ end
 
 function UploadUrls_result:write(oprot)
   oprot:writeStructBegin('UploadUrls_result')
+  if self.success ~= nil then
+    oprot:writeFieldBegin('success', TType.STRUCT, 0)
+    self.success:write(oprot)
+    oprot:writeFieldEnd()
+  end
   if self.se ~= nil then
     oprot:writeFieldBegin('se', TType.STRUCT, 1)
     self.se:write(oprot)
@@ -934,11 +1035,11 @@ function UploadUserMentions_args:read(iprot)
     elseif fid == 2 then
       if ftype == TType.LIST then
         self.user_mentions = {}
-        local _etype129, _size126 = iprot:readListBegin()
-        for _i=1,_size126 do
-          local _elem130 = UserMention:new{}
-          _elem130:read(iprot)
-          table.insert(self.user_mentions, _elem130)
+        local _etype155, _size152 = iprot:readListBegin()
+        for _i=1,_size152 do
+          local _elem156 = UserMention:new{}
+          _elem156:read(iprot)
+          table.insert(self.user_mentions, _elem156)
         end
         iprot:readListEnd()
       else
@@ -947,11 +1048,11 @@ function UploadUserMentions_args:read(iprot)
     elseif fid == 3 then
       if ftype == TType.MAP then
         self.carrier = {}
-        local _ktype132, _vtype133, _size131 = iprot:readMapBegin() 
-        for _i=1,_size131 do
-          local _key135 = iprot:readString()
-          local _val136 = iprot:readString()
-          self.carrier[_key135] = _val136
+        local _ktype158, _vtype159, _size157 = iprot:readMapBegin() 
+        for _i=1,_size157 do
+          local _key161 = iprot:readString()
+          local _val162 = iprot:readString()
+          self.carrier[_key161] = _val162
         end
         iprot:readMapEnd()
       else
@@ -975,8 +1076,8 @@ function UploadUserMentions_args:write(oprot)
   if self.user_mentions ~= nil then
     oprot:writeFieldBegin('user_mentions', TType.LIST, 2)
     oprot:writeListBegin(TType.STRUCT, #self.user_mentions)
-    for _,iter137 in ipairs(self.user_mentions) do
-      iter137:write(oprot)
+    for _,iter163 in ipairs(self.user_mentions) do
+      iter163:write(oprot)
     end
     oprot:writeListEnd()
     oprot:writeFieldEnd()
@@ -984,9 +1085,9 @@ function UploadUserMentions_args:write(oprot)
   if self.carrier ~= nil then
     oprot:writeFieldBegin('carrier', TType.MAP, 3)
     oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
-    for kiter138,viter139 in pairs(self.carrier) do
-      oprot:writeString(kiter138)
-      oprot:writeString(viter139)
+    for kiter164,viter165 in pairs(self.carrier) do
+      oprot:writeString(kiter164)
+      oprot:writeString(viter165)
     end
     oprot:writeMapEnd()
     oprot:writeFieldEnd()
@@ -996,6 +1097,7 @@ function UploadUserMentions_args:write(oprot)
 end
 
 UploadUserMentions_result = __TObject:new{
+  success,
   se
 }
 
@@ -1005,6 +1107,13 @@ function UploadUserMentions_result:read(iprot)
     local fname, ftype, fid = iprot:readFieldBegin()
     if ftype == TType.STOP then
       break
+    elseif fid == 0 then
+      if ftype == TType.STRUCT then
+        self.success = BaseRpcResponse:new{}
+        self.success:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
     elseif fid == 1 then
       if ftype == TType.STRUCT then
         self.se = ServiceException:new{}
@@ -1022,6 +1131,11 @@ end
 
 function UploadUserMentions_result:write(oprot)
   oprot:writeStructBegin('UploadUserMentions_result')
+  if self.success ~= nil then
+    oprot:writeFieldBegin('success', TType.STRUCT, 0)
+    self.success:write(oprot)
+    oprot:writeFieldEnd()
+  end
   if self.se ~= nil then
     oprot:writeFieldBegin('se', TType.STRUCT, 1)
     self.se:write(oprot)

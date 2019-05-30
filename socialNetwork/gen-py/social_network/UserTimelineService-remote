@@ -24,8 +24,8 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
     print('Usage: ' + sys.argv[0] + ' [-h host[:port]] [-u url] [-f[ramed]] [-s[sl]] [-novalidate] [-ca_certs certs] [-keyfile keyfile] [-certfile certfile] function [arg1 [arg2...]]')
     print('')
     print('Functions:')
-    print('  void WriteUserTimeline(i64 req_id, i64 post_id, i64 user_id, i64 timestamp,  carrier)')
-    print('   ReadUserTimeline(i64 req_id, i64 user_id, i32 start, i32 stop,  carrier)')
+    print('  BaseRpcResponse WriteUserTimeline(i64 req_id, i64 post_id, i64 user_id, i64 timestamp,  carrier)')
+    print('  PostListRpcResponse ReadUserTimeline(i64 req_id, i64 user_id, i32 start, i32 stop,  carrier)')
     print('')
     sys.exit(0)
 

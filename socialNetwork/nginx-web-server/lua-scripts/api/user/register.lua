@@ -57,6 +57,7 @@ function _M.RegisterUser()
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
   end
 
+  xtracer.JoinBaggage(err.baggage)
 
   span:finish()
   xtracer.DeleteBaggage()

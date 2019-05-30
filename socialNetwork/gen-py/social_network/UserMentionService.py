@@ -46,7 +46,7 @@ class Client(Iface):
 
         """
         self.send_UploadUserMentions(req_id, usernames, carrier)
-        self.recv_UploadUserMentions()
+        return self.recv_UploadUserMentions()
 
     def send_UploadUserMentions(self, req_id, usernames, carrier):
         self._oprot.writeMessageBegin('UploadUserMentions', TMessageType.CALL, self._seqid)
@@ -69,9 +69,11 @@ class Client(Iface):
         result = UploadUserMentions_result()
         result.read(iprot)
         iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
         if result.se is not None:
             raise result.se
-        return
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "UploadUserMentions failed: unknown result")
 
 
 class Processor(Iface, TProcessor):
@@ -101,7 +103,7 @@ class Processor(Iface, TProcessor):
         iprot.readMessageEnd()
         result = UploadUserMentions_result()
         try:
-            self._handler.UploadUserMentions(args.req_id, args.usernames, args.carrier)
+            result.success = self._handler.UploadUserMentions(args.req_id, args.usernames, args.carrier)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -156,21 +158,21 @@ class UploadUserMentions_args(object):
             elif fid == 2:
                 if ftype == TType.LIST:
                     self.usernames = []
-                    (_etype330, _size327) = iprot.readListBegin()
-                    for _i331 in range(_size327):
-                        _elem332 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.usernames.append(_elem332)
+                    (_etype316, _size313) = iprot.readListBegin()
+                    for _i317 in range(_size313):
+                        _elem318 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.usernames.append(_elem318)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
             elif fid == 3:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype334, _vtype335, _size333) = iprot.readMapBegin()
-                    for _i337 in range(_size333):
-                        _key338 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val339 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key338] = _val339
+                    (_ktype320, _vtype321, _size319) = iprot.readMapBegin()
+                    for _i323 in range(_size319):
+                        _key324 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val325 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key324] = _val325
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -191,16 +193,16 @@ class UploadUserMentions_args(object):
         if self.usernames is not None:
             oprot.writeFieldBegin('usernames', TType.LIST, 2)
             oprot.writeListBegin(TType.STRING, len(self.usernames))
-            for iter340 in self.usernames:
-                oprot.writeString(iter340.encode('utf-8') if sys.version_info[0] == 2 else iter340)
+            for iter326 in self.usernames:
+                oprot.writeString(iter326.encode('utf-8') if sys.version_info[0] == 2 else iter326)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 3)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter341, viter342 in self.carrier.items():
-                oprot.writeString(kiter341.encode('utf-8') if sys.version_info[0] == 2 else kiter341)
-                oprot.writeString(viter342.encode('utf-8') if sys.version_info[0] == 2 else viter342)
+            for kiter327, viter328 in self.carrier.items():
+                oprot.writeString(kiter327.encode('utf-8') if sys.version_info[0] == 2 else kiter327)
+                oprot.writeString(viter328.encode('utf-8') if sys.version_info[0] == 2 else viter328)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -231,12 +233,14 @@ UploadUserMentions_args.thrift_spec = (
 class UploadUserMentions_result(object):
     """
     Attributes:
+     - success
      - se
 
     """
 
 
-    def __init__(self, se=None,):
+    def __init__(self, success=None, se=None,):
+        self.success = success
         self.se = se
 
     def read(self, iprot):
@@ -248,7 +252,13 @@ class UploadUserMentions_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = BaseRpcResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
                 if ftype == TType.STRUCT:
                     self.se = ServiceException()
                     self.se.read(iprot)
@@ -264,6 +274,10 @@ class UploadUserMentions_result(object):
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
         oprot.writeStructBegin('UploadUserMentions_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
             self.se.write(oprot)
@@ -286,7 +300,7 @@ class UploadUserMentions_result(object):
         return not (self == other)
 all_structs.append(UploadUserMentions_result)
 UploadUserMentions_result.thrift_spec = (
-    None,  # 0
+    (0, TType.STRUCT, 'success', [BaseRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 fix_spec(all_structs)

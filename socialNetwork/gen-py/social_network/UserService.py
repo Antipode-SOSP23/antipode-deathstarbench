@@ -108,7 +108,7 @@ class Client(Iface):
 
         """
         self.send_RegisterUser(req_id, first_name, last_name, username, password, carrier)
-        self.recv_RegisterUser()
+        return self.recv_RegisterUser()
 
     def send_RegisterUser(self, req_id, first_name, last_name, username, password, carrier):
         self._oprot.writeMessageBegin('RegisterUser', TMessageType.CALL, self._seqid)
@@ -134,9 +134,11 @@ class Client(Iface):
         result = RegisterUser_result()
         result.read(iprot)
         iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
         if result.se is not None:
             raise result.se
-        return
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "RegisterUser failed: unknown result")
 
     def RegisterUserWithId(self, req_id, first_name, last_name, username, password, user_id, carrier):
         """
@@ -151,7 +153,7 @@ class Client(Iface):
 
         """
         self.send_RegisterUserWithId(req_id, first_name, last_name, username, password, user_id, carrier)
-        self.recv_RegisterUserWithId()
+        return self.recv_RegisterUserWithId()
 
     def send_RegisterUserWithId(self, req_id, first_name, last_name, username, password, user_id, carrier):
         self._oprot.writeMessageBegin('RegisterUserWithId', TMessageType.CALL, self._seqid)
@@ -178,9 +180,11 @@ class Client(Iface):
         result = RegisterUserWithId_result()
         result.read(iprot)
         iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
         if result.se is not None:
             raise result.se
-        return
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "RegisterUserWithId failed: unknown result")
 
     def Login(self, req_id, username, password, carrier):
         """
@@ -232,7 +236,7 @@ class Client(Iface):
 
         """
         self.send_UploadCreatorWithUserId(req_id, user_id, username, carrier)
-        self.recv_UploadCreatorWithUserId()
+        return self.recv_UploadCreatorWithUserId()
 
     def send_UploadCreatorWithUserId(self, req_id, user_id, username, carrier):
         self._oprot.writeMessageBegin('UploadCreatorWithUserId', TMessageType.CALL, self._seqid)
@@ -256,9 +260,11 @@ class Client(Iface):
         result = UploadCreatorWithUserId_result()
         result.read(iprot)
         iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
         if result.se is not None:
             raise result.se
-        return
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "UploadCreatorWithUserId failed: unknown result")
 
     def UploadCreatorWithUsername(self, req_id, username, carrier):
         """
@@ -269,7 +275,7 @@ class Client(Iface):
 
         """
         self.send_UploadCreatorWithUsername(req_id, username, carrier)
-        self.recv_UploadCreatorWithUsername()
+        return self.recv_UploadCreatorWithUsername()
 
     def send_UploadCreatorWithUsername(self, req_id, username, carrier):
         self._oprot.writeMessageBegin('UploadCreatorWithUsername', TMessageType.CALL, self._seqid)
@@ -292,9 +298,11 @@ class Client(Iface):
         result = UploadCreatorWithUsername_result()
         result.read(iprot)
         iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
         if result.se is not None:
             raise result.se
-        return
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "UploadCreatorWithUsername failed: unknown result")
 
     def GetUserId(self, req_id, username, carrier):
         """
@@ -367,7 +375,7 @@ class Processor(Iface, TProcessor):
         iprot.readMessageEnd()
         result = RegisterUser_result()
         try:
-            self._handler.RegisterUser(args.req_id, args.first_name, args.last_name, args.username, args.password, args.carrier)
+            result.success = self._handler.RegisterUser(args.req_id, args.first_name, args.last_name, args.username, args.password, args.carrier)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -393,7 +401,7 @@ class Processor(Iface, TProcessor):
         iprot.readMessageEnd()
         result = RegisterUserWithId_result()
         try:
-            self._handler.RegisterUserWithId(args.req_id, args.first_name, args.last_name, args.username, args.password, args.user_id, args.carrier)
+            result.success = self._handler.RegisterUserWithId(args.req_id, args.first_name, args.last_name, args.username, args.password, args.user_id, args.carrier)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -445,7 +453,7 @@ class Processor(Iface, TProcessor):
         iprot.readMessageEnd()
         result = UploadCreatorWithUserId_result()
         try:
-            self._handler.UploadCreatorWithUserId(args.req_id, args.user_id, args.username, args.carrier)
+            result.success = self._handler.UploadCreatorWithUserId(args.req_id, args.user_id, args.username, args.carrier)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -471,7 +479,7 @@ class Processor(Iface, TProcessor):
         iprot.readMessageEnd()
         result = UploadCreatorWithUsername_result()
         try:
-            self._handler.UploadCreatorWithUsername(args.req_id, args.username, args.carrier)
+            result.success = self._handler.UploadCreatorWithUsername(args.req_id, args.username, args.carrier)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -578,11 +586,11 @@ class RegisterUser_args(object):
             elif fid == 6:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype40, _vtype41, _size39) = iprot.readMapBegin()
-                    for _i43 in range(_size39):
-                        _key44 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val45 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key44] = _val45
+                    (_ktype61, _vtype62, _size60) = iprot.readMapBegin()
+                    for _i64 in range(_size60):
+                        _key65 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val66 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key65] = _val66
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -619,9 +627,9 @@ class RegisterUser_args(object):
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 6)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter46, viter47 in self.carrier.items():
-                oprot.writeString(kiter46.encode('utf-8') if sys.version_info[0] == 2 else kiter46)
-                oprot.writeString(viter47.encode('utf-8') if sys.version_info[0] == 2 else viter47)
+            for kiter67, viter68 in self.carrier.items():
+                oprot.writeString(kiter67.encode('utf-8') if sys.version_info[0] == 2 else kiter67)
+                oprot.writeString(viter68.encode('utf-8') if sys.version_info[0] == 2 else viter68)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -655,12 +663,14 @@ RegisterUser_args.thrift_spec = (
 class RegisterUser_result(object):
     """
     Attributes:
+     - success
      - se
 
     """
 
 
-    def __init__(self, se=None,):
+    def __init__(self, success=None, se=None,):
+        self.success = success
         self.se = se
 
     def read(self, iprot):
@@ -672,7 +682,13 @@ class RegisterUser_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = BaseRpcResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
                 if ftype == TType.STRUCT:
                     self.se = ServiceException()
                     self.se.read(iprot)
@@ -688,6 +704,10 @@ class RegisterUser_result(object):
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
         oprot.writeStructBegin('RegisterUser_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
             self.se.write(oprot)
@@ -710,7 +730,7 @@ class RegisterUser_result(object):
         return not (self == other)
 all_structs.append(RegisterUser_result)
 RegisterUser_result.thrift_spec = (
-    None,  # 0
+    (0, TType.STRUCT, 'success', [BaseRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 
@@ -780,11 +800,11 @@ class RegisterUserWithId_args(object):
             elif fid == 7:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype49, _vtype50, _size48) = iprot.readMapBegin()
-                    for _i52 in range(_size48):
-                        _key53 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val54 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key53] = _val54
+                    (_ktype70, _vtype71, _size69) = iprot.readMapBegin()
+                    for _i73 in range(_size69):
+                        _key74 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val75 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key74] = _val75
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -825,9 +845,9 @@ class RegisterUserWithId_args(object):
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 7)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter55, viter56 in self.carrier.items():
-                oprot.writeString(kiter55.encode('utf-8') if sys.version_info[0] == 2 else kiter55)
-                oprot.writeString(viter56.encode('utf-8') if sys.version_info[0] == 2 else viter56)
+            for kiter76, viter77 in self.carrier.items():
+                oprot.writeString(kiter76.encode('utf-8') if sys.version_info[0] == 2 else kiter76)
+                oprot.writeString(viter77.encode('utf-8') if sys.version_info[0] == 2 else viter77)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -862,12 +882,14 @@ RegisterUserWithId_args.thrift_spec = (
 class RegisterUserWithId_result(object):
     """
     Attributes:
+     - success
      - se
 
     """
 
 
-    def __init__(self, se=None,):
+    def __init__(self, success=None, se=None,):
+        self.success = success
         self.se = se
 
     def read(self, iprot):
@@ -879,7 +901,13 @@ class RegisterUserWithId_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = BaseRpcResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
                 if ftype == TType.STRUCT:
                     self.se = ServiceException()
                     self.se.read(iprot)
@@ -895,6 +923,10 @@ class RegisterUserWithId_result(object):
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
         oprot.writeStructBegin('RegisterUserWithId_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
             self.se.write(oprot)
@@ -917,7 +949,7 @@ class RegisterUserWithId_result(object):
         return not (self == other)
 all_structs.append(RegisterUserWithId_result)
 RegisterUserWithId_result.thrift_spec = (
-    None,  # 0
+    (0, TType.STRUCT, 'success', [BaseRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 
@@ -966,11 +998,11 @@ class Login_args(object):
             elif fid == 4:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype58, _vtype59, _size57) = iprot.readMapBegin()
-                    for _i61 in range(_size57):
-                        _key62 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val63 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key62] = _val63
+                    (_ktype79, _vtype80, _size78) = iprot.readMapBegin()
+                    for _i82 in range(_size78):
+                        _key83 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val84 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key83] = _val84
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -999,9 +1031,9 @@ class Login_args(object):
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 4)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter64, viter65 in self.carrier.items():
-                oprot.writeString(kiter64.encode('utf-8') if sys.version_info[0] == 2 else kiter64)
-                oprot.writeString(viter65.encode('utf-8') if sys.version_info[0] == 2 else viter65)
+            for kiter85, viter86 in self.carrier.items():
+                oprot.writeString(kiter85.encode('utf-8') if sys.version_info[0] == 2 else kiter85)
+                oprot.writeString(viter86.encode('utf-8') if sys.version_info[0] == 2 else viter86)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -1053,8 +1085,9 @@ class Login_result(object):
             if ftype == TType.STOP:
                 break
             if fid == 0:
-                if ftype == TType.STRING:
-                    self.success = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                if ftype == TType.STRUCT:
+                    self.success = LoginRpcResponse()
+                    self.success.read(iprot)
                 else:
                     iprot.skip(ftype)
             elif fid == 1:
@@ -1074,8 +1107,8 @@ class Login_result(object):
             return
         oprot.writeStructBegin('Login_result')
         if self.success is not None:
-            oprot.writeFieldBegin('success', TType.STRING, 0)
-            oprot.writeString(self.success.encode('utf-8') if sys.version_info[0] == 2 else self.success)
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
             oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
@@ -1099,7 +1132,7 @@ class Login_result(object):
         return not (self == other)
 all_structs.append(Login_result)
 Login_result.thrift_spec = (
-    (0, TType.STRING, 'success', 'UTF8', None, ),  # 0
+    (0, TType.STRUCT, 'success', [LoginRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 
@@ -1148,11 +1181,11 @@ class UploadCreatorWithUserId_args(object):
             elif fid == 4:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype67, _vtype68, _size66) = iprot.readMapBegin()
-                    for _i70 in range(_size66):
-                        _key71 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val72 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key71] = _val72
+                    (_ktype88, _vtype89, _size87) = iprot.readMapBegin()
+                    for _i91 in range(_size87):
+                        _key92 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val93 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key92] = _val93
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -1181,9 +1214,9 @@ class UploadCreatorWithUserId_args(object):
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 4)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter73, viter74 in self.carrier.items():
-                oprot.writeString(kiter73.encode('utf-8') if sys.version_info[0] == 2 else kiter73)
-                oprot.writeString(viter74.encode('utf-8') if sys.version_info[0] == 2 else viter74)
+            for kiter94, viter95 in self.carrier.items():
+                oprot.writeString(kiter94.encode('utf-8') if sys.version_info[0] == 2 else kiter94)
+                oprot.writeString(viter95.encode('utf-8') if sys.version_info[0] == 2 else viter95)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -1215,12 +1248,14 @@ UploadCreatorWithUserId_args.thrift_spec = (
 class UploadCreatorWithUserId_result(object):
     """
     Attributes:
+     - success
      - se
 
     """
 
 
-    def __init__(self, se=None,):
+    def __init__(self, success=None, se=None,):
+        self.success = success
         self.se = se
 
     def read(self, iprot):
@@ -1232,7 +1267,13 @@ class UploadCreatorWithUserId_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = BaseRpcResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
                 if ftype == TType.STRUCT:
                     self.se = ServiceException()
                     self.se.read(iprot)
@@ -1248,6 +1289,10 @@ class UploadCreatorWithUserId_result(object):
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
         oprot.writeStructBegin('UploadCreatorWithUserId_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
             self.se.write(oprot)
@@ -1270,7 +1315,7 @@ class UploadCreatorWithUserId_result(object):
         return not (self == other)
 all_structs.append(UploadCreatorWithUserId_result)
 UploadCreatorWithUserId_result.thrift_spec = (
-    None,  # 0
+    (0, TType.STRUCT, 'success', [BaseRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 
@@ -1312,11 +1357,11 @@ class UploadCreatorWithUsername_args(object):
             elif fid == 3:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype76, _vtype77, _size75) = iprot.readMapBegin()
-                    for _i79 in range(_size75):
-                        _key80 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val81 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key80] = _val81
+                    (_ktype97, _vtype98, _size96) = iprot.readMapBegin()
+                    for _i100 in range(_size96):
+                        _key101 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val102 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key101] = _val102
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -1341,9 +1386,9 @@ class UploadCreatorWithUsername_args(object):
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 3)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter82, viter83 in self.carrier.items():
-                oprot.writeString(kiter82.encode('utf-8') if sys.version_info[0] == 2 else kiter82)
-                oprot.writeString(viter83.encode('utf-8') if sys.version_info[0] == 2 else viter83)
+            for kiter103, viter104 in self.carrier.items():
+                oprot.writeString(kiter103.encode('utf-8') if sys.version_info[0] == 2 else kiter103)
+                oprot.writeString(viter104.encode('utf-8') if sys.version_info[0] == 2 else viter104)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -1374,12 +1419,14 @@ UploadCreatorWithUsername_args.thrift_spec = (
 class UploadCreatorWithUsername_result(object):
     """
     Attributes:
+     - success
      - se
 
     """
 
 
-    def __init__(self, se=None,):
+    def __init__(self, success=None, se=None,):
+        self.success = success
         self.se = se
 
     def read(self, iprot):
@@ -1391,7 +1438,13 @@ class UploadCreatorWithUsername_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = BaseRpcResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
                 if ftype == TType.STRUCT:
                     self.se = ServiceException()
                     self.se.read(iprot)
@@ -1407,6 +1460,10 @@ class UploadCreatorWithUsername_result(object):
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
         oprot.writeStructBegin('UploadCreatorWithUsername_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
             self.se.write(oprot)
@@ -1429,7 +1486,7 @@ class UploadCreatorWithUsername_result(object):
         return not (self == other)
 all_structs.append(UploadCreatorWithUsername_result)
 UploadCreatorWithUsername_result.thrift_spec = (
-    None,  # 0
+    (0, TType.STRUCT, 'success', [BaseRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 
@@ -1471,11 +1528,11 @@ class GetUserId_args(object):
             elif fid == 3:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype85, _vtype86, _size84) = iprot.readMapBegin()
-                    for _i88 in range(_size84):
-                        _key89 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val90 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key89] = _val90
+                    (_ktype106, _vtype107, _size105) = iprot.readMapBegin()
+                    for _i109 in range(_size105):
+                        _key110 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val111 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key110] = _val111
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -1500,9 +1557,9 @@ class GetUserId_args(object):
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 3)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter91, viter92 in self.carrier.items():
-                oprot.writeString(kiter91.encode('utf-8') if sys.version_info[0] == 2 else kiter91)
-                oprot.writeString(viter92.encode('utf-8') if sys.version_info[0] == 2 else viter92)
+            for kiter112, viter113 in self.carrier.items():
+                oprot.writeString(kiter112.encode('utf-8') if sys.version_info[0] == 2 else kiter112)
+                oprot.writeString(viter113.encode('utf-8') if sys.version_info[0] == 2 else viter113)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -1553,8 +1610,9 @@ class GetUserId_result(object):
             if ftype == TType.STOP:
                 break
             if fid == 0:
-                if ftype == TType.I64:
-                    self.success = iprot.readI64()
+                if ftype == TType.STRUCT:
+                    self.success = UserIdRpcResponse()
+                    self.success.read(iprot)
                 else:
                     iprot.skip(ftype)
             elif fid == 1:
@@ -1574,8 +1632,8 @@ class GetUserId_result(object):
             return
         oprot.writeStructBegin('GetUserId_result')
         if self.success is not None:
-            oprot.writeFieldBegin('success', TType.I64, 0)
-            oprot.writeI64(self.success)
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
             oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
@@ -1599,7 +1657,7 @@ class GetUserId_result(object):
         return not (self == other)
 all_structs.append(GetUserId_result)
 GetUserId_result.thrift_spec = (
-    (0, TType.I64, 'success', None, None, ),  # 0
+    (0, TType.STRUCT, 'success', [UserIdRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 fix_spec(all_structs)

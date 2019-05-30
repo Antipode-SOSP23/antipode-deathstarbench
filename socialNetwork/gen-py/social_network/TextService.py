@@ -46,7 +46,7 @@ class Client(Iface):
 
         """
         self.send_UploadText(req_id, text, carrier)
-        self.recv_UploadText()
+        return self.recv_UploadText()
 
     def send_UploadText(self, req_id, text, carrier):
         self._oprot.writeMessageBegin('UploadText', TMessageType.CALL, self._seqid)
@@ -69,9 +69,11 @@ class Client(Iface):
         result = UploadText_result()
         result.read(iprot)
         iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
         if result.se is not None:
             raise result.se
-        return
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "UploadText failed: unknown result")
 
 
 class Processor(Iface, TProcessor):
@@ -101,7 +103,7 @@ class Processor(Iface, TProcessor):
         iprot.readMessageEnd()
         result = UploadText_result()
         try:
-            self._handler.UploadText(args.req_id, args.text, args.carrier)
+            result.success = self._handler.UploadText(args.req_id, args.text, args.carrier)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -161,11 +163,11 @@ class UploadText_args(object):
             elif fid == 3:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype31, _vtype32, _size30) = iprot.readMapBegin()
-                    for _i34 in range(_size30):
-                        _key35 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val36 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key35] = _val36
+                    (_ktype52, _vtype53, _size51) = iprot.readMapBegin()
+                    for _i55 in range(_size51):
+                        _key56 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val57 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key56] = _val57
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -190,9 +192,9 @@ class UploadText_args(object):
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 3)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter37, viter38 in self.carrier.items():
-                oprot.writeString(kiter37.encode('utf-8') if sys.version_info[0] == 2 else kiter37)
-                oprot.writeString(viter38.encode('utf-8') if sys.version_info[0] == 2 else viter38)
+            for kiter58, viter59 in self.carrier.items():
+                oprot.writeString(kiter58.encode('utf-8') if sys.version_info[0] == 2 else kiter58)
+                oprot.writeString(viter59.encode('utf-8') if sys.version_info[0] == 2 else viter59)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -223,12 +225,14 @@ UploadText_args.thrift_spec = (
 class UploadText_result(object):
     """
     Attributes:
+     - success
      - se
 
     """
 
 
-    def __init__(self, se=None,):
+    def __init__(self, success=None, se=None,):
+        self.success = success
         self.se = se
 
     def read(self, iprot):
@@ -240,7 +244,13 @@ class UploadText_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = BaseRpcResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
                 if ftype == TType.STRUCT:
                     self.se = ServiceException()
                     self.se.read(iprot)
@@ -256,6 +266,10 @@ class UploadText_result(object):
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
         oprot.writeStructBegin('UploadText_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
             self.se.write(oprot)
@@ -278,7 +292,7 @@ class UploadText_result(object):
         return not (self == other)
 all_structs.append(UploadText_result)
 UploadText_result.thrift_spec = (
-    None,  # 0
+    (0, TType.STRUCT, 'success', [BaseRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 fix_spec(all_structs)

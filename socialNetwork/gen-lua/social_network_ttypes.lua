@@ -5,12 +5,14 @@
 -- @generated
 --
 
+
 local Thrift = require 'Thrift'
 local TType = Thrift[1]
 local __TObject = Thrift[3]
 local TException = Thrift[4]
+require 'social_network_constants'
 
-local ErrorCode = {
+ErrorCode = {
   SE_CONNPOOL_TIMEOUT = 0,
   SE_THRIFT_CONN_ERROR = 1,
   SE_UNAUTHORIZED = 2,
@@ -21,14 +23,14 @@ local ErrorCode = {
   SE_RABBITMQ_CONN_ERROR = 7
 }
 
-local PostType = {
+PostType = {
   POST = 0,
   REPOST = 1,
   REPLY = 2,
   DM = 3
 }
 
-local User = __TObject:new{
+User = __TObject:new{
   user_id,
   first_name,
   last_name,
@@ -123,7 +125,7 @@ function User:write(oprot)
   oprot:writeStructEnd()
 end
 
-local ServiceException = TException:new{
+ServiceException = TException:new{
   __type = 'ServiceException',
   errorCode,
   message
@@ -171,7 +173,7 @@ function ServiceException:write(oprot)
   oprot:writeStructEnd()
 end
 
-local Media = __TObject:new{
+Media = __TObject:new{
   media_id,
   media_type
 }
@@ -218,7 +220,7 @@ function Media:write(oprot)
   oprot:writeStructEnd()
 end
 
-local Url = __TObject:new{
+Url = __TObject:new{
   shortened_url,
   expanded_url
 }
@@ -265,7 +267,7 @@ function Url:write(oprot)
   oprot:writeStructEnd()
 end
 
-local UserMention = __TObject:new{
+UserMention = __TObject:new{
   user_id,
   username
 }
@@ -312,7 +314,7 @@ function UserMention:write(oprot)
   oprot:writeStructEnd()
 end
 
-local Creator = __TObject:new{
+Creator = __TObject:new{
   user_id,
   username
 }
@@ -359,7 +361,7 @@ function Creator:write(oprot)
   oprot:writeStructEnd()
 end
 
-local Post = __TObject:new{
+Post = __TObject:new{
   post_id,
   creator,
   req_id,
@@ -524,5 +526,351 @@ function Post:write(oprot)
   oprot:writeStructEnd()
 end
 
-return {ErrorCode, PostType, User, ServiceException, Media, Url,
-        UserMention, Creator, Post}
+BaseRpcResponse = __TObject:new{
+  baggage
+}
+
+function BaseRpcResponse:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 1 then
+      if ftype == TType.STRING then
+        self.baggage = iprot:readString()
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function BaseRpcResponse:write(oprot)
+  oprot:writeStructBegin('BaseRpcResponse')
+  if self.baggage ~= nil then
+    oprot:writeFieldBegin('baggage', TType.STRING, 1)
+    oprot:writeString(self.baggage)
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+LoginRpcResponse = __TObject:new{
+  baggage,
+  result
+}
+
+function LoginRpcResponse:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 1 then
+      if ftype == TType.STRING then
+        self.baggage = iprot:readString()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 2 then
+      if ftype == TType.STRING then
+        self.result = iprot:readString()
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function LoginRpcResponse:write(oprot)
+  oprot:writeStructBegin('LoginRpcResponse')
+  if self.baggage ~= nil then
+    oprot:writeFieldBegin('baggage', TType.STRING, 1)
+    oprot:writeString(self.baggage)
+    oprot:writeFieldEnd()
+  end
+  if self.result ~= nil then
+    oprot:writeFieldBegin('result', TType.STRING, 2)
+    oprot:writeString(self.result)
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+UserIdRpcResponse = __TObject:new{
+  baggage,
+  result
+}
+
+function UserIdRpcResponse:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 1 then
+      if ftype == TType.STRING then
+        self.baggage = iprot:readString()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 2 then
+      if ftype == TType.I64 then
+        self.result = iprot:readI64()
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function UserIdRpcResponse:write(oprot)
+  oprot:writeStructBegin('UserIdRpcResponse')
+  if self.baggage ~= nil then
+    oprot:writeFieldBegin('baggage', TType.STRING, 1)
+    oprot:writeString(self.baggage)
+    oprot:writeFieldEnd()
+  end
+  if self.result ~= nil then
+    oprot:writeFieldBegin('result', TType.I64, 2)
+    oprot:writeI64(self.result)
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+PostRpcResponse = __TObject:new{
+  baggage,
+  result
+}
+
+function PostRpcResponse:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 1 then
+      if ftype == TType.STRING then
+        self.baggage = iprot:readString()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 2 then
+      if ftype == TType.STRUCT then
+        self.result = Post:new{}
+        self.result:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function PostRpcResponse:write(oprot)
+  oprot:writeStructBegin('PostRpcResponse')
+  if self.baggage ~= nil then
+    oprot:writeFieldBegin('baggage', TType.STRING, 1)
+    oprot:writeString(self.baggage)
+    oprot:writeFieldEnd()
+  end
+  if self.result ~= nil then
+    oprot:writeFieldBegin('result', TType.STRUCT, 2)
+    self.result:write(oprot)
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+PostListRpcResponse = __TObject:new{
+  baggage,
+  result
+}
+
+function PostListRpcResponse:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 1 then
+      if ftype == TType.STRING then
+        self.baggage = iprot:readString()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 2 then
+      if ftype == TType.LIST then
+        self.result = {}
+        local _etype21, _size18 = iprot:readListBegin()
+        for _i=1,_size18 do
+          local _elem22 = Post:new{}
+          _elem22:read(iprot)
+          table.insert(self.result, _elem22)
+        end
+        iprot:readListEnd()
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function PostListRpcResponse:write(oprot)
+  oprot:writeStructBegin('PostListRpcResponse')
+  if self.baggage ~= nil then
+    oprot:writeFieldBegin('baggage', TType.STRING, 1)
+    oprot:writeString(self.baggage)
+    oprot:writeFieldEnd()
+  end
+  if self.result ~= nil then
+    oprot:writeFieldBegin('result', TType.LIST, 2)
+    oprot:writeListBegin(TType.STRUCT, #self.result)
+    for _,iter23 in ipairs(self.result) do
+      iter23:write(oprot)
+    end
+    oprot:writeListEnd()
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+UidListRpcResponse = __TObject:new{
+  baggage,
+  result
+}
+
+function UidListRpcResponse:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 1 then
+      if ftype == TType.STRING then
+        self.baggage = iprot:readString()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 2 then
+      if ftype == TType.LIST then
+        self.result = {}
+        local _etype27, _size24 = iprot:readListBegin()
+        for _i=1,_size24 do
+          local _elem28 = iprot:readI64()
+          table.insert(self.result, _elem28)
+        end
+        iprot:readListEnd()
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function UidListRpcResponse:write(oprot)
+  oprot:writeStructBegin('UidListRpcResponse')
+  if self.baggage ~= nil then
+    oprot:writeFieldBegin('baggage', TType.STRING, 1)
+    oprot:writeString(self.baggage)
+    oprot:writeFieldEnd()
+  end
+  if self.result ~= nil then
+    oprot:writeFieldBegin('result', TType.LIST, 2)
+    oprot:writeListBegin(TType.I64, #self.result)
+    for _,iter29 in ipairs(self.result) do
+      oprot:writeI64(iter29)
+    end
+    oprot:writeListEnd()
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+UrlListRpcResponse = __TObject:new{
+  baggage,
+  result
+}
+
+function UrlListRpcResponse:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 1 then
+      if ftype == TType.STRING then
+        self.baggage = iprot:readString()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 2 then
+      if ftype == TType.LIST then
+        self.result = {}
+        local _etype33, _size30 = iprot:readListBegin()
+        for _i=1,_size30 do
+          local _elem34 = iprot:readString()
+          table.insert(self.result, _elem34)
+        end
+        iprot:readListEnd()
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function UrlListRpcResponse:write(oprot)
+  oprot:writeStructBegin('UrlListRpcResponse')
+  if self.baggage ~= nil then
+    oprot:writeFieldBegin('baggage', TType.STRING, 1)
+    oprot:writeString(self.baggage)
+    oprot:writeFieldEnd()
+  end
+  if self.result ~= nil then
+    oprot:writeFieldBegin('result', TType.LIST, 2)
+    oprot:writeListBegin(TType.STRING, #self.result)
+    for _,iter35 in ipairs(self.result) do
+      oprot:writeString(iter35)
+    end
+    oprot:writeListEnd()
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end

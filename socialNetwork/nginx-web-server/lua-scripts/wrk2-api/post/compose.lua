@@ -24,6 +24,7 @@ local function _UploadUserId(req_id, post, carrier, baggage)
     xtracer.DeleteBaggage()
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
   end
+  xtracer.JoinBaggage(err.baggage)
   GenericObjectPool:returnConnection(user_client)
   xtracer.DeleteBaggage()
 end
@@ -47,6 +48,7 @@ local function _UploadText(req_id, post, carrier, baggage)
     xtracer.DeleteBaggage()
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
   end
+  xtracer.JoinBaggage(err.baggage)
   GenericObjectPool:returnConnection(text_client)
   xtracer.DeleteBaggage()
 end
@@ -70,6 +72,7 @@ local function _UploadUniqueId(req_id, post, carrier, baggage)
     xtracer.DeleteBaggage()
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
   end
+  xtracer.JoinBaggage(err.baggage)
   GenericObjectPool:returnConnection(unique_id_client)
   xtracer.DeleteBaggage()
 end
@@ -100,11 +103,13 @@ local function _UploadMedia(req_id, post, carrier, baggage)
     xtracer.DeleteBaggage()
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
   end
+  xtracer.JoinBaggage(err.baggage)
   GenericObjectPool:returnConnection(media_client)
   xtracer.DeleteBaggage()
 end
 
 function _M.ComposePost()
+  print("I am here")
   local bridge_tracer = require "opentracing_bridge_tracer"
   local ngx = ngx
   local cjson = require "cjson"

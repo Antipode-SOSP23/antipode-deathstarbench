@@ -24,9 +24,9 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
     print('Usage: ' + sys.argv[0] + ' [-h host[:port]] [-u url] [-f[ramed]] [-s[sl]] [-novalidate] [-ca_certs certs] [-keyfile keyfile] [-certfile certfile] function [arg1 [arg2...]]')
     print('')
     print('Functions:')
-    print('  void StorePost(i64 req_id, Post post,  carrier)')
-    print('  Post ReadPost(i64 req_id, i64 post_id,  carrier)')
-    print('   ReadPosts(i64 req_id,  post_ids,  carrier)')
+    print('  BaseRpcResponse StorePost(i64 req_id, Post post,  carrier)')
+    print('  PostRpcResponse ReadPost(i64 req_id, i64 post_id,  carrier)')
+    print('  PostListRpcResponse ReadPosts(i64 req_id,  post_ids,  carrier)')
     print('')
     sys.exit(0)
 

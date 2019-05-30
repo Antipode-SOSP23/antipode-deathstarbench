@@ -46,7 +46,7 @@ class Client(Iface):
 
         """
         self.send_UploadUniqueId(req_id, post_type, carrier)
-        self.recv_UploadUniqueId()
+        return self.recv_UploadUniqueId()
 
     def send_UploadUniqueId(self, req_id, post_type, carrier):
         self._oprot.writeMessageBegin('UploadUniqueId', TMessageType.CALL, self._seqid)
@@ -69,9 +69,11 @@ class Client(Iface):
         result = UploadUniqueId_result()
         result.read(iprot)
         iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
         if result.se is not None:
             raise result.se
-        return
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "UploadUniqueId failed: unknown result")
 
 
 class Processor(Iface, TProcessor):
@@ -101,7 +103,7 @@ class Processor(Iface, TProcessor):
         iprot.readMessageEnd()
         result = UploadUniqueId_result()
         try:
-            self._handler.UploadUniqueId(args.req_id, args.post_type, args.carrier)
+            result.success = self._handler.UploadUniqueId(args.req_id, args.post_type, args.carrier)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -161,11 +163,11 @@ class UploadUniqueId_args(object):
             elif fid == 3:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype22, _vtype23, _size21) = iprot.readMapBegin()
-                    for _i25 in range(_size21):
-                        _key26 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val27 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key26] = _val27
+                    (_ktype43, _vtype44, _size42) = iprot.readMapBegin()
+                    for _i46 in range(_size42):
+                        _key47 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val48 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key47] = _val48
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -190,9 +192,9 @@ class UploadUniqueId_args(object):
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 3)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter28, viter29 in self.carrier.items():
-                oprot.writeString(kiter28.encode('utf-8') if sys.version_info[0] == 2 else kiter28)
-                oprot.writeString(viter29.encode('utf-8') if sys.version_info[0] == 2 else viter29)
+            for kiter49, viter50 in self.carrier.items():
+                oprot.writeString(kiter49.encode('utf-8') if sys.version_info[0] == 2 else kiter49)
+                oprot.writeString(viter50.encode('utf-8') if sys.version_info[0] == 2 else viter50)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -223,12 +225,14 @@ UploadUniqueId_args.thrift_spec = (
 class UploadUniqueId_result(object):
     """
     Attributes:
+     - success
      - se
 
     """
 
 
-    def __init__(self, se=None,):
+    def __init__(self, success=None, se=None,):
+        self.success = success
         self.se = se
 
     def read(self, iprot):
@@ -240,7 +244,13 @@ class UploadUniqueId_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = BaseRpcResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
                 if ftype == TType.STRUCT:
                     self.se = ServiceException()
                     self.se.read(iprot)
@@ -256,6 +266,10 @@ class UploadUniqueId_result(object):
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
         oprot.writeStructBegin('UploadUniqueId_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
             self.se.write(oprot)
@@ -278,7 +292,7 @@ class UploadUniqueId_result(object):
         return not (self == other)
 all_structs.append(UploadUniqueId_result)
 UploadUniqueId_result.thrift_spec = (
-    None,  # 0
+    (0, TType.STRUCT, 'success', [BaseRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 fix_spec(all_structs)

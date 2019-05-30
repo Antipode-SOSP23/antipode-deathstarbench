@@ -48,7 +48,7 @@ class Client(Iface):
 
         """
         self.send_UploadMedia(req_id, media_types, media_ids, carrier)
-        self.recv_UploadMedia()
+        return self.recv_UploadMedia()
 
     def send_UploadMedia(self, req_id, media_types, media_ids, carrier):
         self._oprot.writeMessageBegin('UploadMedia', TMessageType.CALL, self._seqid)
@@ -72,9 +72,11 @@ class Client(Iface):
         result = UploadMedia_result()
         result.read(iprot)
         iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
         if result.se is not None:
             raise result.se
-        return
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "UploadMedia failed: unknown result")
 
 
 class Processor(Iface, TProcessor):
@@ -104,7 +106,7 @@ class Processor(Iface, TProcessor):
         iprot.readMessageEnd()
         result = UploadMedia_result()
         try:
-            self._handler.UploadMedia(args.req_id, args.media_types, args.media_ids, args.carrier)
+            result.success = self._handler.UploadMedia(args.req_id, args.media_types, args.media_ids, args.carrier)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -161,31 +163,31 @@ class UploadMedia_args(object):
             elif fid == 2:
                 if ftype == TType.LIST:
                     self.media_types = []
-                    (_etype392, _size389) = iprot.readListBegin()
-                    for _i393 in range(_size389):
-                        _elem394 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.media_types.append(_elem394)
+                    (_etype364, _size361) = iprot.readListBegin()
+                    for _i365 in range(_size361):
+                        _elem366 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.media_types.append(_elem366)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
             elif fid == 3:
                 if ftype == TType.LIST:
                     self.media_ids = []
-                    (_etype398, _size395) = iprot.readListBegin()
-                    for _i399 in range(_size395):
-                        _elem400 = iprot.readI64()
-                        self.media_ids.append(_elem400)
+                    (_etype370, _size367) = iprot.readListBegin()
+                    for _i371 in range(_size367):
+                        _elem372 = iprot.readI64()
+                        self.media_ids.append(_elem372)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
             elif fid == 4:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype402, _vtype403, _size401) = iprot.readMapBegin()
-                    for _i405 in range(_size401):
-                        _key406 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val407 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key406] = _val407
+                    (_ktype374, _vtype375, _size373) = iprot.readMapBegin()
+                    for _i377 in range(_size373):
+                        _key378 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val379 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key378] = _val379
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -206,23 +208,23 @@ class UploadMedia_args(object):
         if self.media_types is not None:
             oprot.writeFieldBegin('media_types', TType.LIST, 2)
             oprot.writeListBegin(TType.STRING, len(self.media_types))
-            for iter408 in self.media_types:
-                oprot.writeString(iter408.encode('utf-8') if sys.version_info[0] == 2 else iter408)
+            for iter380 in self.media_types:
+                oprot.writeString(iter380.encode('utf-8') if sys.version_info[0] == 2 else iter380)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.media_ids is not None:
             oprot.writeFieldBegin('media_ids', TType.LIST, 3)
             oprot.writeListBegin(TType.I64, len(self.media_ids))
-            for iter409 in self.media_ids:
-                oprot.writeI64(iter409)
+            for iter381 in self.media_ids:
+                oprot.writeI64(iter381)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 4)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter410, viter411 in self.carrier.items():
-                oprot.writeString(kiter410.encode('utf-8') if sys.version_info[0] == 2 else kiter410)
-                oprot.writeString(viter411.encode('utf-8') if sys.version_info[0] == 2 else viter411)
+            for kiter382, viter383 in self.carrier.items():
+                oprot.writeString(kiter382.encode('utf-8') if sys.version_info[0] == 2 else kiter382)
+                oprot.writeString(viter383.encode('utf-8') if sys.version_info[0] == 2 else viter383)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -254,12 +256,14 @@ UploadMedia_args.thrift_spec = (
 class UploadMedia_result(object):
     """
     Attributes:
+     - success
      - se
 
     """
 
 
-    def __init__(self, se=None,):
+    def __init__(self, success=None, se=None,):
+        self.success = success
         self.se = se
 
     def read(self, iprot):
@@ -271,7 +275,13 @@ class UploadMedia_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = BaseRpcResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
                 if ftype == TType.STRUCT:
                     self.se = ServiceException()
                     self.se.read(iprot)
@@ -287,6 +297,10 @@ class UploadMedia_result(object):
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
         oprot.writeStructBegin('UploadMedia_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
             self.se.write(oprot)
@@ -309,7 +323,7 @@ class UploadMedia_result(object):
         return not (self == other)
 all_structs.append(UploadMedia_result)
 UploadMedia_result.thrift_spec = (
-    None,  # 0
+    (0, TType.STRUCT, 'success', [BaseRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 fix_spec(all_structs)

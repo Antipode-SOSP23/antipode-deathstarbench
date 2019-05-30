@@ -66,7 +66,7 @@ class Client(Iface):
 
         """
         self.send_StorePost(req_id, post, carrier)
-        self.recv_StorePost()
+        return self.recv_StorePost()
 
     def send_StorePost(self, req_id, post, carrier):
         self._oprot.writeMessageBegin('StorePost', TMessageType.CALL, self._seqid)
@@ -89,9 +89,11 @@ class Client(Iface):
         result = StorePost_result()
         result.read(iprot)
         iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
         if result.se is not None:
             raise result.se
-        return
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "StorePost failed: unknown result")
 
     def ReadPost(self, req_id, post_id, carrier):
         """
@@ -199,7 +201,7 @@ class Processor(Iface, TProcessor):
         iprot.readMessageEnd()
         result = StorePost_result()
         try:
-            self._handler.StorePost(args.req_id, args.post, args.carrier)
+            result.success = self._handler.StorePost(args.req_id, args.post, args.carrier)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -312,11 +314,11 @@ class StorePost_args(object):
             elif fid == 3:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype169, _vtype170, _size168) = iprot.readMapBegin()
-                    for _i172 in range(_size168):
-                        _key173 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val174 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key173] = _val174
+                    (_ktype190, _vtype191, _size189) = iprot.readMapBegin()
+                    for _i193 in range(_size189):
+                        _key194 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val195 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key194] = _val195
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -341,9 +343,9 @@ class StorePost_args(object):
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 3)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter175, viter176 in self.carrier.items():
-                oprot.writeString(kiter175.encode('utf-8') if sys.version_info[0] == 2 else kiter175)
-                oprot.writeString(viter176.encode('utf-8') if sys.version_info[0] == 2 else viter176)
+            for kiter196, viter197 in self.carrier.items():
+                oprot.writeString(kiter196.encode('utf-8') if sys.version_info[0] == 2 else kiter196)
+                oprot.writeString(viter197.encode('utf-8') if sys.version_info[0] == 2 else viter197)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -374,12 +376,14 @@ StorePost_args.thrift_spec = (
 class StorePost_result(object):
     """
     Attributes:
+     - success
      - se
 
     """
 
 
-    def __init__(self, se=None,):
+    def __init__(self, success=None, se=None,):
+        self.success = success
         self.se = se
 
     def read(self, iprot):
@@ -391,7 +395,13 @@ class StorePost_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = BaseRpcResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
                 if ftype == TType.STRUCT:
                     self.se = ServiceException()
                     self.se.read(iprot)
@@ -407,6 +417,10 @@ class StorePost_result(object):
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
         oprot.writeStructBegin('StorePost_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
             self.se.write(oprot)
@@ -429,7 +443,7 @@ class StorePost_result(object):
         return not (self == other)
 all_structs.append(StorePost_result)
 StorePost_result.thrift_spec = (
-    None,  # 0
+    (0, TType.STRUCT, 'success', [BaseRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 
@@ -471,11 +485,11 @@ class ReadPost_args(object):
             elif fid == 3:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype178, _vtype179, _size177) = iprot.readMapBegin()
-                    for _i181 in range(_size177):
-                        _key182 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val183 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key182] = _val183
+                    (_ktype199, _vtype200, _size198) = iprot.readMapBegin()
+                    for _i202 in range(_size198):
+                        _key203 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val204 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key203] = _val204
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -500,9 +514,9 @@ class ReadPost_args(object):
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 3)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter184, viter185 in self.carrier.items():
-                oprot.writeString(kiter184.encode('utf-8') if sys.version_info[0] == 2 else kiter184)
-                oprot.writeString(viter185.encode('utf-8') if sys.version_info[0] == 2 else viter185)
+            for kiter205, viter206 in self.carrier.items():
+                oprot.writeString(kiter205.encode('utf-8') if sys.version_info[0] == 2 else kiter205)
+                oprot.writeString(viter206.encode('utf-8') if sys.version_info[0] == 2 else viter206)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -554,7 +568,7 @@ class ReadPost_result(object):
                 break
             if fid == 0:
                 if ftype == TType.STRUCT:
-                    self.success = Post()
+                    self.success = PostRpcResponse()
                     self.success.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -600,7 +614,7 @@ class ReadPost_result(object):
         return not (self == other)
 all_structs.append(ReadPost_result)
 ReadPost_result.thrift_spec = (
-    (0, TType.STRUCT, 'success', [Post, None], None, ),  # 0
+    (0, TType.STRUCT, 'success', [PostRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 
@@ -637,21 +651,21 @@ class ReadPosts_args(object):
             elif fid == 2:
                 if ftype == TType.LIST:
                     self.post_ids = []
-                    (_etype189, _size186) = iprot.readListBegin()
-                    for _i190 in range(_size186):
-                        _elem191 = iprot.readI64()
-                        self.post_ids.append(_elem191)
+                    (_etype210, _size207) = iprot.readListBegin()
+                    for _i211 in range(_size207):
+                        _elem212 = iprot.readI64()
+                        self.post_ids.append(_elem212)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
             elif fid == 3:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype193, _vtype194, _size192) = iprot.readMapBegin()
-                    for _i196 in range(_size192):
-                        _key197 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val198 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key197] = _val198
+                    (_ktype214, _vtype215, _size213) = iprot.readMapBegin()
+                    for _i217 in range(_size213):
+                        _key218 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val219 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key218] = _val219
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -672,16 +686,16 @@ class ReadPosts_args(object):
         if self.post_ids is not None:
             oprot.writeFieldBegin('post_ids', TType.LIST, 2)
             oprot.writeListBegin(TType.I64, len(self.post_ids))
-            for iter199 in self.post_ids:
-                oprot.writeI64(iter199)
+            for iter220 in self.post_ids:
+                oprot.writeI64(iter220)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 3)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter200, viter201 in self.carrier.items():
-                oprot.writeString(kiter200.encode('utf-8') if sys.version_info[0] == 2 else kiter200)
-                oprot.writeString(viter201.encode('utf-8') if sys.version_info[0] == 2 else viter201)
+            for kiter221, viter222 in self.carrier.items():
+                oprot.writeString(kiter221.encode('utf-8') if sys.version_info[0] == 2 else kiter221)
+                oprot.writeString(viter222.encode('utf-8') if sys.version_info[0] == 2 else viter222)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -732,14 +746,9 @@ class ReadPosts_result(object):
             if ftype == TType.STOP:
                 break
             if fid == 0:
-                if ftype == TType.LIST:
-                    self.success = []
-                    (_etype205, _size202) = iprot.readListBegin()
-                    for _i206 in range(_size202):
-                        _elem207 = Post()
-                        _elem207.read(iprot)
-                        self.success.append(_elem207)
-                    iprot.readListEnd()
+                if ftype == TType.STRUCT:
+                    self.success = PostListRpcResponse()
+                    self.success.read(iprot)
                 else:
                     iprot.skip(ftype)
             elif fid == 1:
@@ -759,11 +768,8 @@ class ReadPosts_result(object):
             return
         oprot.writeStructBegin('ReadPosts_result')
         if self.success is not None:
-            oprot.writeFieldBegin('success', TType.LIST, 0)
-            oprot.writeListBegin(TType.STRUCT, len(self.success))
-            for iter208 in self.success:
-                iter208.write(oprot)
-            oprot.writeListEnd()
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
             oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
@@ -787,7 +793,7 @@ class ReadPosts_result(object):
         return not (self == other)
 all_structs.append(ReadPosts_result)
 ReadPosts_result.thrift_spec = (
-    (0, TType.LIST, 'success', (TType.STRUCT, [Post, None], False), None, ),  # 0
+    (0, TType.STRUCT, 'success', [PostListRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 fix_spec(all_structs)

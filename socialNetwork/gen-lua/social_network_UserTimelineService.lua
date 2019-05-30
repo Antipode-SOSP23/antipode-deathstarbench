@@ -15,304 +15,15 @@ local __TClient = Thrift[6]
 local __TProcessor = Thrift[7]
 local ttype = Thrift[8]
 local ttable_size = Thrift[10]
-local social_network_ttypes = require 'social_network_ttypes'
-local ServiceException = social_network_ttypes[4]
-local Post = social_network_ttypes[9]
+require 'social_network_ttypes'
 
--- HELPER FUNCTIONS AND STRUCTURES
-
-local WriteUserTimeline_args = __TObject:new{
-  req_id,
-  post_id,
-  user_id,
-  timestamp,
-  carrier
-}
-
-function WriteUserTimeline_args:read(iprot)
-  iprot:readStructBegin()
-  while true do
-    local fname, ftype, fid = iprot:readFieldBegin()
-    if ftype == TType.STOP then
-      break
-    elseif fid == 1 then
-      if ftype == TType.I64 then
-        self.req_id = iprot:readI64()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 2 then
-      if ftype == TType.I64 then
-        self.post_id = iprot:readI64()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 3 then
-      if ftype == TType.I64 then
-        self.user_id = iprot:readI64()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 4 then
-      if ftype == TType.I64 then
-        self.timestamp = iprot:readI64()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 5 then
-      if ftype == TType.MAP then
-        self.carrier = {}
-        local _ktype171, _vtype172, _size170 = iprot:readMapBegin()
-        for _i=1,_size170 do
-          local _key174 = iprot:readString()
-          local _val175 = iprot:readString()
-          self.carrier[_key174] = _val175
-        end
-        iprot:readMapEnd()
-      else
-        iprot:skip(ftype)
-      end
-    else
-      iprot:skip(ftype)
-    end
-    iprot:readFieldEnd()
-  end
-  iprot:readStructEnd()
-end
-
-function WriteUserTimeline_args:write(oprot)
-  oprot:writeStructBegin('WriteUserTimeline_args')
-  if self.req_id ~= nil then
-    oprot:writeFieldBegin('req_id', TType.I64, 1)
-    oprot:writeI64(self.req_id)
-    oprot:writeFieldEnd()
-  end
-  if self.post_id ~= nil then
-    oprot:writeFieldBegin('post_id', TType.I64, 2)
-    oprot:writeI64(self.post_id)
-    oprot:writeFieldEnd()
-  end
-  if self.user_id ~= nil then
-    oprot:writeFieldBegin('user_id', TType.I64, 3)
-    oprot:writeI64(self.user_id)
-    oprot:writeFieldEnd()
-  end
-  if self.timestamp ~= nil then
-    oprot:writeFieldBegin('timestamp', TType.I64, 4)
-    oprot:writeI64(self.timestamp)
-    oprot:writeFieldEnd()
-  end
-  if self.carrier ~= nil then
-    oprot:writeFieldBegin('carrier', TType.MAP, 5)
-    oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
-    for kiter176,viter177 in pairs(self.carrier) do
-      oprot:writeString(kiter176)
-      oprot:writeString(viter177)
-    end
-    oprot:writeMapEnd()
-    oprot:writeFieldEnd()
-  end
-  oprot:writeFieldStop()
-  oprot:writeStructEnd()
-end
-
-local WriteUserTimeline_result = __TObject:new{
-  se
-}
-
-function WriteUserTimeline_result:read(iprot)
-  iprot:readStructBegin()
-  while true do
-    local fname, ftype, fid = iprot:readFieldBegin()
-    if ftype == TType.STOP then
-      break
-    elseif fid == 1 then
-      if ftype == TType.STRUCT then
-        self.se = ServiceException:new{}
-        self.se:read(iprot)
-      else
-        iprot:skip(ftype)
-      end
-    else
-      iprot:skip(ftype)
-    end
-    iprot:readFieldEnd()
-  end
-  iprot:readStructEnd()
-end
-
-function WriteUserTimeline_result:write(oprot)
-  oprot:writeStructBegin('WriteUserTimeline_result')
-  if self.se ~= nil then
-    oprot:writeFieldBegin('se', TType.STRUCT, 1)
-    self.se:write(oprot)
-    oprot:writeFieldEnd()
-  end
-  oprot:writeFieldStop()
-  oprot:writeStructEnd()
-end
-
-local ReadUserTimeline_args = __TObject:new{
-  req_id,
-  user_id,
-  start,
-  stop,
-  carrier
-}
-
-function ReadUserTimeline_args:read(iprot)
-  iprot:readStructBegin()
-  while true do
-    local fname, ftype, fid = iprot:readFieldBegin()
-    if ftype == TType.STOP then
-      break
-    elseif fid == 1 then
-      if ftype == TType.I64 then
-        self.req_id = iprot:readI64()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 2 then
-      if ftype == TType.I64 then
-        self.user_id = iprot:readI64()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 3 then
-      if ftype == TType.I32 then
-        self.start = iprot:readI32()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 4 then
-      if ftype == TType.I32 then
-        self.stop = iprot:readI32()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 5 then
-      if ftype == TType.MAP then
-        self.carrier = {}
-        local _ktype179, _vtype180, _size178 = iprot:readMapBegin()
-        for _i=1,_size178 do
-          local _key182 = iprot:readString()
-          local _val183 = iprot:readString()
-          self.carrier[_key182] = _val183
-        end
-        iprot:readMapEnd()
-      else
-        iprot:skip(ftype)
-      end
-    else
-      iprot:skip(ftype)
-    end
-    iprot:readFieldEnd()
-  end
-  iprot:readStructEnd()
-end
-
-function ReadUserTimeline_args:write(oprot)
-  oprot:writeStructBegin('ReadUserTimeline_args')
-  if self.req_id ~= nil then
-    oprot:writeFieldBegin('req_id', TType.I64, 1)
-    oprot:writeI64(self.req_id)
-    oprot:writeFieldEnd()
-  end
-  if self.user_id ~= nil then
-    oprot:writeFieldBegin('user_id', TType.I64, 2)
-    oprot:writeI64(self.user_id)
-    oprot:writeFieldEnd()
-  end
-  if self.start ~= nil then
-    oprot:writeFieldBegin('start', TType.I32, 3)
-    oprot:writeI32(self.start)
-    oprot:writeFieldEnd()
-  end
-  if self.stop ~= nil then
-    oprot:writeFieldBegin('stop', TType.I32, 4)
-    oprot:writeI32(self.stop)
-    oprot:writeFieldEnd()
-  end
-  if self.carrier ~= nil then
-    oprot:writeFieldBegin('carrier', TType.MAP, 5)
-    oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
-    for kiter184,viter185 in pairs(self.carrier) do
-      oprot:writeString(kiter184)
-      oprot:writeString(viter185)
-    end
-    oprot:writeMapEnd()
-    oprot:writeFieldEnd()
-  end
-  oprot:writeFieldStop()
-  oprot:writeStructEnd()
-end
-
-local ReadUserTimeline_result = __TObject:new{
-  success,
-  se
-}
-
-function ReadUserTimeline_result:read(iprot)
-  iprot:readStructBegin()
-  while true do
-    local fname, ftype, fid = iprot:readFieldBegin()
-    if ftype == TType.STOP then
-      break
-    elseif fid == 0 then
-      if ftype == TType.LIST then
-        self.success = {}
-        local _etype189, _size186 = iprot:readListBegin()
-        for _i=1,_size186 do
-          local _elem190 = Post:new{}
-          _elem190:read(iprot)
-          table.insert(self.success, _elem190)
-        end
-        iprot:readListEnd()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 1 then
-      if ftype == TType.STRUCT then
-        self.se = ServiceException:new{}
-        self.se:read(iprot)
-      else
-        iprot:skip(ftype)
-      end
-    else
-      iprot:skip(ftype)
-    end
-    iprot:readFieldEnd()
-  end
-  iprot:readStructEnd()
-end
-
-function ReadUserTimeline_result:write(oprot)
-  oprot:writeStructBegin('ReadUserTimeline_result')
-  if self.success ~= nil then
-    oprot:writeFieldBegin('success', TType.LIST, 0)
-    oprot:writeListBegin(TType.STRUCT, #self.success)
-    for _,iter191 in ipairs(self.success) do
-      iter191:write(oprot)
-    end
-    oprot:writeListEnd()
-    oprot:writeFieldEnd()
-  end
-  if self.se ~= nil then
-    oprot:writeFieldBegin('se', TType.STRUCT, 1)
-    self.se:write(oprot)
-    oprot:writeFieldEnd()
-  end
-  oprot:writeFieldStop()
-  oprot:writeStructEnd()
-end
-
-local UserTimelineServiceClient = __TObject.new(__TClient, {
+UserTimelineServiceClient = __TObject.new(__TClient, {
   __type = 'UserTimelineServiceClient'
 })
 
 function UserTimelineServiceClient:WriteUserTimeline(req_id, post_id, user_id, timestamp, carrier)
   self:send_WriteUserTimeline(req_id, post_id, user_id, timestamp, carrier)
-  self:recv_WriteUserTimeline(req_id, post_id, user_id, timestamp, carrier)
+  return self:recv_WriteUserTimeline(req_id, post_id, user_id, timestamp, carrier)
 end
 
 function UserTimelineServiceClient:send_WriteUserTimeline(req_id, post_id, user_id, timestamp, carrier)
@@ -339,9 +50,12 @@ function UserTimelineServiceClient:recv_WriteUserTimeline(req_id, post_id, user_
   local result = WriteUserTimeline_result:new{}
   result:read(self.iprot)
   self.iprot:readMessageEnd()
-  if result.se then
+  if result.success ~= nil then
+    return result.success
+  elseif result.se then
     error(result.se)
   end
+  error(TApplicationException:new{errorCode = TApplicationException.MISSING_RESULT})
 end
 
 function UserTimelineServiceClient:ReadUserTimeline(req_id, user_id, start, stop, carrier)
@@ -380,12 +94,12 @@ function UserTimelineServiceClient:recv_ReadUserTimeline(req_id, user_id, start,
   end
   error(TApplicationException:new{errorCode = TApplicationException.MISSING_RESULT})
 end
-local UserTimelineServiceIface = __TObject:new{
+UserTimelineServiceIface = __TObject:new{
   __type = 'UserTimelineServiceIface'
 }
 
 
-local UserTimelineServiceProcessor = __TObject.new(__TProcessor
+UserTimelineServiceProcessor = __TObject.new(__TProcessor
 , {
  __type = 'UserTimelineServiceProcessor'
 })
@@ -448,6 +162,296 @@ function UserTimelineServiceProcessor:process_ReadUserTimeline(seqid, iprot, opr
   result:write(oprot)
   oprot:writeMessageEnd()
   oprot.trans:flush()
+end
+
+-- HELPER FUNCTIONS AND STRUCTURES
+
+WriteUserTimeline_args = __TObject:new{
+  req_id,
+  post_id,
+  user_id,
+  timestamp,
+  carrier
+}
+
+function WriteUserTimeline_args:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 1 then
+      if ftype == TType.I64 then
+        self.req_id = iprot:readI64()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 2 then
+      if ftype == TType.I64 then
+        self.post_id = iprot:readI64()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 3 then
+      if ftype == TType.I64 then
+        self.user_id = iprot:readI64()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 4 then
+      if ftype == TType.I64 then
+        self.timestamp = iprot:readI64()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 5 then
+      if ftype == TType.MAP then
+        self.carrier = {}
+        local _ktype205, _vtype206, _size204 = iprot:readMapBegin() 
+        for _i=1,_size204 do
+          local _key208 = iprot:readString()
+          local _val209 = iprot:readString()
+          self.carrier[_key208] = _val209
+        end
+        iprot:readMapEnd()
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function WriteUserTimeline_args:write(oprot)
+  oprot:writeStructBegin('WriteUserTimeline_args')
+  if self.req_id ~= nil then
+    oprot:writeFieldBegin('req_id', TType.I64, 1)
+    oprot:writeI64(self.req_id)
+    oprot:writeFieldEnd()
+  end
+  if self.post_id ~= nil then
+    oprot:writeFieldBegin('post_id', TType.I64, 2)
+    oprot:writeI64(self.post_id)
+    oprot:writeFieldEnd()
+  end
+  if self.user_id ~= nil then
+    oprot:writeFieldBegin('user_id', TType.I64, 3)
+    oprot:writeI64(self.user_id)
+    oprot:writeFieldEnd()
+  end
+  if self.timestamp ~= nil then
+    oprot:writeFieldBegin('timestamp', TType.I64, 4)
+    oprot:writeI64(self.timestamp)
+    oprot:writeFieldEnd()
+  end
+  if self.carrier ~= nil then
+    oprot:writeFieldBegin('carrier', TType.MAP, 5)
+    oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
+    for kiter210,viter211 in pairs(self.carrier) do
+      oprot:writeString(kiter210)
+      oprot:writeString(viter211)
+    end
+    oprot:writeMapEnd()
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+WriteUserTimeline_result = __TObject:new{
+  success,
+  se
+}
+
+function WriteUserTimeline_result:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 0 then
+      if ftype == TType.STRUCT then
+        self.success = BaseRpcResponse:new{}
+        self.success:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 1 then
+      if ftype == TType.STRUCT then
+        self.se = ServiceException:new{}
+        self.se:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function WriteUserTimeline_result:write(oprot)
+  oprot:writeStructBegin('WriteUserTimeline_result')
+  if self.success ~= nil then
+    oprot:writeFieldBegin('success', TType.STRUCT, 0)
+    self.success:write(oprot)
+    oprot:writeFieldEnd()
+  end
+  if self.se ~= nil then
+    oprot:writeFieldBegin('se', TType.STRUCT, 1)
+    self.se:write(oprot)
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+ReadUserTimeline_args = __TObject:new{
+  req_id,
+  user_id,
+  start,
+  stop,
+  carrier
+}
+
+function ReadUserTimeline_args:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 1 then
+      if ftype == TType.I64 then
+        self.req_id = iprot:readI64()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 2 then
+      if ftype == TType.I64 then
+        self.user_id = iprot:readI64()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 3 then
+      if ftype == TType.I32 then
+        self.start = iprot:readI32()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 4 then
+      if ftype == TType.I32 then
+        self.stop = iprot:readI32()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 5 then
+      if ftype == TType.MAP then
+        self.carrier = {}
+        local _ktype213, _vtype214, _size212 = iprot:readMapBegin() 
+        for _i=1,_size212 do
+          local _key216 = iprot:readString()
+          local _val217 = iprot:readString()
+          self.carrier[_key216] = _val217
+        end
+        iprot:readMapEnd()
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function ReadUserTimeline_args:write(oprot)
+  oprot:writeStructBegin('ReadUserTimeline_args')
+  if self.req_id ~= nil then
+    oprot:writeFieldBegin('req_id', TType.I64, 1)
+    oprot:writeI64(self.req_id)
+    oprot:writeFieldEnd()
+  end
+  if self.user_id ~= nil then
+    oprot:writeFieldBegin('user_id', TType.I64, 2)
+    oprot:writeI64(self.user_id)
+    oprot:writeFieldEnd()
+  end
+  if self.start ~= nil then
+    oprot:writeFieldBegin('start', TType.I32, 3)
+    oprot:writeI32(self.start)
+    oprot:writeFieldEnd()
+  end
+  if self.stop ~= nil then
+    oprot:writeFieldBegin('stop', TType.I32, 4)
+    oprot:writeI32(self.stop)
+    oprot:writeFieldEnd()
+  end
+  if self.carrier ~= nil then
+    oprot:writeFieldBegin('carrier', TType.MAP, 5)
+    oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
+    for kiter218,viter219 in pairs(self.carrier) do
+      oprot:writeString(kiter218)
+      oprot:writeString(viter219)
+    end
+    oprot:writeMapEnd()
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+ReadUserTimeline_result = __TObject:new{
+  success,
+  se
+}
+
+function ReadUserTimeline_result:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 0 then
+      if ftype == TType.STRUCT then
+        self.success = PostListRpcResponse:new{}
+        self.success:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 1 then
+      if ftype == TType.STRUCT then
+        self.se = ServiceException:new{}
+        self.se:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function ReadUserTimeline_result:write(oprot)
+  oprot:writeStructBegin('ReadUserTimeline_result')
+  if self.success ~= nil then
+    oprot:writeFieldBegin('success', TType.STRUCT, 0)
+    self.success:write(oprot)
+    oprot:writeFieldEnd()
+  end
+  if self.se ~= nil then
+    oprot:writeFieldBegin('se', TType.STRUCT, 1)
+    self.se:write(oprot)
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
 end
 
 return UserTimelineServiceClient

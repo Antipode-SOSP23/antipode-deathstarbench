@@ -97,7 +97,7 @@ class Client(Iface):
 
         """
         self.send_UploadText(req_id, text, carrier)
-        self.recv_UploadText()
+        return self.recv_UploadText()
 
     def send_UploadText(self, req_id, text, carrier):
         self._oprot.writeMessageBegin('UploadText', TMessageType.CALL, self._seqid)
@@ -120,9 +120,11 @@ class Client(Iface):
         result = UploadText_result()
         result.read(iprot)
         iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
         if result.se is not None:
             raise result.se
-        return
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "UploadText failed: unknown result")
 
     def UploadMedia(self, req_id, media, carrier):
         """
@@ -133,7 +135,7 @@ class Client(Iface):
 
         """
         self.send_UploadMedia(req_id, media, carrier)
-        self.recv_UploadMedia()
+        return self.recv_UploadMedia()
 
     def send_UploadMedia(self, req_id, media, carrier):
         self._oprot.writeMessageBegin('UploadMedia', TMessageType.CALL, self._seqid)
@@ -156,9 +158,11 @@ class Client(Iface):
         result = UploadMedia_result()
         result.read(iprot)
         iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
         if result.se is not None:
             raise result.se
-        return
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "UploadMedia failed: unknown result")
 
     def UploadUniqueId(self, req_id, post_id, post_type, carrier):
         """
@@ -170,7 +174,7 @@ class Client(Iface):
 
         """
         self.send_UploadUniqueId(req_id, post_id, post_type, carrier)
-        self.recv_UploadUniqueId()
+        return self.recv_UploadUniqueId()
 
     def send_UploadUniqueId(self, req_id, post_id, post_type, carrier):
         self._oprot.writeMessageBegin('UploadUniqueId', TMessageType.CALL, self._seqid)
@@ -194,9 +198,11 @@ class Client(Iface):
         result = UploadUniqueId_result()
         result.read(iprot)
         iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
         if result.se is not None:
             raise result.se
-        return
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "UploadUniqueId failed: unknown result")
 
     def UploadCreator(self, req_id, creator, carrier):
         """
@@ -207,7 +213,7 @@ class Client(Iface):
 
         """
         self.send_UploadCreator(req_id, creator, carrier)
-        self.recv_UploadCreator()
+        return self.recv_UploadCreator()
 
     def send_UploadCreator(self, req_id, creator, carrier):
         self._oprot.writeMessageBegin('UploadCreator', TMessageType.CALL, self._seqid)
@@ -230,9 +236,11 @@ class Client(Iface):
         result = UploadCreator_result()
         result.read(iprot)
         iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
         if result.se is not None:
             raise result.se
-        return
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "UploadCreator failed: unknown result")
 
     def UploadUrls(self, req_id, urls, carrier):
         """
@@ -243,7 +251,7 @@ class Client(Iface):
 
         """
         self.send_UploadUrls(req_id, urls, carrier)
-        self.recv_UploadUrls()
+        return self.recv_UploadUrls()
 
     def send_UploadUrls(self, req_id, urls, carrier):
         self._oprot.writeMessageBegin('UploadUrls', TMessageType.CALL, self._seqid)
@@ -266,9 +274,11 @@ class Client(Iface):
         result = UploadUrls_result()
         result.read(iprot)
         iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
         if result.se is not None:
             raise result.se
-        return
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "UploadUrls failed: unknown result")
 
     def UploadUserMentions(self, req_id, user_mentions, carrier):
         """
@@ -279,7 +289,7 @@ class Client(Iface):
 
         """
         self.send_UploadUserMentions(req_id, user_mentions, carrier)
-        self.recv_UploadUserMentions()
+        return self.recv_UploadUserMentions()
 
     def send_UploadUserMentions(self, req_id, user_mentions, carrier):
         self._oprot.writeMessageBegin('UploadUserMentions', TMessageType.CALL, self._seqid)
@@ -302,9 +312,11 @@ class Client(Iface):
         result = UploadUserMentions_result()
         result.read(iprot)
         iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
         if result.se is not None:
             raise result.se
-        return
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "UploadUserMentions failed: unknown result")
 
 
 class Processor(Iface, TProcessor):
@@ -339,7 +351,7 @@ class Processor(Iface, TProcessor):
         iprot.readMessageEnd()
         result = UploadText_result()
         try:
-            self._handler.UploadText(args.req_id, args.text, args.carrier)
+            result.success = self._handler.UploadText(args.req_id, args.text, args.carrier)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -365,7 +377,7 @@ class Processor(Iface, TProcessor):
         iprot.readMessageEnd()
         result = UploadMedia_result()
         try:
-            self._handler.UploadMedia(args.req_id, args.media, args.carrier)
+            result.success = self._handler.UploadMedia(args.req_id, args.media, args.carrier)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -391,7 +403,7 @@ class Processor(Iface, TProcessor):
         iprot.readMessageEnd()
         result = UploadUniqueId_result()
         try:
-            self._handler.UploadUniqueId(args.req_id, args.post_id, args.post_type, args.carrier)
+            result.success = self._handler.UploadUniqueId(args.req_id, args.post_id, args.post_type, args.carrier)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -417,7 +429,7 @@ class Processor(Iface, TProcessor):
         iprot.readMessageEnd()
         result = UploadCreator_result()
         try:
-            self._handler.UploadCreator(args.req_id, args.creator, args.carrier)
+            result.success = self._handler.UploadCreator(args.req_id, args.creator, args.carrier)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -443,7 +455,7 @@ class Processor(Iface, TProcessor):
         iprot.readMessageEnd()
         result = UploadUrls_result()
         try:
-            self._handler.UploadUrls(args.req_id, args.urls, args.carrier)
+            result.success = self._handler.UploadUrls(args.req_id, args.urls, args.carrier)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -469,7 +481,7 @@ class Processor(Iface, TProcessor):
         iprot.readMessageEnd()
         result = UploadUserMentions_result()
         try:
-            self._handler.UploadUserMentions(args.req_id, args.user_mentions, args.carrier)
+            result.success = self._handler.UploadUserMentions(args.req_id, args.user_mentions, args.carrier)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -529,11 +541,11 @@ class UploadText_args(object):
             elif fid == 3:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype94, _vtype95, _size93) = iprot.readMapBegin()
-                    for _i97 in range(_size93):
-                        _key98 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val99 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key98] = _val99
+                    (_ktype115, _vtype116, _size114) = iprot.readMapBegin()
+                    for _i118 in range(_size114):
+                        _key119 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val120 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key119] = _val120
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -558,9 +570,9 @@ class UploadText_args(object):
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 3)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter100, viter101 in self.carrier.items():
-                oprot.writeString(kiter100.encode('utf-8') if sys.version_info[0] == 2 else kiter100)
-                oprot.writeString(viter101.encode('utf-8') if sys.version_info[0] == 2 else viter101)
+            for kiter121, viter122 in self.carrier.items():
+                oprot.writeString(kiter121.encode('utf-8') if sys.version_info[0] == 2 else kiter121)
+                oprot.writeString(viter122.encode('utf-8') if sys.version_info[0] == 2 else viter122)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -591,12 +603,14 @@ UploadText_args.thrift_spec = (
 class UploadText_result(object):
     """
     Attributes:
+     - success
      - se
 
     """
 
 
-    def __init__(self, se=None,):
+    def __init__(self, success=None, se=None,):
+        self.success = success
         self.se = se
 
     def read(self, iprot):
@@ -608,7 +622,13 @@ class UploadText_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = BaseRpcResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
                 if ftype == TType.STRUCT:
                     self.se = ServiceException()
                     self.se.read(iprot)
@@ -624,6 +644,10 @@ class UploadText_result(object):
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
         oprot.writeStructBegin('UploadText_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
             self.se.write(oprot)
@@ -646,7 +670,7 @@ class UploadText_result(object):
         return not (self == other)
 all_structs.append(UploadText_result)
 UploadText_result.thrift_spec = (
-    None,  # 0
+    (0, TType.STRUCT, 'success', [BaseRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 
@@ -683,22 +707,22 @@ class UploadMedia_args(object):
             elif fid == 2:
                 if ftype == TType.LIST:
                     self.media = []
-                    (_etype105, _size102) = iprot.readListBegin()
-                    for _i106 in range(_size102):
-                        _elem107 = Media()
-                        _elem107.read(iprot)
-                        self.media.append(_elem107)
+                    (_etype126, _size123) = iprot.readListBegin()
+                    for _i127 in range(_size123):
+                        _elem128 = Media()
+                        _elem128.read(iprot)
+                        self.media.append(_elem128)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
             elif fid == 3:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype109, _vtype110, _size108) = iprot.readMapBegin()
-                    for _i112 in range(_size108):
-                        _key113 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val114 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key113] = _val114
+                    (_ktype130, _vtype131, _size129) = iprot.readMapBegin()
+                    for _i133 in range(_size129):
+                        _key134 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val135 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key134] = _val135
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -719,16 +743,16 @@ class UploadMedia_args(object):
         if self.media is not None:
             oprot.writeFieldBegin('media', TType.LIST, 2)
             oprot.writeListBegin(TType.STRUCT, len(self.media))
-            for iter115 in self.media:
-                iter115.write(oprot)
+            for iter136 in self.media:
+                iter136.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 3)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter116, viter117 in self.carrier.items():
-                oprot.writeString(kiter116.encode('utf-8') if sys.version_info[0] == 2 else kiter116)
-                oprot.writeString(viter117.encode('utf-8') if sys.version_info[0] == 2 else viter117)
+            for kiter137, viter138 in self.carrier.items():
+                oprot.writeString(kiter137.encode('utf-8') if sys.version_info[0] == 2 else kiter137)
+                oprot.writeString(viter138.encode('utf-8') if sys.version_info[0] == 2 else viter138)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -759,12 +783,14 @@ UploadMedia_args.thrift_spec = (
 class UploadMedia_result(object):
     """
     Attributes:
+     - success
      - se
 
     """
 
 
-    def __init__(self, se=None,):
+    def __init__(self, success=None, se=None,):
+        self.success = success
         self.se = se
 
     def read(self, iprot):
@@ -776,7 +802,13 @@ class UploadMedia_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = BaseRpcResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
                 if ftype == TType.STRUCT:
                     self.se = ServiceException()
                     self.se.read(iprot)
@@ -792,6 +824,10 @@ class UploadMedia_result(object):
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
         oprot.writeStructBegin('UploadMedia_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
             self.se.write(oprot)
@@ -814,7 +850,7 @@ class UploadMedia_result(object):
         return not (self == other)
 all_structs.append(UploadMedia_result)
 UploadMedia_result.thrift_spec = (
-    None,  # 0
+    (0, TType.STRUCT, 'success', [BaseRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 
@@ -863,11 +899,11 @@ class UploadUniqueId_args(object):
             elif fid == 4:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype119, _vtype120, _size118) = iprot.readMapBegin()
-                    for _i122 in range(_size118):
-                        _key123 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val124 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key123] = _val124
+                    (_ktype140, _vtype141, _size139) = iprot.readMapBegin()
+                    for _i143 in range(_size139):
+                        _key144 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val145 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key144] = _val145
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -896,9 +932,9 @@ class UploadUniqueId_args(object):
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 4)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter125, viter126 in self.carrier.items():
-                oprot.writeString(kiter125.encode('utf-8') if sys.version_info[0] == 2 else kiter125)
-                oprot.writeString(viter126.encode('utf-8') if sys.version_info[0] == 2 else viter126)
+            for kiter146, viter147 in self.carrier.items():
+                oprot.writeString(kiter146.encode('utf-8') if sys.version_info[0] == 2 else kiter146)
+                oprot.writeString(viter147.encode('utf-8') if sys.version_info[0] == 2 else viter147)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -930,12 +966,14 @@ UploadUniqueId_args.thrift_spec = (
 class UploadUniqueId_result(object):
     """
     Attributes:
+     - success
      - se
 
     """
 
 
-    def __init__(self, se=None,):
+    def __init__(self, success=None, se=None,):
+        self.success = success
         self.se = se
 
     def read(self, iprot):
@@ -947,7 +985,13 @@ class UploadUniqueId_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = BaseRpcResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
                 if ftype == TType.STRUCT:
                     self.se = ServiceException()
                     self.se.read(iprot)
@@ -963,6 +1007,10 @@ class UploadUniqueId_result(object):
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
         oprot.writeStructBegin('UploadUniqueId_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
             self.se.write(oprot)
@@ -985,7 +1033,7 @@ class UploadUniqueId_result(object):
         return not (self == other)
 all_structs.append(UploadUniqueId_result)
 UploadUniqueId_result.thrift_spec = (
-    None,  # 0
+    (0, TType.STRUCT, 'success', [BaseRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 
@@ -1028,11 +1076,11 @@ class UploadCreator_args(object):
             elif fid == 3:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype128, _vtype129, _size127) = iprot.readMapBegin()
-                    for _i131 in range(_size127):
-                        _key132 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val133 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key132] = _val133
+                    (_ktype149, _vtype150, _size148) = iprot.readMapBegin()
+                    for _i152 in range(_size148):
+                        _key153 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val154 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key153] = _val154
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -1057,9 +1105,9 @@ class UploadCreator_args(object):
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 3)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter134, viter135 in self.carrier.items():
-                oprot.writeString(kiter134.encode('utf-8') if sys.version_info[0] == 2 else kiter134)
-                oprot.writeString(viter135.encode('utf-8') if sys.version_info[0] == 2 else viter135)
+            for kiter155, viter156 in self.carrier.items():
+                oprot.writeString(kiter155.encode('utf-8') if sys.version_info[0] == 2 else kiter155)
+                oprot.writeString(viter156.encode('utf-8') if sys.version_info[0] == 2 else viter156)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -1090,12 +1138,14 @@ UploadCreator_args.thrift_spec = (
 class UploadCreator_result(object):
     """
     Attributes:
+     - success
      - se
 
     """
 
 
-    def __init__(self, se=None,):
+    def __init__(self, success=None, se=None,):
+        self.success = success
         self.se = se
 
     def read(self, iprot):
@@ -1107,7 +1157,13 @@ class UploadCreator_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = BaseRpcResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
                 if ftype == TType.STRUCT:
                     self.se = ServiceException()
                     self.se.read(iprot)
@@ -1123,6 +1179,10 @@ class UploadCreator_result(object):
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
         oprot.writeStructBegin('UploadCreator_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
             self.se.write(oprot)
@@ -1145,7 +1205,7 @@ class UploadCreator_result(object):
         return not (self == other)
 all_structs.append(UploadCreator_result)
 UploadCreator_result.thrift_spec = (
-    None,  # 0
+    (0, TType.STRUCT, 'success', [BaseRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 
@@ -1182,22 +1242,22 @@ class UploadUrls_args(object):
             elif fid == 2:
                 if ftype == TType.LIST:
                     self.urls = []
-                    (_etype139, _size136) = iprot.readListBegin()
-                    for _i140 in range(_size136):
-                        _elem141 = Url()
-                        _elem141.read(iprot)
-                        self.urls.append(_elem141)
+                    (_etype160, _size157) = iprot.readListBegin()
+                    for _i161 in range(_size157):
+                        _elem162 = Url()
+                        _elem162.read(iprot)
+                        self.urls.append(_elem162)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
             elif fid == 3:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype143, _vtype144, _size142) = iprot.readMapBegin()
-                    for _i146 in range(_size142):
-                        _key147 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val148 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key147] = _val148
+                    (_ktype164, _vtype165, _size163) = iprot.readMapBegin()
+                    for _i167 in range(_size163):
+                        _key168 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val169 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key168] = _val169
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -1218,16 +1278,16 @@ class UploadUrls_args(object):
         if self.urls is not None:
             oprot.writeFieldBegin('urls', TType.LIST, 2)
             oprot.writeListBegin(TType.STRUCT, len(self.urls))
-            for iter149 in self.urls:
-                iter149.write(oprot)
+            for iter170 in self.urls:
+                iter170.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 3)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter150, viter151 in self.carrier.items():
-                oprot.writeString(kiter150.encode('utf-8') if sys.version_info[0] == 2 else kiter150)
-                oprot.writeString(viter151.encode('utf-8') if sys.version_info[0] == 2 else viter151)
+            for kiter171, viter172 in self.carrier.items():
+                oprot.writeString(kiter171.encode('utf-8') if sys.version_info[0] == 2 else kiter171)
+                oprot.writeString(viter172.encode('utf-8') if sys.version_info[0] == 2 else viter172)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -1258,12 +1318,14 @@ UploadUrls_args.thrift_spec = (
 class UploadUrls_result(object):
     """
     Attributes:
+     - success
      - se
 
     """
 
 
-    def __init__(self, se=None,):
+    def __init__(self, success=None, se=None,):
+        self.success = success
         self.se = se
 
     def read(self, iprot):
@@ -1275,7 +1337,13 @@ class UploadUrls_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = BaseRpcResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
                 if ftype == TType.STRUCT:
                     self.se = ServiceException()
                     self.se.read(iprot)
@@ -1291,6 +1359,10 @@ class UploadUrls_result(object):
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
         oprot.writeStructBegin('UploadUrls_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
             self.se.write(oprot)
@@ -1313,7 +1385,7 @@ class UploadUrls_result(object):
         return not (self == other)
 all_structs.append(UploadUrls_result)
 UploadUrls_result.thrift_spec = (
-    None,  # 0
+    (0, TType.STRUCT, 'success', [BaseRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 
@@ -1350,22 +1422,22 @@ class UploadUserMentions_args(object):
             elif fid == 2:
                 if ftype == TType.LIST:
                     self.user_mentions = []
-                    (_etype155, _size152) = iprot.readListBegin()
-                    for _i156 in range(_size152):
-                        _elem157 = UserMention()
-                        _elem157.read(iprot)
-                        self.user_mentions.append(_elem157)
+                    (_etype176, _size173) = iprot.readListBegin()
+                    for _i177 in range(_size173):
+                        _elem178 = UserMention()
+                        _elem178.read(iprot)
+                        self.user_mentions.append(_elem178)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
             elif fid == 3:
                 if ftype == TType.MAP:
                     self.carrier = {}
-                    (_ktype159, _vtype160, _size158) = iprot.readMapBegin()
-                    for _i162 in range(_size158):
-                        _key163 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        _val164 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
-                        self.carrier[_key163] = _val164
+                    (_ktype180, _vtype181, _size179) = iprot.readMapBegin()
+                    for _i183 in range(_size179):
+                        _key184 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        _val185 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.carrier[_key184] = _val185
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -1386,16 +1458,16 @@ class UploadUserMentions_args(object):
         if self.user_mentions is not None:
             oprot.writeFieldBegin('user_mentions', TType.LIST, 2)
             oprot.writeListBegin(TType.STRUCT, len(self.user_mentions))
-            for iter165 in self.user_mentions:
-                iter165.write(oprot)
+            for iter186 in self.user_mentions:
+                iter186.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.carrier is not None:
             oprot.writeFieldBegin('carrier', TType.MAP, 3)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.carrier))
-            for kiter166, viter167 in self.carrier.items():
-                oprot.writeString(kiter166.encode('utf-8') if sys.version_info[0] == 2 else kiter166)
-                oprot.writeString(viter167.encode('utf-8') if sys.version_info[0] == 2 else viter167)
+            for kiter187, viter188 in self.carrier.items():
+                oprot.writeString(kiter187.encode('utf-8') if sys.version_info[0] == 2 else kiter187)
+                oprot.writeString(viter188.encode('utf-8') if sys.version_info[0] == 2 else viter188)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -1426,12 +1498,14 @@ UploadUserMentions_args.thrift_spec = (
 class UploadUserMentions_result(object):
     """
     Attributes:
+     - success
      - se
 
     """
 
 
-    def __init__(self, se=None,):
+    def __init__(self, success=None, se=None,):
+        self.success = success
         self.se = se
 
     def read(self, iprot):
@@ -1443,7 +1517,13 @@ class UploadUserMentions_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = BaseRpcResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
                 if ftype == TType.STRUCT:
                     self.se = ServiceException()
                     self.se.read(iprot)
@@ -1459,6 +1539,10 @@ class UploadUserMentions_result(object):
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
         oprot.writeStructBegin('UploadUserMentions_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
         if self.se is not None:
             oprot.writeFieldBegin('se', TType.STRUCT, 1)
             self.se.write(oprot)
@@ -1481,7 +1565,7 @@ class UploadUserMentions_result(object):
         return not (self == other)
 all_structs.append(UploadUserMentions_result)
 UploadUserMentions_result.thrift_spec = (
-    None,  # 0
+    (0, TType.STRUCT, 'success', [BaseRpcResponse, None], None, ),  # 0
     (1, TType.STRUCT, 'se', [ServiceException, None], None, ),  # 1
 )
 fix_spec(all_structs)

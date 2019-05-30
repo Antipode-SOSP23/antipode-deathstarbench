@@ -696,6 +696,497 @@ class Post(object):
 
     def __ne__(self, other):
         return not (self == other)
+
+
+class BaseRpcResponse(object):
+    """
+    Attributes:
+     - baggage
+
+    """
+
+
+    def __init__(self, baggage=None,):
+        self.baggage = baggage
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRING:
+                    self.baggage = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('BaseRpcResponse')
+        if self.baggage is not None:
+            oprot.writeFieldBegin('baggage', TType.STRING, 1)
+            oprot.writeString(self.baggage.encode('utf-8') if sys.version_info[0] == 2 else self.baggage)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class LoginRpcResponse(object):
+    """
+    Attributes:
+     - baggage
+     - result
+
+    """
+
+
+    def __init__(self, baggage=None, result=None,):
+        self.baggage = baggage
+        self.result = result
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRING:
+                    self.baggage = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.STRING:
+                    self.result = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('LoginRpcResponse')
+        if self.baggage is not None:
+            oprot.writeFieldBegin('baggage', TType.STRING, 1)
+            oprot.writeString(self.baggage.encode('utf-8') if sys.version_info[0] == 2 else self.baggage)
+            oprot.writeFieldEnd()
+        if self.result is not None:
+            oprot.writeFieldBegin('result', TType.STRING, 2)
+            oprot.writeString(self.result.encode('utf-8') if sys.version_info[0] == 2 else self.result)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class UserIdRpcResponse(object):
+    """
+    Attributes:
+     - baggage
+     - result
+
+    """
+
+
+    def __init__(self, baggage=None, result=None,):
+        self.baggage = baggage
+        self.result = result
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRING:
+                    self.baggage = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.I64:
+                    self.result = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('UserIdRpcResponse')
+        if self.baggage is not None:
+            oprot.writeFieldBegin('baggage', TType.STRING, 1)
+            oprot.writeString(self.baggage.encode('utf-8') if sys.version_info[0] == 2 else self.baggage)
+            oprot.writeFieldEnd()
+        if self.result is not None:
+            oprot.writeFieldBegin('result', TType.I64, 2)
+            oprot.writeI64(self.result)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class PostRpcResponse(object):
+    """
+    Attributes:
+     - baggage
+     - result
+
+    """
+
+
+    def __init__(self, baggage=None, result=None,):
+        self.baggage = baggage
+        self.result = result
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRING:
+                    self.baggage = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.STRUCT:
+                    self.result = Post()
+                    self.result.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('PostRpcResponse')
+        if self.baggage is not None:
+            oprot.writeFieldBegin('baggage', TType.STRING, 1)
+            oprot.writeString(self.baggage.encode('utf-8') if sys.version_info[0] == 2 else self.baggage)
+            oprot.writeFieldEnd()
+        if self.result is not None:
+            oprot.writeFieldBegin('result', TType.STRUCT, 2)
+            self.result.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class PostListRpcResponse(object):
+    """
+    Attributes:
+     - baggage
+     - result
+
+    """
+
+
+    def __init__(self, baggage=None, result=None,):
+        self.baggage = baggage
+        self.result = result
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRING:
+                    self.baggage = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.LIST:
+                    self.result = []
+                    (_etype24, _size21) = iprot.readListBegin()
+                    for _i25 in range(_size21):
+                        _elem26 = Post()
+                        _elem26.read(iprot)
+                        self.result.append(_elem26)
+                    iprot.readListEnd()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('PostListRpcResponse')
+        if self.baggage is not None:
+            oprot.writeFieldBegin('baggage', TType.STRING, 1)
+            oprot.writeString(self.baggage.encode('utf-8') if sys.version_info[0] == 2 else self.baggage)
+            oprot.writeFieldEnd()
+        if self.result is not None:
+            oprot.writeFieldBegin('result', TType.LIST, 2)
+            oprot.writeListBegin(TType.STRUCT, len(self.result))
+            for iter27 in self.result:
+                iter27.write(oprot)
+            oprot.writeListEnd()
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class UidListRpcResponse(object):
+    """
+    Attributes:
+     - baggage
+     - result
+
+    """
+
+
+    def __init__(self, baggage=None, result=None,):
+        self.baggage = baggage
+        self.result = result
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRING:
+                    self.baggage = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.LIST:
+                    self.result = []
+                    (_etype31, _size28) = iprot.readListBegin()
+                    for _i32 in range(_size28):
+                        _elem33 = iprot.readI64()
+                        self.result.append(_elem33)
+                    iprot.readListEnd()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('UidListRpcResponse')
+        if self.baggage is not None:
+            oprot.writeFieldBegin('baggage', TType.STRING, 1)
+            oprot.writeString(self.baggage.encode('utf-8') if sys.version_info[0] == 2 else self.baggage)
+            oprot.writeFieldEnd()
+        if self.result is not None:
+            oprot.writeFieldBegin('result', TType.LIST, 2)
+            oprot.writeListBegin(TType.I64, len(self.result))
+            for iter34 in self.result:
+                oprot.writeI64(iter34)
+            oprot.writeListEnd()
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class UrlListRpcResponse(object):
+    """
+    Attributes:
+     - baggage
+     - result
+
+    """
+
+
+    def __init__(self, baggage=None, result=None,):
+        self.baggage = baggage
+        self.result = result
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRING:
+                    self.baggage = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.LIST:
+                    self.result = []
+                    (_etype38, _size35) = iprot.readListBegin()
+                    for _i39 in range(_size35):
+                        _elem40 = iprot.readString().decode('utf-8') if sys.version_info[0] == 2 else iprot.readString()
+                        self.result.append(_elem40)
+                    iprot.readListEnd()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('UrlListRpcResponse')
+        if self.baggage is not None:
+            oprot.writeFieldBegin('baggage', TType.STRING, 1)
+            oprot.writeString(self.baggage.encode('utf-8') if sys.version_info[0] == 2 else self.baggage)
+            oprot.writeFieldEnd()
+        if self.result is not None:
+            oprot.writeFieldBegin('result', TType.LIST, 2)
+            oprot.writeListBegin(TType.STRING, len(self.result))
+            for iter41 in self.result:
+                oprot.writeString(iter41.encode('utf-8') if sys.version_info[0] == 2 else iter41)
+            oprot.writeListEnd()
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
 all_structs.append(User)
 User.thrift_spec = (
     None,  # 0
@@ -748,6 +1239,47 @@ Post.thrift_spec = (
     (7, TType.LIST, 'urls', (TType.STRUCT, [Url, None], False), None, ),  # 7
     (8, TType.I64, 'timestamp', None, None, ),  # 8
     (9, TType.I32, 'post_type', None, None, ),  # 9
+)
+all_structs.append(BaseRpcResponse)
+BaseRpcResponse.thrift_spec = (
+    None,  # 0
+    (1, TType.STRING, 'baggage', 'UTF8', None, ),  # 1
+)
+all_structs.append(LoginRpcResponse)
+LoginRpcResponse.thrift_spec = (
+    None,  # 0
+    (1, TType.STRING, 'baggage', 'UTF8', None, ),  # 1
+    (2, TType.STRING, 'result', 'UTF8', None, ),  # 2
+)
+all_structs.append(UserIdRpcResponse)
+UserIdRpcResponse.thrift_spec = (
+    None,  # 0
+    (1, TType.STRING, 'baggage', 'UTF8', None, ),  # 1
+    (2, TType.I64, 'result', None, None, ),  # 2
+)
+all_structs.append(PostRpcResponse)
+PostRpcResponse.thrift_spec = (
+    None,  # 0
+    (1, TType.STRING, 'baggage', 'UTF8', None, ),  # 1
+    (2, TType.STRUCT, 'result', [Post, None], None, ),  # 2
+)
+all_structs.append(PostListRpcResponse)
+PostListRpcResponse.thrift_spec = (
+    None,  # 0
+    (1, TType.STRING, 'baggage', 'UTF8', None, ),  # 1
+    (2, TType.LIST, 'result', (TType.STRUCT, [Post, None], False), None, ),  # 2
+)
+all_structs.append(UidListRpcResponse)
+UidListRpcResponse.thrift_spec = (
+    None,  # 0
+    (1, TType.STRING, 'baggage', 'UTF8', None, ),  # 1
+    (2, TType.LIST, 'result', (TType.I64, None, False), None, ),  # 2
+)
+all_structs.append(UrlListRpcResponse)
+UrlListRpcResponse.thrift_spec = (
+    None,  # 0
+    (1, TType.STRING, 'baggage', 'UTF8', None, ),  # 1
+    (2, TType.LIST, 'result', (TType.STRING, 'UTF8', False), None, ),  # 2
 )
 fix_spec(all_structs)
 del all_structs

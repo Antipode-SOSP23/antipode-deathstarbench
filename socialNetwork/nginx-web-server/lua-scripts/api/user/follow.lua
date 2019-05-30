@@ -56,6 +56,7 @@ function _M.Follow()
     xtracer.DeleteBaggage()
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
   end
+  xtracer.JoinBaggage(err.baggage)
   GenericObjectPool:returnConnection(client)
   span:finish()
   xtracer.DeleteBaggage()

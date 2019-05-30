@@ -24,6 +24,7 @@ local function _UploadUserId(req_id, user_id, username, carrier, baggage)
     xtracer.DeleteBaggage()
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
   end
+  xtracer.JoinBaggage(err.baggage)
   GenericObjectPool:returnConnection(user_client)
   xtracer.DeleteBaggage()
 end
@@ -37,6 +38,7 @@ local function _UploadText(req_id, post, carrier, baggage)
   carrier["baggage"] = xtracer.BranchBaggage()
   local status, err = pcall(text_client.UploadText, text_client, req_id,
       post.text, carrier)
+  xtracer.JoinBaggage(err.baggage)
   GenericObjectPool:returnConnection(text_client)
   xtracer.DeleteBaggage()
 end
@@ -50,6 +52,7 @@ local function _UploadUniqueId(req_id, post, carrier, baggage)
   carrier["baggage"] = xtracer.BranchBaggage()
   local status, err = pcall(unique_id_client.UploadUniqueId, unique_id_client,
       req_id, tonumber(post.post_type), carrier)
+  xtracer.JoinBaggage(err.baggage)
   GenericObjectPool:returnConnection(unique_id_client)
   xtracer.DeleteBaggage()
 end
@@ -70,6 +73,7 @@ local function _UploadMedia(req_id, post, carrier)
     local status, err = pcall(media_client.UploadMedia, media_client,
         req_id, {}, {}, carrier)
   end
+  xtracer.JoinBaggage(err.baggage)
   GenericObjectPool:returnConnection(media_client)
   xtracer.DeleteBaggage()
 end

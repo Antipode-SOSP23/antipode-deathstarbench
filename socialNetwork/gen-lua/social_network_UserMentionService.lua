@@ -15,7 +15,7 @@ UserMentionServiceClient = __TObject.new(__TClient, {
 
 function UserMentionServiceClient:UploadUserMentions(req_id, usernames, carrier)
   self:send_UploadUserMentions(req_id, usernames, carrier)
-  self:recv_UploadUserMentions(req_id, usernames, carrier)
+  return self:recv_UploadUserMentions(req_id, usernames, carrier)
 end
 
 function UserMentionServiceClient:send_UploadUserMentions(req_id, usernames, carrier)
@@ -40,6 +40,12 @@ function UserMentionServiceClient:recv_UploadUserMentions(req_id, usernames, car
   local result = UploadUserMentions_result:new{}
   result:read(self.iprot)
   self.iprot:readMessageEnd()
+  if result.success ~= nil then
+    return result.success
+  elseif result.se then
+    error(result.se)
+  end
+  error(TApplicationException:new{errorCode = TApplicationException.MISSING_RESULT})
 end
 UserMentionServiceIface = __TObject:new{
   __type = 'UserMentionServiceIface'
@@ -113,10 +119,10 @@ function UploadUserMentions_args:read(iprot)
     elseif fid == 2 then
       if ftype == TType.LIST then
         self.usernames = {}
-        local _etype239, _size236 = iprot:readListBegin()
-        for _i=1,_size236 do
-          local _elem240 = iprot:readString()
-          table.insert(self.usernames, _elem240)
+        local _etype279, _size276 = iprot:readListBegin()
+        for _i=1,_size276 do
+          local _elem280 = iprot:readString()
+          table.insert(self.usernames, _elem280)
         end
         iprot:readListEnd()
       else
@@ -125,11 +131,11 @@ function UploadUserMentions_args:read(iprot)
     elseif fid == 3 then
       if ftype == TType.MAP then
         self.carrier = {}
-        local _ktype242, _vtype243, _size241 = iprot:readMapBegin() 
-        for _i=1,_size241 do
-          local _key245 = iprot:readString()
-          local _val246 = iprot:readString()
-          self.carrier[_key245] = _val246
+        local _ktype282, _vtype283, _size281 = iprot:readMapBegin() 
+        for _i=1,_size281 do
+          local _key285 = iprot:readString()
+          local _val286 = iprot:readString()
+          self.carrier[_key285] = _val286
         end
         iprot:readMapEnd()
       else
@@ -153,8 +159,8 @@ function UploadUserMentions_args:write(oprot)
   if self.usernames ~= nil then
     oprot:writeFieldBegin('usernames', TType.LIST, 2)
     oprot:writeListBegin(TType.STRING, #self.usernames)
-    for _,iter247 in ipairs(self.usernames) do
-      oprot:writeString(iter247)
+    for _,iter287 in ipairs(self.usernames) do
+      oprot:writeString(iter287)
     end
     oprot:writeListEnd()
     oprot:writeFieldEnd()
@@ -162,9 +168,9 @@ function UploadUserMentions_args:write(oprot)
   if self.carrier ~= nil then
     oprot:writeFieldBegin('carrier', TType.MAP, 3)
     oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
-    for kiter248,viter249 in pairs(self.carrier) do
-      oprot:writeString(kiter248)
-      oprot:writeString(viter249)
+    for kiter288,viter289 in pairs(self.carrier) do
+      oprot:writeString(kiter288)
+      oprot:writeString(viter289)
     end
     oprot:writeMapEnd()
     oprot:writeFieldEnd()
@@ -174,6 +180,7 @@ function UploadUserMentions_args:write(oprot)
 end
 
 UploadUserMentions_result = __TObject:new{
+  success,
   se
 }
 
@@ -183,6 +190,13 @@ function UploadUserMentions_result:read(iprot)
     local fname, ftype, fid = iprot:readFieldBegin()
     if ftype == TType.STOP then
       break
+    elseif fid == 0 then
+      if ftype == TType.STRUCT then
+        self.success = BaseRpcResponse:new{}
+        self.success:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
     elseif fid == 1 then
       if ftype == TType.STRUCT then
         self.se = ServiceException:new{}
@@ -200,6 +214,11 @@ end
 
 function UploadUserMentions_result:write(oprot)
   oprot:writeStructBegin('UploadUserMentions_result')
+  if self.success ~= nil then
+    oprot:writeFieldBegin('success', TType.STRUCT, 0)
+    self.success:write(oprot)
+    oprot:writeFieldEnd()
+  end
   if self.se ~= nil then
     oprot:writeFieldBegin('se', TType.STRUCT, 1)
     self.se:write(oprot)
