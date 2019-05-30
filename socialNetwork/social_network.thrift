@@ -66,8 +66,42 @@ struct Post {
   9: PostType post_type;
 }
 
+struct BaseRpcResponse {
+  1: string baggage;
+}
+
+struct LoginRpcResponse {
+  1: string baggage;
+  2: string result;
+}
+
+struct UserIdRpcResponse {
+  1: string baggage;
+  2: i64 result;
+}
+
+struct PostRpcResponse {
+  1: string baggage;
+  2: Post result;
+}
+
+struct PostListRpcResponse {
+  1: string baggage;
+  2: list<Post> result;
+}
+
+struct UidListRpcResponse {
+  1: string baggage;
+  2: list<i64> result;
+}
+
+struct UrlListRpcResponse {
+  1: string baggage;
+  2: list<string> result;
+}
+
 service UniqueIdService {
-  void UploadUniqueId (
+  BaseRpcResponse UploadUniqueId (
       1: i64 req_id,
       2: PostType post_type,
       3: map<string, string> carrier
@@ -75,7 +109,7 @@ service UniqueIdService {
 }
 
 service TextService {
-  void UploadText (
+  BaseRpcResponse UploadText (
       1: i64 req_id,
       2: string text,
       3: map<string, string> carrier
@@ -83,7 +117,7 @@ service TextService {
 }
 
 service UserService {
-  void RegisterUser (
+  BaseRpcResponse RegisterUser (
       1: i64 req_id,
       2: string first_name,
       3: string last_name,
@@ -92,7 +126,7 @@ service UserService {
       6: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-    void RegisterUserWithId (
+    BaseRpcResponse RegisterUserWithId (
         1: i64 req_id,
         2: string first_name,
         3: string last_name,
@@ -102,27 +136,27 @@ service UserService {
         7: map<string, string> carrier
     ) throws (1: ServiceException se)
 
-  string Login(
+  LoginRpcResponse Login(
       1: i64 req_id,
       2: string username,
       3: string password,
       4: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  void UploadCreatorWithUserId(
+  BaseRpcResponse UploadCreatorWithUserId(
       1: i64 req_id,
       2: i64 user_id,
       3: string username,
       4: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  void UploadCreatorWithUsername(
+  BaseRpcResponse UploadCreatorWithUsername(
       1: i64 req_id,
       2: string username,
       3: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  i64 GetUserId(
+  UserIdRpcResponse GetUserId(
       1: i64 req_id,
       2: string username,
       3: map<string, string> carrier
@@ -130,38 +164,38 @@ service UserService {
 }
 
 service ComposePostService {
-  void UploadText(
+  BaseRpcResponse UploadText(
       1: i64 req_id,
       2: string text,
       3: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  void UploadMedia(
+  BaseRpcResponse UploadMedia(
       1: i64 req_id,
       2: list<Media> media,
       3: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  void UploadUniqueId(
+  BaseRpcResponse UploadUniqueId(
       1: i64 req_id,
       2: i64 post_id,
       3: PostType post_type
       4: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  void UploadCreator(
+  BaseRpcResponse UploadCreator(
       1: i64 req_id,
       2: Creator creator,
       3: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  void UploadUrls(
+  BaseRpcResponse UploadUrls(
       1: i64 req_id,
       2: list<Url> urls,
       3: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  void UploadUserMentions(
+  BaseRpcResponse UploadUserMentions(
       1: i64 req_id,
       2: list<UserMention> user_mentions,
       3: map<string, string> carrier
@@ -169,19 +203,19 @@ service ComposePostService {
 }
 
 service PostStorageService {
-  void StorePost(
+  BaseRpcResponse StorePost(
     1: i64 req_id,
     2: Post post,
     3: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  Post ReadPost(
+  PostRpcResponse ReadPost(
     1: i64 req_id,
     2: i64 post_id,
     3: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  list<Post> ReadPosts(
+  PostListRpcResponse ReadPosts(
     1: i64 req_id,
     2: list<i64> post_ids,
     3: map<string, string> carrier
@@ -189,7 +223,7 @@ service PostStorageService {
 }
 
 service HomeTimelineService {
-  list<Post> ReadHomeTimeline(
+  PostListRpcResponse ReadHomeTimeline(
     1: i64 req_id,
     2: i64 user_id,
     3: i32 start,
@@ -199,7 +233,7 @@ service HomeTimelineService {
 }
 
 service UserTimelineService {
-  void WriteUserTimeline(
+  BaseRpcResponse WriteUserTimeline(
     1: i64 req_id,
     2: i64 post_id,
     3: i64 user_id,
@@ -207,7 +241,7 @@ service UserTimelineService {
     5: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  list<Post> ReadUserTimeline(
+  PostListRpcResponse ReadUserTimeline(
     1: i64 req_id,
     2: i64 user_id,
     3: i32 start,
@@ -217,47 +251,47 @@ service UserTimelineService {
 }
 
 service SocialGraphService{
-  list<i64> GetFollowers(
+  UidListRpcResponse GetFollowers(
       1: i64 req_id,
       2: i64 user_id,
       3: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  list<i64> GetFollowees(
+  UidListRpcResponse GetFollowees(
       1: i64 req_id,
       2: i64 user_id,
       3: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  void Follow(
+  BaseRpcResponse Follow(
       1: i64 req_id,
       2: i64 user_id,
       3: i64 followee_id,
       4: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  void Unfollow(
+  BaseRpcResponse Unfollow(
       1: i64 req_id,
       2: i64 user_id,
       3: i64 followee_id,
       4: map<string, string> carrier
    ) throws (1: ServiceException se)
 
-  void FollowWithUsername(
+  BaseRpcResponse FollowWithUsername(
       1: i64 req_id,
       2: string user_usernmae,
       3: string followee_username,
       4: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  void UnfollowWithUsername(
+  BaseRpcResponse UnfollowWithUsername(
       1: i64 req_id,
       2: string user_usernmae,
       3: string followee_username,
       4: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  void InsertUser(
+  BaseRpcResponse InsertUser(
      1: i64 req_id,
      2: i64 user_id,
      3: map<string, string> carrier
@@ -265,7 +299,7 @@ service SocialGraphService{
 }
 
 service UserMentionService {
-  void UploadUserMentions(
+  BaseRpcResponse UploadUserMentions(
       1: i64 req_id,
       2: list<string> usernames,
       3: map<string, string> carrier
@@ -273,13 +307,13 @@ service UserMentionService {
 }
 
 service UrlShortenService {
-  list<string> UploadUrls(
+  UrlListRpcResponse UploadUrls(
       1: i64 req_id,
       2: list<string> urls,
       3: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-    list<string> GetExtendedUrls(
+    UrlListRpcResponse GetExtendedUrls(
         1: i64 req_id,
         2: list<string> shortened_urls,
         3: map<string, string> carrier
@@ -287,7 +321,7 @@ service UrlShortenService {
 }
 
 service MediaService {
-  void UploadMedia(
+  BaseRpcResponse UploadMedia(
       1: i64 req_id,
       2: list<string> media_types,
       3: list<i64> media_ids,
