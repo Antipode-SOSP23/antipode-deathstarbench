@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <chrono>
+#include <future>
 
 #include <cpp_redis/cpp_redis>
 #include <nlohmann/json.hpp>
@@ -76,17 +77,17 @@ class ComposePostHandler : public ComposePostServiceIf {
   void _UploadUserTimelineHelper(int64_t req_id, int64_t post_id,
       int64_t user_id, int64_t timestamp,
       const std::map<std::string, std::string> & carrier,
-      Baggage& baggage);
+      Baggage& baggage, std::promise<Baggage> baggage_promise);
 
   void _UploadPostHelper(int64_t req_id, const Post &post,
       const std::map<std::string, std::string> &carrier,
-      Baggage& baggage);
+      Baggage& baggage, std::promise<Baggage> baggage_promise);
 
   void _UploadHomeTimelineHelper(int64_t req_id, int64_t post_id,
       int64_t user_id, int64_t timestamp,
       const std::vector<int64_t> &user_mentions_id,
       const std::map<std::string, std::string> &carrier,
-      Baggage& baggage);
+      Baggage& baggage, std::promise<Baggage> baggage_promise);
 
 };
 
@@ -689,23 +690,37 @@ void ComposePostHandler::_ComposeAndUpload(
   // Upload the post
   XTRACE("Upload Post start");
   Baggage upload_post_helper_baggage = BRANCH_CURRENT_BAGGAGE();
+  std::promise<Baggage> upload_post_promise;
+  std::future<Baggage> upload_post_future = upload_post_promise.get_future();
   std::thread upload_post_worker(&ComposePostHandler::_UploadPostHelper,
-                                   this, req_id, std::ref(post), std::ref(carrier), std::ref(upload_post_helper_baggage));
+                                   this, req_id, std::ref(post), std::ref(carrier), std::ref(upload_post_helper_baggage), std::move(upload_post_promise));
 
   Baggage upload_user_timeline_helper_baggage = BRANCH_CURRENT_BAGGAGE();
+  std::promise<Baggage> upload_user_promise;
+  std::future<Baggage> upload_user_future = upload_user_promise.get_future();
   std::thread upload_user_timeline_worker(
       &ComposePostHandler::_UploadUserTimelineHelper, this, req_id,
-      post.post_id, post.creator.user_id, post.timestamp, std::ref(carrier), std::ref(upload_user_timeline_helper_baggage));
+      post.post_id, post.creator.user_id, post.timestamp, std::ref(carrier), std::ref(upload_user_timeline_helper_baggage), std::move(upload_user_promise));
 
   Baggage upload_home_timeline_helper_baggage = BRANCH_CURRENT_BAGGAGE();
+  std::promise<Baggage> upload_home_promise;
+  std::future<Baggage> upload_home_future = upload_home_promise.get_future();
   std::thread upload_home_timeline_worker(
       &ComposePostHandler::_UploadHomeTimelineHelper, this, req_id,
       post.post_id, post.creator.user_id, post.timestamp,
-      std::ref(user_mentions_id), std::ref(carrier), std::ref(upload_home_timeline_helper_baggage));
+      std::ref(user_mentions_id), std::ref(carrier), std::ref(upload_home_timeline_helper_baggage), std::move(upload_home_promise));
 
   upload_post_worker.join();
   upload_user_timeline_worker.join();
   upload_home_timeline_worker.join();
+
+  try {
+    upload_post_helper_baggage = upload_post_future.get();
+    upload_user_timeline_helper_baggage = upload_user_future.get();
+    upload_home_timeline_helper_baggage = upload_home_future.get();
+  } catch (std::exception &) {
+    XTRACE("Error whilst trying to get baggages from futures");
+  }
 
   JOIN_CURRENT_BAGGAGE(upload_post_helper_baggage);
   JOIN_CURRENT_BAGGAGE(upload_user_timeline_helper_baggage);
@@ -750,7 +765,7 @@ void ComposePostHandler::_UploadPostHelper(
     int64_t req_id,
     const Post &post,
     const std::map<std::string, std::string> &carrier,
-    Baggage& baggage) {
+    Baggage& baggage, std::promise<Baggage> baggage_promise) {
   BAGGAGE(baggage);
   TextMapReader reader(carrier);
   std::map<std::string, std::string> writer_text_map;
@@ -783,7 +798,7 @@ void ComposePostHandler::_UploadPostHelper(
     XTRACE("Failed to connect to post-storage-service");
     _post_storage_teptr = std::current_exception();
   }
-  baggage = GET_CURRENT_BAGGAGE();
+  baggage_promise.set_value(BRANCH_CURRENT_BAGGAGE());
   DELETE_CURRENT_BAGGAGE();
 }
 
@@ -793,7 +808,7 @@ void ComposePostHandler::_UploadUserTimelineHelper(
     int64_t user_id,
     int64_t timestamp,
     const std::map<std::string, std::string> &carrier,
-    Baggage& baggage) {
+    Baggage& baggage, std::promise<Baggage> baggage_promise) {
   BAGGAGE(baggage);
   TextMapReader reader(carrier);
   std::map<std::string, std::string> writer_text_map;
@@ -825,7 +840,7 @@ void ComposePostHandler::_UploadUserTimelineHelper(
     XTRACE("Failed to write user-timeline to user-timeline-service");
     _user_timeline_teptr = std::current_exception();
   }
-  baggage = GET_CURRENT_BAGGAGE();
+  baggage_promise.set_value(BRANCH_CURRENT_BAGGAGE());
   DELETE_CURRENT_BAGGAGE();
 }
 
@@ -836,7 +851,7 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
     int64_t timestamp,
     const std::vector<int64_t> &user_mentions_id,
     const std::map<std::string, std::string> &carrier,
-    Baggage& baggage) {
+    Baggage& baggage, std::promise<Baggage> baggage_promise) {
   BAGGAGE(baggage);
   TextMapReader reader(carrier);
   std::map<std::string, std::string> writer_text_map;
@@ -880,7 +895,7 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
     XTRACE("Failed to connect to home-timeline-rabbitmq");
     _rabbitmq_teptr = std::current_exception();
   }
-  baggage = GET_CURRENT_BAGGAGE();
+  baggage_promise.set_value(BRANCH_CURRENT_BAGGAGE());
   DELETE_CURRENT_BAGGAGE();
 }
 
