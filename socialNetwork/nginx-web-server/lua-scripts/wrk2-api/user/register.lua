@@ -38,7 +38,7 @@ function _M.RegisterUser()
 
   local client = GenericObjectPool:connection(UserServiceClient, "user-service", 9090)
 
-  carrier["baggage"] = baggage.BranchBaggage()
+  carrier["baggage"] = xtracer.BranchBaggage()
   local status, err = pcall(client.RegisterUserWithId, client, req_id, post.first_name,
       post.last_name, post.username, post.password, tonumber(post.user_id), carrier)
   GenericObjectPool:returnConnection(client)
