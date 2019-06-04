@@ -29,7 +29,7 @@ def getEdges(file):
 async def register(addr, nodes):
   idx = 0
   tasks = []
-  conn = aiohttp.TCPConnector(limit=200)
+  conn = aiohttp.TCPConnector(limit=1)
   async with aiohttp.ClientSession(connector=conn) as session:
     for i in range(1, nodes + 1):
       task = asyncio.ensure_future(upload_register(session, addr, str(i)))
@@ -45,7 +45,7 @@ async def register(addr, nodes):
 async def follow(addr, edges):
   idx = 0
   tasks = []
-  conn = aiohttp.TCPConnector(limit=200)
+  conn = aiohttp.TCPConnector(limit=1)
   async with aiohttp.ClientSession(connector=conn) as session:
     for edge in edges:
       task = asyncio.ensure_future(upload_follow(session, addr, edge[0], edge[1]))
