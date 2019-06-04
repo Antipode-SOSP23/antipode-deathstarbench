@@ -446,6 +446,7 @@ void PostStorageHandler::ReadPosts(
 
   if (post_ids.empty()) {
     XTRACE("List of Post IDs is empty");
+    response.baggage = GET_CURRENT_BAGGAGE().str();
     DELETE_CURRENT_BAGGAGE();
     return;
   }

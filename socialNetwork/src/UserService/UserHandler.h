@@ -168,7 +168,7 @@ void UserHandler::RegisterUserWithId(
   }
 
   if (!XTrace::IsTracing()) {
-    XTrace::StartTrace("UserHandler");
+    XTrace::StartTrace("UserHandler-RegisterUserWithId");
   }
 
   XTRACE("UserHandler::RegisterUserWithId", {{"RequestID", std::to_string(req_id)}});
@@ -310,7 +310,7 @@ void UserHandler::RegisterUser(
   }
 
   if (!XTrace::IsTracing()) {
-    XTrace::StartTrace("UserHandler");
+    XTrace::StartTrace("UserHandler-RegisterUser");
   }
 
   XTRACE("UserHandler::RegisterUser", {{"RequestID", std::to_string(req_id)}});
@@ -482,7 +482,7 @@ void UserHandler::UploadCreatorWithUsername(
   }
 
   if (!XTrace::IsTracing()) {
-    XTrace::StartTrace("UserHandler");
+    XTrace::StartTrace("UserHandler-UploadCreatorWithUsername");
   }
 
   XTRACE("UserHandler::UploadCreatorWithUsername", {{"RequestID", std::to_string(req_id)}});
@@ -702,7 +702,7 @@ void UserHandler::UploadCreatorWithUserId(
   }
 
   if (!XTrace::IsTracing()) {
-    XTrace::StartTrace("UserHandler");
+    XTrace::StartTrace("UserHandler-UploadCreatorWithUserId");
   }
 
   XTRACE("UserHandler::UploadCreatorWithUserId", {{"RequestID", std::to_string(req_id)}});
@@ -763,7 +763,7 @@ void UserHandler::Login(
   }
 
   if (!XTrace::IsTracing()) {
-    XTrace::StartTrace("UserHandler");
+    XTrace::StartTrace("UserHandler-Login");
   }
 
   XTRACE("UserHandler::Login", {{"RequestID", std::to_string(req_id)}});
@@ -1002,7 +1002,7 @@ void UserHandler::GetUserId(
   }
 
   if (!XTrace::IsTracing()) {
-    XTrace::StartTrace("UserHandler");
+    XTrace::StartTrace("UserHandler-GetUserId");
   }
 
   XTRACE("UserHandler::GetUserId", {{"RequestID", std::to_string(req_id)}});

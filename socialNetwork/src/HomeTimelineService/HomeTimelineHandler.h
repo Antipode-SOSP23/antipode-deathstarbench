@@ -117,6 +117,7 @@ void ReadHomeTimelineHandler::ReadHomeTimeline(
   auto post_client = post_client_wrapper->GetClient();
   try {
     XTRACE("Reading Posts");
+    writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
     post_client->ReadPosts(response, req_id, post_ids, writer_text_map);
     Baggage b = Baggage::deserialize(response.baggage);
     JOIN_CURRENT_BAGGAGE(b);
