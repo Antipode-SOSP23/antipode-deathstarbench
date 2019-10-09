@@ -1,14 +1,14 @@
 # X-Trace DeathStarBench
 
-Open-source benchmark suite for cloud microservices. DeathStarBench includes five end-to-end services, four for cloud systems, and 
-one for cloud-edge systems running on drone swarms. 
-
 This is a modified version of the Cornell DeathStarBench.  It has been modified to add X-Trace tracing support.  Please note the modified build / install / run directions.
 
-## End-to-end Services
+Open-source benchmark suite for cloud microservices. DeathStarBench includes five end-to-end services, four for cloud systems, and one for cloud-edge systems running on drone swarms. 
+
+## End-to-end Services <img src="microservices_bundle4.png" alt="suite-icon" width="40"/>
 
 * Social Network (released)
-* Media Service (in progress)
+* Media Service (released)
+* Hotel Reservation (released)
 * E-commerce site (in progress)
 * Banking System (in progress)
 * Drone coordination system (in progress)

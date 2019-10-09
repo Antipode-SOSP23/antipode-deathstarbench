@@ -15,7 +15,8 @@ local __TClient = Thrift[6]
 local __TProcessor = Thrift[7]
 local ttype = Thrift[8]
 local ttable_size = Thrift[10]
-require 'social_network_ttypes'
+local social_network_ttypes = require 'social_network_ttypes'
+local ServiceException = social_network_ttypes.ServiceException
 
 UserServiceClient = __TObject.new(__TClient, {
   __type = 'UserServiceClient'
