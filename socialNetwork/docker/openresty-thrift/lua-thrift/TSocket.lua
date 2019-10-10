@@ -17,11 +17,12 @@
 --
 
 local TTransport = require 'TTransport'
-local TTransportException = TTransport.TTransportException
-local TTransportBase = TTransport.TTransportBase
+local TTransportException = TTransport[1]
+local TTransportBase = TTransport[2]
 local Thrift = require 'Thrift'
-local ttype = Thrift.ttype
-local terror = Thrift.terror
+local ttype = Thrift[8]
+local terror = Thrift[9]
+
 
 -- TSocketBase
 local TSocketBase = TTransportBase:new{

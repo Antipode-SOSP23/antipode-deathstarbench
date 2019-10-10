@@ -526,7 +526,6 @@ function Post:write(oprot)
   oprot:writeStructEnd()
 end
 
-<<<<<<< HEAD
 BaseRpcResponse = __TObject:new{
   baggage
 }
@@ -875,16 +874,3 @@ function UrlListRpcResponse:write(oprot)
   oprot:writeFieldStop()
   oprot:writeStructEnd()
 end
-=======
-return {
-  ErrorCode=ErrorCode,
-  PostType=PostType,
-  User=User,
-  ServiceException=ServiceException,
-  Media=Media,
-  Url=Url,
-  UserMention=UserMention,
-  Creator=Creator,
-  Post=Post
-}
->>>>>>> 4be4b8007624671631caa95e8d1f2252a22f8fc8

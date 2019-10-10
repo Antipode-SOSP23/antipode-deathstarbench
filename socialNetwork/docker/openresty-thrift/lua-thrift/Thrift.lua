@@ -50,6 +50,7 @@ end
 
 local version = 1.0
 
+-- Thrift[1]
 local TType = {
   STOP   = 0,
   VOID   = 1,
@@ -70,6 +71,7 @@ local TType = {
   UTF16  = 17
 }
 
+-- Thrift[2]
 local TMessageType = {
   CALL  = 1,
   REPLY = 2,
@@ -78,7 +80,7 @@ local TMessageType = {
 }
 
 -- Recursive __index function to achieve inheritance
-local function __tobj_index(self, key)
+function __tobj_index(self, key)
   local v = rawget(self, key)
   if v ~= nil then
     return v
@@ -93,6 +95,7 @@ local function __tobj_index(self, key)
 end
 
 -- Basic Thrift-Lua Object
+-- Thrift[3]
 local __TObject = {
   __type = '__TObject',
   __mt = {
@@ -112,7 +115,7 @@ function __TObject:new(init_obj)
 end
 
 -- Return a string representation of any lua variable
-local function thrift_print_r(t)
+function thrift_print_r(t)
   local ret = ''
   local ltype = type(t)
   if (ltype == 'table') then
@@ -130,6 +133,7 @@ local function thrift_print_r(t)
 end
 
 -- Basic Exception
+-- Thrift[4]
 local TException = __TObject:new{
   message,
   errorCode,
@@ -235,6 +239,7 @@ function TException:write(oprot)
 end
 
 -- Basic Client (used in generated lua code)
+-- Thrift[6]
 local __TClient = __TObject:new{
   __type = '__TClient',
   _seqid = 0
@@ -265,6 +270,7 @@ function __TClient:close()
 end
 
 -- Basic Processor (used in generated lua code)
+-- Thrift[7]
 local __TProcessor = __TObject:new{
   __type = '__TProcessor'
 }
@@ -281,15 +287,5 @@ function __TProcessor:new(obj)
   return __TObject.new(self, obj)
 end
 
-return {
-    TType=TType,
-    TMessageType=TMessageType,
-    __TObject=__TObject,
-    TException=TException,
-    TApplicationException=TApplicationException,
-    __TClient=__TClient,
-    __TProcessor=__TProcessor,
-    ttype=ttype,
-    terror=terror,
-    ttable_size=ttable_size
-}
+return {TType, TMessageType, __TObject, TException,
+    TApplicationException, __TClient, __TProcessor, ttype, terror, ttable_size}

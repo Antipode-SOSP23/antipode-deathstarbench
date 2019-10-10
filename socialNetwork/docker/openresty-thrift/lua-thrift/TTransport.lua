@@ -18,9 +18,8 @@
 --
 
 local Thrift = require('Thrift')
-local __TObject = Thrift.__TObject
-local TException = Thrift.TException
-local terror = Thrift.terror
+local __TObject = Thrift[3]
+local TException = Thrift[4]
 
 local TTransportException = TException:new {
   UNKNOWN             = 0,
@@ -95,8 +94,4 @@ function TTransportFactoryBase:getTransport(trans)
   return trans
 end
 
-return {
-  TTransportException=TTransportException,
-  TTransportBase=TTransportBase,
-  TTransportFactoryBase=TTransportFactoryBase
-}
+return {TTransportException, TTransportBase, TTransportFactoryBase}
