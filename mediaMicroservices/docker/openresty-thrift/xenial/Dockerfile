@@ -14,7 +14,7 @@ ARG JAEGER_TRACING_VERSION="0.4.2"
 ARG NGINX_OPENTRACING_VERSION="0.8.0"
 ARG OPENTRACING_CPP_VERSION="1.5.1"
 ARG RESTY_J="1"
-ARG NUM_CPUS="40"
+ARG NUM_CPUS="12"
 ARG RESTY_CONFIG_OPTIONS="\
     --with-file-aio \
     --with-http_addition_module \
@@ -78,6 +78,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
         ca-certificates \
         curl \
         git \
+        wget \
         gettext-base \
         libgd-dev \
         libgeoip-dev \
@@ -201,6 +202,39 @@ RUN luarocks install long \
     && luarocks install lua-resty-jwt \
     && ldconfig
 
+RUN apt-get update \ 
+  && apt-get install -y libboost-all-dev
+
+RUN apt-get install -y lua5.1 lua5.1-dev
+
+RUN cd /tmp \ 
+  && wget https://github.com/google/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.gz \
+  && gunzip protobuf-2.5.0.tar.gz \
+  && tar -xvf protobuf-2.5.0.tar \
+  && cd protobuf-2.5.0 \
+  && ./configure --prefix=/usr \
+  && make \
+  && make install \
+  && ldconfig \
+  # Install xtrace
+  && cd /tmp \
+  && git clone https://github.com/JonathanMace/xtrace-cpp.git \
+  && cd xtrace-cpp \
+  && mkdir build \
+  && cd build \
+  && cmake .. \
+  && make \
+  && make install \
+  && cd /tmp \
+  && rm -rf \
+      protobuf-2.5.0.tar \
+      protobuf-2.5.0 \
+      xtrace-cpp
+
+RUN cp /usr/local/lib/luaxtrace.so /usr/local/openresty/lualib/luaxtrace.so
+
+ENV LD_LIBRARY_PATH /usr/local/lib:/usr/lib:/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}
+RUN ldconfig
 
 # Copy nginx configuration files
 COPY nginx.conf /usr/local/openresty/nginx/conf/nginx.conf
