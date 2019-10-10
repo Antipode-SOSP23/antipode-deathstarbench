@@ -19,7 +19,30 @@
 ### Before you start
 - Install Docker and Docker Compose.
 - Make sure the following ports are available: port `8080` for Nginx frontend and 
-  `16686` for Jaeger.
+  `16686` for Jaeger,`4080` and `5563` for X-Trace.
+
+### Build modified containers
+
+By default, the DeathStarBench pulls its containers from docker hub.  We need to override these with our modified X-Trace containers.  To do this, we will manually build the docker images for the modified components.
+
+1. Build the base docker image that contains all the dependent libraries.  We modified this to add X-Trace and protocol buffers.
+```
+cd docker/thrift-microservice-deps/cpp
+docker build --no-cache -t yg397/thrift-microservice-deps .
+cd ../../..
+```
+
+2. Build the nginx server image. We modified this to add X-Trace and protocol buffers
+```
+cd docker/openresty-thrift
+docker build --no-cache -t yg397/openresty-thrift -f xenial/Dockerfile .
+cd ../../../
+```
+
+3. Build the social network docker image
+```
+docker build -t yg397/media-microservices .
+```
 
 ### Start docker containers
 Start docker containers by running `docker-compose up -d`. All images will be 
