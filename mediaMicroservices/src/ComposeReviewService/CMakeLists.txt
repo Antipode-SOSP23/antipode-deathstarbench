@@ -12,6 +12,7 @@ target_include_directories(
     ComposeReviewService PRIVATE
     ${LIBMEMCACHED_INCLUDE_DIR}
     /usr/local/include/jaegertracing
+    /usr/local/include/xtrace
 )
 
 target_link_libraries(
@@ -21,9 +22,12 @@ target_link_libraries(
     ${THRIFT_LIB}
     ${CMAKE_THREAD_LIBS_INIT}
     ${Boost_LIBRARIES}
+    Boost::system
     Boost::log
     Boost::log_setup
     jaegertracing
+    xtrace
+    protobuf
 )
 
 install(TARGETS ComposeReviewService DESTINATION ./)
