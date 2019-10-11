@@ -18,6 +18,8 @@
 #include "../ThriftClient.h"
 #include "../logger.h"
 #include "../tracing.h"
+#include <xtrace/xtrace.h>
+#include <xtrace/baggage.h>
 
 namespace media_service {
 #define NUM_COMPONENTS 5
@@ -74,7 +76,12 @@ ComposeReviewHandler::ComposeReviewHandler(
 }
 
 void ComposeReviewHandler::_ComposeAndUpload(
-    int64_t req_id, const std::map<std::string, std::string> &writer_text_map) {
+    int64_t req_id, const std::map<std::string, std::string> &carrier) {
+
+  // Assumption: Baggage has already been set at this point and this function is being
+  // executed in the same thread as the caller thread (which seems to be the case).
+  // Hence, we don't need to look into the writer_text_map to get the baggage
+  // as the thread local variable already has the baggage set.
 
   std::string key_unique_id = std::to_string(req_id) + ":review_id";
   std::string key_movie_id = std::to_string(req_id) + ":movie_id";
@@ -98,6 +105,7 @@ void ComposeReviewHandler::_ComposeAndUpload(
       key_rating.size()
   };
 
+  XTRACE("Composing a review from the components obtained from memcached");
   // Compose a review from the components obtained from memcached
   memcached_return_t rc;
   auto client = memcached_pool_pop(_memcached_client_pool, true, &rc);
@@ -105,6 +113,7 @@ void ComposeReviewHandler::_ComposeAndUpload(
     ServiceException se;
     se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
     se.message = "Failed to pop a client from memcached pool";
+    XTRACE("Failed to pop a client from memcached pool");
     throw se;
   }
 
@@ -113,6 +122,7 @@ void ComposeReviewHandler::_ComposeAndUpload(
   if (rc != MEMCACHED_SUCCESS) {
     LOG(error) << "Cannot get components of request " << req_id << ": "
         << memcached_strerror(client, rc);
+    XTRACE("Cannot get components of request " + std::to_string(req_id), {{"ErrorCode", memcached_strerror(client, rc)}});
     ServiceException se;
     se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
     se.message = memcached_strerror(client, rc);
@@ -132,6 +142,7 @@ void ComposeReviewHandler::_ComposeAndUpload(
     if (return_value == nullptr) {
        LOG(debug) << "Memcached mget finished "
           << memcached_strerror(client, rc);
+       XTRACE("Memcached mget finished " + std::string(memcached_strerror(client, rc)));
       break;
     }
     if (rc != MEMCACHED_SUCCESS) {
@@ -139,6 +150,7 @@ void ComposeReviewHandler::_ComposeAndUpload(
       memcached_quit(client);
       memcached_pool_push(_memcached_client_pool, client);
       LOG(error) << "Cannot get components of request " << req_id;
+      XTRACE("Cannot get components of request " + std::to_string(req_id));
       ServiceException se;
       se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
       se.message =  "Cannot get components of request " + std::to_string(req_id);
@@ -160,6 +172,7 @@ void ComposeReviewHandler::_ComposeAndUpload(
       LOG(error) << "Unexpected memcached fetched data of request " << req_id
                    << " key: " << key_str
                    << " value: " << value_str;
+      XTRACE("Unexpected memcached fetched data of request " + std::to_string(req_id), {{"key", key_str}, {"value", value_str}});
       ServiceException se;
       se.errorCode = ErrorCode::SE_THRIFT_HANDLER_ERROR;
       se.message = "Unexpected memcached fetched data of request " +
@@ -182,61 +195,88 @@ void ComposeReviewHandler::_ComposeAndUpload(
   std::future<void> review_future;
   std::future<void> user_review_future;
   std::future<void> movie_review_future;
+
+  Baggage review_baggage = BRANCH_CURRENT_BAGGAGE();
   
   review_future = std::async(std::launch::async, [&](){
+    BAGGAGE(review_baggage);
+    TextMapReader reader(carrier);
+    std::map<std::string, std::string> writer_text_map(carrier);
+    TextMapWriter writer(writer_text_map);
     auto review_storage_client_wrapper = _review_storage_client_pool->Pop();
     if (!review_storage_client_wrapper) {
       ServiceException se;
       se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
       se.message = "Failed to connected to review-storage-service";
+      XTRACE("Failed to connect to review-storage-service");
       throw se;
     }
     auto review_storage_client = review_storage_client_wrapper->GetClient();
     try {
+      writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
       review_storage_client->StoreReview(req_id, new_review, writer_text_map);
     } catch (...) {
       _review_storage_client_pool->Push(review_storage_client_wrapper);
       LOG(error) << "Failed to upload review to review-storage-service";
+      XTRACE("Failed to upload review to review-storage-service");
       throw;
     }
     _review_storage_client_pool->Push(review_storage_client_wrapper);
   });
 
+  Baggage user_review_baggage = BRANCH_CURRENT_BAGGAGE();
+
   user_review_future = std::async(std::launch::async, [&](){
+    BAGGAGE(user_review_baggage);
+    TextMapReader reader(carrier);
+    std::map<std::string, std::string> writer_text_map(carrier);
+    TextMapWriter writer(writer_text_map);
     auto user_review_client_wrapper = _user_review_client_pool->Pop();
     if (!user_review_client_wrapper) {
       ServiceException se;
       se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
       se.message = "Failed to connected to user-review-service";
+      XTRACE("Failed to connect to user-review-service");
       throw se;
     }
     auto user_review_client = user_review_client_wrapper->GetClient();
     try {
+      writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
       user_review_client->UploadUserReview(req_id, new_review.user_id,
           new_review.review_id, new_review.timestamp, writer_text_map);
     } catch (...) {
       _user_review_client_pool->Push(user_review_client_wrapper);
       LOG(error) << "Failed to upload review to user-review-service";
+      XTRACE("Failed to upload review to user-review-service");
       throw;
     }
     _user_review_client_pool->Push(user_review_client_wrapper);
   });
 
+  Baggage movie_review_baggage = BRANCH_CURRENT_BAGGAGE();
+
   movie_review_future = std::async(std::launch::async, [&](){
+    BAGGAGE(movie_review_baggage);
+    TextMapReader reader(carrier);
+    std::map<std::string, std::string> writer_text_map(carrier);
+    TextMapWriter writer(writer_text_map);
     auto movie_review_client_wrapper = _movie_review_client_pool->Pop();
     if (!movie_review_client_wrapper) {
       ServiceException se;
       se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
       se.message = "Failed to connected to movie-review-service";
+      XTRACE("Failed to connect to movie-review-service");
       throw se;
     }
     auto movie_review_client = movie_review_client_wrapper->GetClient();
     try {
+      writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
       movie_review_client->UploadMovieReview(req_id, new_review.movie_id,
           new_review.review_id, new_review.timestamp, writer_text_map);
     } catch (...) {
       _movie_review_client_pool->Push(movie_review_client_wrapper);
       LOG(error) << "Failed to upload review to movie-review-service";
+      XTRACE("Failed to upload review to movie-review-service");
       throw;
     }
     _movie_review_client_pool->Push(movie_review_client_wrapper);
@@ -244,8 +284,11 @@ void ComposeReviewHandler::_ComposeAndUpload(
   
   try {
     review_future.get();
+    JOIN_CURRENT_BAGGAGE(review_baggage);
     user_review_future.get();
+    JOIN_CURRENT_BAGGAGE(user_review_baggage);
     movie_review_future.get();
+    JOIN_CURRENT_BAGGAGE(movie_review_baggage);
   } catch (...) {
     throw;
   }
@@ -255,6 +298,16 @@ void ComposeReviewHandler::UploadMovieId(
     int64_t req_id,
     const std::string &movie_id,
     const std::map<std::string, std::string> & carrier) {
+
+  std::map<std::string, std::string>::const_iterator baggage_it = carrier.find("baggage");
+  if (baggage_it != carrier.end()) {
+    SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
+  }
+
+  if (!XTrace::IsTracing()) {
+    XTrace::StartTrace("ComposeReviewHandler");
+  }
+  XTRACE("ComposeReviewHandler::UploadMovieId", {{"RequestID", std::to_string(req_id)}});
 
   // Initialize a span
   TextMapReader reader(carrier);
@@ -287,10 +340,12 @@ void ComposeReviewHandler::UploadMovieId(
     ServiceException se;
     se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
     se.message = memcached_strerror(memcached_client, memcached_rc);
+    XTRACE("Failed to initialize the counter for request " + std::to_string(req_id), {{"ErrorCode", memcached_strerror(memcached_client, memcached_rc)}});
     memcached_pool_push(_memcached_client_pool, memcached_client);
     throw se;
   }
 
+  XTRACE("Storing movie_id to memcached");
   // Store movie_id to memcached
   uint64_t counter_value;
   std::string key_movie_id = std::to_string(req_id) + ":movie_id";
@@ -303,6 +358,7 @@ void ComposeReviewHandler::UploadMovieId(
       MMC_EXP_TIME, 0);
   if (memcached_rc == MEMCACHED_DATA_EXISTS) {
     // Another thread has uploaded movie_id, which is an unexpected behaviour.
+    XTRACE("movie_id of request " + std::to_string(req_id) + " has already been stored");
     LOG(warning) << "movie_id of request " << req_id
                  << " has already been stored";
     size_t value_size;
@@ -315,6 +371,7 @@ void ComposeReviewHandler::UploadMovieId(
         &memcached_rc);
     if (memcached_rc != MEMCACHED_SUCCESS) {
       LOG(error) << "Cannot get the counter of request " << req_id;
+      XTRACE("Cannot get the counter of request " + std::to_string(req_id));
       ServiceException se;
       se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
       se.message = memcached_strerror(memcached_client, memcached_rc);
@@ -325,6 +382,7 @@ void ComposeReviewHandler::UploadMovieId(
     free(counter_value_str);
   } else if (memcached_rc != MEMCACHED_SUCCESS) {
     LOG(error) << "Cannot store movie_id of request " << req_id;
+    XTRACE("Cannot store movie_id of request " + std::to_string(req_id));
     ServiceException se;
     se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
     se.message = memcached_strerror(memcached_client, memcached_rc);
@@ -340,6 +398,7 @@ void ComposeReviewHandler::UploadMovieId(
     if (memcached_rc != MEMCACHED_SUCCESS) {
       LOG(error) << "Cannot increment and get the counter of request "
           << req_id;
+      XTRACE("Cannot increment and get the counter of request " + std::to_string(req_id));
       ServiceException se;
       se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
       se.message = memcached_strerror(memcached_client, memcached_rc);
@@ -350,6 +409,7 @@ void ComposeReviewHandler::UploadMovieId(
   LOG(debug) << "req_id " << req_id
       << " caching movie_id to Memcached finished";
   memcached_pool_push(_memcached_client_pool, memcached_client);
+  XTRACE("Caching movie_id to Memcached finished for request " + std::to_string(req_id));
 
   // If this thread is the last one uploading the review components,
   // it is in charge of compose the request and upload to the microservices in
@@ -358,11 +418,23 @@ void ComposeReviewHandler::UploadMovieId(
     _ComposeAndUpload(req_id, writer_text_map);
   }
   span->Finish();
+  XTRACE("ComposeReviewHandler::UploadMovieId complete");
+  DELETE_CURRENT_BAGGAGE();
 }
 
 void ComposeReviewHandler::UploadUserId(
     int64_t req_id, int64_t user_id,
     const std::map<std::string, std::string> & carrier) {
+
+  std::map<std::string, std::string>::const_iterator baggage_it = carrier.find("baggage");
+  if (baggage_it != carrier.end()) {
+    SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
+  }
+
+  if (!XTrace::IsTracing()) {
+    XTrace::StartTrace("ComposeReviewHandler");
+  }
+  XTRACE("ComposeReviewHandler::UploadUserId", {{"RequestID", std::to_string(req_id)}});
 
   // Initialize a span
   TextMapReader reader(carrier);
@@ -392,6 +464,7 @@ void ComposeReviewHandler::UploadUserId(
     LOG(error) << "Failed to initilize the counter for request " << req_id
         << " Error code: "
         << memcached_strerror(memcached_client, memcached_rc);
+    XTRACE("Failed to initialize the counter for request " + std::to_string(req_id), {{"ErrorCode", memcached_strerror(memcached_client, memcached_rc)}});
     ServiceException se;
     se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
     se.message = memcached_strerror(memcached_client, memcached_rc);
@@ -400,6 +473,7 @@ void ComposeReviewHandler::UploadUserId(
   }
 
   // Store user_id to memcached
+  XTRACE("Storing user_id to memcached");
   uint64_t counter_value;
   std::string key_user_id = std::to_string(req_id) + ":user_id";
   std::string user_id_str = std::to_string(user_id);
@@ -414,6 +488,7 @@ void ComposeReviewHandler::UploadUserId(
     // Another thread has uploaded user_id, which is an unexpected behaviour.
     LOG(warning) << "user_id of request " << req_id
                  << " has already been stored";
+    XTRACE("User_id of request " + std::to_string(req_id) + " has already been stored");
     size_t value_size;
     char *counter_value_str = memcached_get(
         memcached_client,
@@ -427,6 +502,7 @@ void ComposeReviewHandler::UploadUserId(
       ServiceException se;
       se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
       se.message = memcached_strerror(memcached_client, memcached_rc);
+      XTRACE("Cannot get the counter of request");
       memcached_pool_push(_memcached_client_pool, memcached_client);
       throw se;
     }
@@ -436,6 +512,7 @@ void ComposeReviewHandler::UploadUserId(
     LOG(error) << "Cannot store user_id of request " << req_id
                << " Error code: "
                << memcached_strerror(memcached_client, memcached_rc);
+    XTRACE("Cannot store user_id of request " + std::to_string(req_id), {{"ErrorCode", memcached_strerror(memcached_client, memcached_rc)}});
     ServiceException se;
     se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
     se.message = memcached_strerror(memcached_client, memcached_rc);
@@ -451,6 +528,7 @@ void ComposeReviewHandler::UploadUserId(
     if (memcached_rc != MEMCACHED_SUCCESS) {
       LOG(error) << "Cannot increment and get the counter of request "
                  << req_id;
+      XTRACE("Cannot increment and get the counter of request " + std::to_string(req_id));
       ServiceException se;
       se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
       se.message = memcached_strerror(memcached_client, memcached_rc);
@@ -459,6 +537,7 @@ void ComposeReviewHandler::UploadUserId(
     }
   }
   LOG(debug) << "req_id " << req_id << "caching user to Memcached finished";
+  XTRACE("Caching user to Memcached finished for request " + std::to_string(req_id));
   memcached_pool_push(_memcached_client_pool, memcached_client);
 
   // If this thread is the last one uploading the review components,
@@ -468,11 +547,23 @@ void ComposeReviewHandler::UploadUserId(
     _ComposeAndUpload(req_id, writer_text_map);
   }
   span->Finish();
+  XTRACE("ComposeReviewHandler::UploadUserId complete");
+  DELETE_CURRENT_BAGGAGE();
 }
 
 void ComposeReviewHandler::UploadUniqueId(
     int64_t req_id, int64_t review_id,
     const std::map<std::string, std::string> & carrier) {
+
+  std::map<std::string, std::string>::const_iterator baggage_it = carrier.find("baggage");
+  if (baggage_it != carrier.end()) {
+    SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
+  }
+
+  if (!XTrace::IsTracing()) {
+    XTrace::StartTrace("ComposeReviewHandler");
+  }
+  XTRACE("ComposeReviewHandler::UploadUniqueId", {{"RequestID", std::to_string(req_id)}});
 
   // Initialize a span
   TextMapReader reader(carrier);
@@ -502,6 +593,7 @@ void ComposeReviewHandler::UploadUniqueId(
     LOG(error) << "Failed to initilize the counter for request " << req_id
                << " Error code: "
                << memcached_strerror(memcached_client, memcached_rc);
+    XTRACE("Failed to initialize the counter for request " + std::to_string(req_id), {{"ErrorCode", memcached_strerror(memcached_client, memcached_rc)}});
     ServiceException se;
     se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
     se.message = memcached_strerror(memcached_client, memcached_rc);
@@ -509,6 +601,7 @@ void ComposeReviewHandler::UploadUniqueId(
     throw se;
   }
 
+  XTRACE("Storing review_id to memcached");
   // Store review_id to memcached
   uint64_t counter_value;
   std::string key_unique_id = std::to_string(req_id) + ":review_id";
@@ -524,6 +617,7 @@ void ComposeReviewHandler::UploadUniqueId(
     // Another thread has uploaded review_id, which is an unexpected behaviour.
     LOG(warning) << "review_id of request " << req_id
                  << " has already been stored";
+    XTRACE("Review_id of request " + std::to_string(req_id) + " has already been stored");
     size_t value_size;
     char *counter_value_str = memcached_get(
         memcached_client,
@@ -535,6 +629,7 @@ void ComposeReviewHandler::UploadUniqueId(
 
     if (memcached_rc != MEMCACHED_SUCCESS) {
       LOG(error) << "Cannot get the counter of request " << req_id;
+      XTRACE("Cannot get the counter of request " + std::to_string(req_id));
       ServiceException se;
       se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
       se.message = memcached_strerror(memcached_client, memcached_rc);
@@ -545,6 +640,7 @@ void ComposeReviewHandler::UploadUniqueId(
     free(counter_value_str);
   } else if (memcached_rc != MEMCACHED_SUCCESS) {
     LOG(error) << "Cannot store review_id of request " << req_id;
+    XTRACE("Cannot store review_id of request " + std::to_string(req_id));
     ServiceException se;
     se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
     se.message = memcached_strerror(memcached_client, memcached_rc);
@@ -560,6 +656,7 @@ void ComposeReviewHandler::UploadUniqueId(
     if (memcached_rc != MEMCACHED_SUCCESS) {
       LOG(error) << "Cannot increment and get the counter of request "
                  << req_id;
+      XTRACE("Cannot increment and get the counter of request " + std::to_string(req_id));
       ServiceException se;
       se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
       se.message = memcached_strerror(memcached_client, memcached_rc);
@@ -569,7 +666,7 @@ void ComposeReviewHandler::UploadUniqueId(
   }
   LOG(debug) << "req_id " << req_id
              << " caching review_id to Memcached finished";
-
+  XTRACE("Caching review_id to Memcached finished for request " + std::to_string(req_id));
   memcached_pool_push(_memcached_client_pool, memcached_client);
 
   // If this thread is the last one uploading the review components,
@@ -579,12 +676,24 @@ void ComposeReviewHandler::UploadUniqueId(
     _ComposeAndUpload(req_id, writer_text_map);
   }
   span->Finish();
+  XTRACE("ComposeReviewHandler::UploadReviewId complete");
+  DELETE_CURRENT_BAGGAGE();
 }
 
 void ComposeReviewHandler::UploadText(
     int64_t req_id,
     const std::string &text,
     const std::map<std::string, std::string> & carrier) {
+
+  std::map<std::string, std::string>::const_iterator baggage_it = carrier.find("baggage");
+  if (baggage_it != carrier.end()) {
+    SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
+  }
+
+  if (!XTrace::IsTracing()) {
+    XTrace::StartTrace("ComposeReviewHandler");
+  }
+  XTRACE("ComposeReviewHandler::UploadText", {{"RequestID", std::to_string(req_id)}});
 
   // Initialize a span
   TextMapReader reader(carrier);
@@ -614,6 +723,7 @@ void ComposeReviewHandler::UploadText(
     LOG(error) << "Failed to initilize the counter for request " << req_id
                << " Error code: "
                << memcached_strerror(memcached_client, memcached_rc);
+    XTRACE("Failed to initialize the counter for request " + std::to_string(req_id), {{"ErrorCode", memcached_strerror(memcached_client, memcached_rc)}});
     ServiceException se;
     se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
     se.message = memcached_strerror(memcached_client, memcached_rc);
@@ -621,6 +731,7 @@ void ComposeReviewHandler::UploadText(
     throw se;
   }
 
+  XTRACE("Storing text to memcached");
   // Store text to memcached
   uint64_t counter_value;
   std::string key_text = std::to_string(req_id) + ":text";
@@ -635,6 +746,7 @@ void ComposeReviewHandler::UploadText(
     // Another thread has uploaded text, which is an unexpected behaviour.
     LOG(warning) << "text of request " << req_id
                  << " has already been stored";
+    XTRACE("Text of request " + std::to_string(req_id) + " has already been stored");
     size_t value_size;
     char *counter_value_str = memcached_get(
         memcached_client,
@@ -645,6 +757,7 @@ void ComposeReviewHandler::UploadText(
         &memcached_rc);
     if (memcached_rc != MEMCACHED_SUCCESS) {
       LOG(error) << "Cannot get the counter of request " << req_id;
+      XTRACE("Cannot get the counter of request " + std::to_string(req_id));
       ServiceException se;
       se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
       se.message = memcached_strerror(memcached_client, memcached_rc);
@@ -655,6 +768,7 @@ void ComposeReviewHandler::UploadText(
     free(counter_value_str);
   } else if (memcached_rc != MEMCACHED_SUCCESS) {
     LOG(error) << "Cannot store text of request " << req_id;
+    XTRACE("Cannot store text of request " + std::to_string(req_id));
     ServiceException se;
     se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
     se.message = memcached_strerror(memcached_client, memcached_rc);
@@ -670,6 +784,7 @@ void ComposeReviewHandler::UploadText(
     if (memcached_rc != MEMCACHED_SUCCESS) {
       LOG(error) << "Cannot increment and get the counter of request "
                  << req_id;
+      XTRACE("Cannot increment and get the counter of request " + std::to_string(req_id));
       ServiceException se;
       se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
       se.message = memcached_strerror(memcached_client, memcached_rc);
@@ -678,6 +793,7 @@ void ComposeReviewHandler::UploadText(
     }
   }
   LOG(debug) << "req_id " << req_id << "caching text to Memcached finished";
+  XTRACE("Caching text to Memcached finished " + std::to_string(req_id));
   memcached_pool_push(_memcached_client_pool, memcached_client);
 
   // If this thread is the last one uploading the review components,
@@ -687,10 +803,22 @@ void ComposeReviewHandler::UploadText(
     _ComposeAndUpload(req_id, writer_text_map);
   }
   span->Finish();
+  XTRACE("ComposeReviewHandler::UploadText complete");
+  DELETE_CURRENT_BAGGAGE();
 }
 
 void ComposeReviewHandler::UploadRating(
     int64_t req_id, int32_t rating, const std::map<std::string, std::string> & carrier) {
+
+  std::map<std::string, std::string>::const_iterator baggage_it = carrier.find("baggage");
+  if (baggage_it != carrier.end()) {
+    SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
+  }
+
+  if (!XTrace::IsTracing()) {
+    XTrace::StartTrace("ComposeReviewHandler");
+  }
+  XTRACE("ComposeReviewHandler::UploadReview", {{"RequestID", std::to_string(req_id)}});
 
   // Initialize a span
   TextMapReader reader(carrier);
@@ -719,6 +847,7 @@ void ComposeReviewHandler::UploadRating(
       memcached_rc != MEMCACHED_DATA_EXISTS) {
     LOG(error) << "Failed to initilize the counter for request " << req_id
                << " Error code: " << memcached_strerror(memcached_client, memcached_rc);
+    XTRACE("Failed to initialize the counter for request " + std::to_string(req_id), {{"ErrorCode", memcached_strerror(memcached_client, memcached_rc)}});
     ServiceException se;
     se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
     se.message = memcached_strerror(memcached_client, memcached_rc);
@@ -726,6 +855,7 @@ void ComposeReviewHandler::UploadRating(
     throw se;
   }
 
+  XTRACE("Storing rating to memcached");
   // Store rating to memcached
   uint64_t counter_value;
   std::string key_rating = std::to_string(req_id) + ":rating";
@@ -741,6 +871,7 @@ void ComposeReviewHandler::UploadRating(
     // Another thread has uploaded rating, which is an unexpected behaviour.
     LOG(warning) << "rating of request " << req_id
                  << " has already been stored";
+    XTRACE("Rating of request " + std::to_string(req_id) + " has already been stored");
     size_t value_size;
     char *counter_value_str = memcached_get(
         memcached_client,
@@ -753,6 +884,7 @@ void ComposeReviewHandler::UploadRating(
     free(counter_value_str);
     if (memcached_rc != MEMCACHED_SUCCESS) {
       LOG(error) << "Cannot get the counter of request " << req_id;
+      XTRACE("Cannot get the counter of request " + std::to_string(req_id));
       ServiceException se;
       se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
       se.message = memcached_strerror(memcached_client, memcached_rc);
@@ -761,6 +893,7 @@ void ComposeReviewHandler::UploadRating(
     }
   } else if (memcached_rc != MEMCACHED_SUCCESS) {
     LOG(error) << "Cannot store rating of request " << req_id;
+    XTRACE("Cannot store rating of request " + std::to_string(req_id));
     ServiceException se;
     se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
     se.message = memcached_strerror(memcached_client, memcached_rc);
@@ -776,6 +909,7 @@ void ComposeReviewHandler::UploadRating(
     if (memcached_rc != MEMCACHED_SUCCESS) {
       LOG(error) << "Cannot increment and get the counter of request "
                  << req_id;
+      XTRACE("Cannot increment and get the counter of request " + req_id);
       ServiceException se;
       se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
       se.message = memcached_strerror(memcached_client, memcached_rc);
@@ -784,6 +918,7 @@ void ComposeReviewHandler::UploadRating(
     }
   }
   LOG(debug) << "req_id " << req_id << " caching rating to Memcached finished";
+  XTRACE("Caching rating to Memcached finished for request " + std::to_string(req_id));
   memcached_pool_push(_memcached_client_pool, memcached_client);
 
   // If this thread is the last one uploading the review components,
@@ -793,6 +928,8 @@ void ComposeReviewHandler::UploadRating(
     _ComposeAndUpload(req_id, writer_text_map);
   }
   span->Finish();
+  XTRACE("ComposeReview::UploadReview complete");
+  DELETE_CURRENT_BAGGAGE();
 }
 
 } // namespace media_service
