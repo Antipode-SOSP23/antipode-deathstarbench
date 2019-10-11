@@ -768,7 +768,7 @@ void ComposePostHandler::_UploadPostHelper(
     Baggage& baggage, std::promise<Baggage> baggage_promise) {
   BAGGAGE(baggage);
   TextMapReader reader(carrier);
-  std::map<std::string, std::string> writer_text_map;
+  std::map<std::string, std::string> writer_text_map(carrier);
   TextMapWriter writer(writer_text_map);
   try{
     auto post_storage_client_wrapper = _post_storage_client_pool->Pop();
@@ -811,7 +811,7 @@ void ComposePostHandler::_UploadUserTimelineHelper(
     Baggage& baggage, std::promise<Baggage> baggage_promise) {
   BAGGAGE(baggage);
   TextMapReader reader(carrier);
-  std::map<std::string, std::string> writer_text_map;
+  std::map<std::string, std::string> writer_text_map(carrier);
   TextMapWriter writer(writer_text_map);
   try{
     auto user_timeline_client_wrapper = _user_timeline_client_pool->Pop();
@@ -854,7 +854,7 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
     Baggage& baggage, std::promise<Baggage> baggage_promise) {
   BAGGAGE(baggage);
   TextMapReader reader(carrier);
-  std::map<std::string, std::string> writer_text_map;
+  std::map<std::string, std::string> writer_text_map(carrier);
   TextMapWriter writer(writer_text_map);
   try {
     std::string user_mentions_id_str = "[";
