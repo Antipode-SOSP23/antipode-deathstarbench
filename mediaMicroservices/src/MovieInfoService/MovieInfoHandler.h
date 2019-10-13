@@ -169,7 +169,7 @@ void MovieInfoHandler::WriteMovieInfo(
   if (!plotinsert) {
     LOG(error) << "Error: Failed to insert movie-info to MongoDB: "
                << error.message;
-    XTRACE("Error: Failed to insert movie-info to MongoDB " + error.message);
+    XTRACE("Error: Failed to insert movie-info to MongoDB " + std::string(error.message));
     ServiceException se;
     se.errorCode = ErrorCode::SE_MONGODB_ERROR;
     se.message = error.message;
@@ -250,7 +250,7 @@ void MovieInfoHandler::ReadMovieInfo(
 
   if (movie_info_mmc) {
     LOG(debug) << "Get movie-info " << movie_id << " cache hit from Memcached";
-    XTRACE("Cache hit in Memcached for movie " + std::to_string(movie_id));
+    XTRACE("Cache hit in Memcached for movie " + movie_id);
     json movie_info_json = json::parse(std::string(
         movie_info_mmc, movie_info_mmc + movie_info_mmc_size));
     _return.movie_id = movie_info_json["movie_id"];
@@ -324,7 +324,7 @@ void MovieInfoHandler::ReadMovieInfo(
         throw se;
       } else {
         LOG(warning) << "Movie_id: " << movie_id << " doesn't exist in MongoDB";
-        XTRACE("Movie_id: " + std::to_string(movie_id) + " doesn't exist in MongoDB");
+        XTRACE("Movie_id: " + movie_id + " doesn't exist in MongoDB");
         bson_destroy(query);
         mongoc_cursor_destroy(cursor);
         mongoc_collection_destroy(collection);
@@ -336,7 +336,7 @@ void MovieInfoHandler::ReadMovieInfo(
       }
     } else {
       LOG(debug) << "Movie_id: " << movie_id << " found in MongoDB";
-      XTRACE("Movie_id: " + std::to_string(movie_id) + " found in MongoDB");
+      XTRACE("Movie_id: " + movie_id + " found in MongoDB");
       auto movie_info_json_char = bson_as_json(doc, nullptr);
       json movie_info_json = json::parse(movie_info_json_char);
       _return.movie_id = movie_info_json["movie_id"];
@@ -499,7 +499,7 @@ void MovieInfoHandler::UpdateRating(
       if (!updated) {
         LOG(error) << "Failed to update rating for movie " << movie_id
                    << " to MongoDB: " << error.message;
-        XTRACE("Failed to update rating for movie " + std::to_string(movie_id) + " to MongoDB");
+        XTRACE("Failed to update rating for movie " + movie_id + " to MongoDB");
         ServiceException se;
         se.errorCode = ErrorCode::SE_MONGODB_ERROR;
         se.message = "Failed to update rating for movie " + movie_id +

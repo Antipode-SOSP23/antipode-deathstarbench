@@ -122,7 +122,7 @@ void MovieIdHandler::UploadMovieId(
     LOG(debug) << "Get movie_id " << movie_id_mmc
         << " cache hit from Memcached";
     movie_id_str = std::string(movie_id_mmc);
-    XTRACE("Cache hit in Memcached for movie_id " + std::to_string(movie_id_mmc));
+    XTRACE("Cache hit in Memcached for movie_id " + std::string(movie_id_mmc));
     free(movie_id_mmc);
   }
 
@@ -231,7 +231,7 @@ void MovieIdHandler::UploadMovieId(
     if (memcached_rc != MEMCACHED_SUCCESS) {
       LOG(warning) << "Failed to set movie_id to Memcached: "
                    << memcached_strerror(memcached_client, memcached_rc);
-      XTRACE("Failed to set movie_id to Memcached: " + memcached_strerror(memcached_client, memcached_rc));
+      XTRACE("Failed to set movie_id to Memcached: " + std::string(memcached_strerror(memcached_client, memcached_rc)));
     }
     memcached_pool_push(_memcached_client_pool, memcached_client);    
   });
