@@ -79,6 +79,7 @@ void RatingHandler::UploadRating(
     }
     auto compose_client = compose_client_wrapper->GetClient();
     try {
+      writer_text_map["baggage"] = GET_CURRENT_BAGGAGE().str();
       compose_client->UploadRating(req_id, rating, writer_text_map);
     } catch (...) {
       _compose_client_pool->Push(compose_client_wrapper);
