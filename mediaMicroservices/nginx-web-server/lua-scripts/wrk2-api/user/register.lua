@@ -1,4 +1,5 @@
 local _M = {}
+local xtracer = require "luaxtrace"
 
 local function _StrIsEmpty(s)
   return s == nil or s == ''
@@ -10,6 +11,8 @@ function _M.RegisterUser()
   local UserServiceClient = require 'media_service_UserService'
   local ngx = ngx
 
+  xtracer.StartLuaTrace("NginxWebServer", "Register")
+  xtracer.LogXTrace("Processing Request")
   local req_id = tonumber(string.sub(ngx.var.request_id, 0, 15), 16)
   local tracer = bridge_tracer.new_from_global()
   local parent_span_context = tracer:binary_extract(ngx.var.opentracing_binary_context)
@@ -25,16 +28,21 @@ function _M.RegisterUser()
     ngx.status = ngx.HTTP_BAD_REQUEST
     ngx.say("Incomplete arguments")
     ngx.log(ngx.ERR, "Incomplete arguments")
+    xtracer.LogXTrace("Incomplete arguments")
+    xtracer.DeleteBaggage()
     ngx.exit(ngx.HTTP_BAD_REQUEST)
   end
 
   local client = GenericObjectPool:connection(UserServiceClient, "user-service", 9090)
 
-  client:RegisterUser(req_id, post.first_name, post.last_name,
+  local status, err = client:RegisterUser(req_id, post.first_name, post.last_name,
       post.username, post.password, carrier)
+
+  xtracer.JoinBaggage(err.baggage)
   GenericObjectPool:returnConnection(client)
 
   span:finish()
+  xtracer.DeleteBaggage()
 end
 
 return _M

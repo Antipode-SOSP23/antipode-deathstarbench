@@ -63,27 +63,61 @@ struct Page {
   4: string plot
 }
 
+struct BaseRpcResponse {
+  1: string baggage;
+}
+
+struct LoginRpcResponse {
+  1: string baggage;
+  2: string result;
+}
+
+struct ReviewListRpcResponse {
+  1: string baggage;
+  2: list<Review> result;
+}
+
+struct CastInfoListRpcResponse {
+  1: string baggage;
+  2: list<CastInfo> result;
+}
+
+struct PlotRpcResponse {
+  1: string baggage;
+  2: string result;
+}
+
+struct MovieInfoRpcResponse {
+  1: string baggage;
+  2: MovieInfo result;
+}
+
+struct PageRpcResponse {
+  1: string baggage;
+  2: Page result;
+}
+
 exception ServiceException {
   1: ErrorCode errorCode;
   2: string message;
 }
 
 service UniqueIdService {
-  void UploadUniqueId (
+  BaseRpcResponse UploadUniqueId (
       1: i64 req_id,
       2: map<string, string> carrier
   ) throws (1: ServiceException se)
 }
 
 service MovieIdService {
-  void UploadMovieId(
+  BaseRpcResponse UploadMovieId(
       1: i64 req_id,
       2: string title,
       3: i32 rating,
       4: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  void RegisterMovieId(
+  BaseRpcResponse RegisterMovieId(
       1: i64 req_id,
       2: string title,
       3: string movie_id,
@@ -92,7 +126,7 @@ service MovieIdService {
 }
 
 service TextService {
-  void UploadText (
+  BaseRpcResponse UploadText (
       1: i64 req_id,
       2: string text,
       3: map<string, string> carrier
@@ -100,7 +134,7 @@ service TextService {
 }
 
 service RatingService {
-  void UploadRating (
+  BaseRpcResponse UploadRating (
       1: i64 req_id,
       2: string movie_id,
       3: i32 rating,
@@ -109,7 +143,7 @@ service RatingService {
 }
 
 service UserService {
-  void RegisterUser (
+  BaseRpcResponse RegisterUser (
       1: i64 req_id,
       2: string first_name,
       3: string last_name,
@@ -118,7 +152,7 @@ service UserService {
       6: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  void RegisterUserWithId (
+  BaseRpcResponse RegisterUserWithId (
       1: i64 req_id,
       2: string first_name,
       3: string last_name,
@@ -128,20 +162,20 @@ service UserService {
       7: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  string Login(
+  LoginRpcResponse Login(
       1: i64 req_id,
       2: string username,
       3: string password,
       4: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  void UploadUserWithUserId(
+  BaseRpcResponse UploadUserWithUserId(
       1: i64 req_id,
       2: i64 user_id,
       3: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  void UploadUserWithUsername(
+  BaseRpcResponse UploadUserWithUsername(
       1: i64 req_id,
       2: string username,
       3: map<string, string> carrier
@@ -149,27 +183,27 @@ service UserService {
 }
 
 service ComposeReviewService {
-  void UploadText(
+  BaseRpcResponse UploadText(
       1: i64 req_id,
       2: string text,
       3: map<string, string> carrier
   ) throws (1: ServiceException se)
-  void UploadRating(
+  BaseRpcResponse UploadRating(
       1: i64 req_id,
       2: i32 rating,
       3: map<string, string> carrier
   ) throws (1: ServiceException se)
-  void UploadMovieId(
+  BaseRpcResponse UploadMovieId(
       1: i64 req_id,
       2: string movie_id,
       3: map<string, string> carrier
   ) throws (1: ServiceException se)
-  void UploadUniqueId(
+  BaseRpcResponse UploadUniqueId(
       1: i64 req_id,
       2: i64 unique_id,
       3: map<string, string> carrier
   ) throws (1: ServiceException se)
-  void UploadUserId(
+  BaseRpcResponse UploadUserId(
       1: i64 req_id,
       2: i64 user_id,
       4: map<string, string> carrier
@@ -177,13 +211,13 @@ service ComposeReviewService {
 }
 
 service ReviewStorageService {
-  void StoreReview(
+  BaseRpcResponse StoreReview(
       1: i64 req_id,
       2: Review review,
       3: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  list<Review> ReadReviews(
+  ReviewListRpcResponse ReadReviews(
       1: i64 req_id,
       2: list<i64> review_ids
       3: map<string, string> carrier
@@ -191,7 +225,7 @@ service ReviewStorageService {
 }
 
 service MovieReviewService {
-  void UploadMovieReview(
+  BaseRpcResponse UploadMovieReview(
       1: i64 req_id,
       2: string movie_id,
       3: i64 review_id,
@@ -199,7 +233,7 @@ service MovieReviewService {
       5: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  list<Review> ReadMovieReviews(
+  ReviewListRpcResponse ReadMovieReviews(
       1: i64 req_id,
       2: string movie_id,
       3: i32 start,
@@ -209,7 +243,7 @@ service MovieReviewService {
 }
 
 service UserReviewService {
-  void UploadUserReview(
+  BaseRpcResponse UploadUserReview(
       1: i64 req_id,
       2: i64 user_id,
       3: i64 review_id,
@@ -217,7 +251,7 @@ service UserReviewService {
       5: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  list<Review> ReadUserReviews(
+  ReviewListRpcResponse ReadUserReviews(
       1: i64 req_id,
       2: i64 user_id,
       3: i32 start,
@@ -227,7 +261,7 @@ service UserReviewService {
 }
 
 service CastInfoService {
-  void WriteCastInfo(
+  BaseRpcResponse WriteCastInfo(
       1: i64 req_id,
       2: i64 cast_info_id,
       3: string name,
@@ -236,7 +270,7 @@ service CastInfoService {
       6: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  list<CastInfo> ReadCastInfo(
+  CastInfoListRpcResponse ReadCastInfo(
       1: i64 req_id,
       2: list<i64> cast_ids,
       3: map<string, string> carrier
@@ -244,14 +278,14 @@ service CastInfoService {
 }
 
 service PlotService {
-  void WritePlot(
+  BaseRpcResponse WritePlot(
       1: i64 req_id,
       2: i64 plot_id,
       3: string plot,
       4: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  string ReadPlot(
+  PlotRpcResponse ReadPlot(
       1: i64 req_id,
       2: i64 plot_id,
       3: map<string, string> carrier
@@ -259,7 +293,7 @@ service PlotService {
 }
 
 service MovieInfoService {
-  void WriteMovieInfo(
+  BaseRpcResponse WriteMovieInfo(
     1: i64 req_id,
     2: string movie_id,
     3: string title,
@@ -273,13 +307,13 @@ service MovieInfoService {
     11: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  MovieInfo ReadMovieInfo(
+  MovieInfoRpcResponse ReadMovieInfo(
       1: i64 req_id,
       2: string movie_id,
       3: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  void UpdateRating(
+  BaseRpcResponse UpdateRating(
     1: i64 req_id,
     2: string movie_id,
     3: i32 sum_uncommitted_rating
@@ -289,7 +323,7 @@ service MovieInfoService {
 }
 
 service PageService {
-  Page ReadPage(
+  PageRpcResponse ReadPage(
     1: i64 req_id,
     2: string movie_id,
     3: i32 review_start

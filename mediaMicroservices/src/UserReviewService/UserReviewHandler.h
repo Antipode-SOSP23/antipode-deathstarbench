@@ -25,9 +25,9 @@ class UserReviewHandler : public UserReviewServiceIf {
       mongoc_client_pool_t *,
       ClientPool<ThriftClient<ReviewStorageServiceClient>> *);
   ~UserReviewHandler() override = default;
-  void UploadUserReview(int64_t, int64_t, int64_t, int64_t,
+  void UploadUserReview(BaseRpcResponse &, int64_t, int64_t, int64_t, int64_t,
                          const std::map<std::string, std::string> &) override;
-  void ReadUserReviews(std::vector<Review> & _return, int64_t req_id,
+  void ReadUserReviews(ReviewListRpcResponse &response, int64_t req_id,
                        int64_t user_id, int32_t start, int32_t stop,
                         const std::map<std::string, std::string> & carrier) override;
 
@@ -47,6 +47,7 @@ UserReviewHandler::UserReviewHandler(
 }
 
 void UserReviewHandler::UploadUserReview(
+    BaseRpcResponse &response,
     int64_t req_id,
     int64_t user_id,
     int64_t review_id,
@@ -204,14 +205,16 @@ void UserReviewHandler::UploadUserReview(
   redis_span->Finish();
   XTRACE("RedisUpdate complete");
   span->Finish();
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   XTRACE("UserReviewHandler::WriteReview complete");
 }
 
 void UserReviewHandler::ReadUserReviews(
-    std::vector<Review> & _return, int64_t req_id,
+    ReviewListRpcResponse &response, int64_t req_id,
     int64_t user_id, int32_t start, int32_t stop,
     const std::map<std::string, std::string> & carrier) {
 
+  std::vector<Review> _return;
   std::map<std::string, std::string>::const_iterator baggage_it = carrier.find("baggage");
   if (baggage_it != carrier.end()) {
     SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
@@ -359,8 +362,12 @@ void UserReviewHandler::ReadUserReviews(
         auto review_client = review_client_wrapper->GetClient();
         try {
           writer_text_map["baggage"] = GET_CURRENT_BAGGAGE().str();
+          ReviewListRpcResponse response;
           review_client->ReadReviews(
-              _return_reviews, req_id, review_ids, writer_text_map);
+              response, req_id, review_ids, writer_text_map);
+          Baggage b = Baggage::deserialize(response.baggage);
+          JOIN_CURRENT_BAGGAGE(b);
+          _return_reviews = response.result;
         } catch (...) {
           _review_client_pool->Push(review_client_wrapper);
           LOG(error) << "Failed to read review from review-storage-service";
@@ -427,6 +434,8 @@ void UserReviewHandler::ReadUserReviews(
 
   span->Finish();
   XTRACE("UserReviewHandler::ReadUserReviews complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
+  response.result = _return;
   DELETE_CURRENT_BAGGAGE();
 
 }

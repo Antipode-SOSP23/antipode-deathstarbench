@@ -20,12 +20,12 @@ class PlotServiceHandler : virtual public PlotServiceIf {
     // Your initialization goes here
   }
 
-  void WritePlot(const int64_t req_id, const int64_t plot_id, const std::string& plot, const std::map<std::string, std::string> & carrier) {
+  void WritePlot(BaseRpcResponse& _return, const int64_t req_id, const int64_t plot_id, const std::string& plot, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("WritePlot\n");
   }
 
-  void ReadPlot(std::string& _return, const int64_t req_id, const int64_t plot_id, const std::map<std::string, std::string> & carrier) {
+  void ReadPlot(PlotRpcResponse& _return, const int64_t req_id, const int64_t plot_id, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("ReadPlot\n");
   }
@@ -34,11 +34,11 @@ class PlotServiceHandler : virtual public PlotServiceIf {
 
 int main(int argc, char **argv) {
   int port = 9090;
-  ::apache::thrift::stdcxx::shared_ptr<PlotServiceHandler> handler(new PlotServiceHandler());
-  ::apache::thrift::stdcxx::shared_ptr<TProcessor> processor(new PlotServiceProcessor(handler));
-  ::apache::thrift::stdcxx::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
-  ::apache::thrift::stdcxx::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
-  ::apache::thrift::stdcxx::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
+  ::std::shared_ptr<PlotServiceHandler> handler(new PlotServiceHandler());
+  ::std::shared_ptr<TProcessor> processor(new PlotServiceProcessor(handler));
+  ::std::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
+  ::std::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
+  ::std::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
 
   TSimpleServer server(processor, serverTransport, transportFactory, protocolFactory);
   server.serve();

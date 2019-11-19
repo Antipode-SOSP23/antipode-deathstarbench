@@ -20,12 +20,12 @@ class MovieIdServiceHandler : virtual public MovieIdServiceIf {
     // Your initialization goes here
   }
 
-  void UploadMovieId(const int64_t req_id, const std::string& title, const int32_t rating, const std::map<std::string, std::string> & carrier) {
+  void UploadMovieId(BaseRpcResponse& _return, const int64_t req_id, const std::string& title, const int32_t rating, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("UploadMovieId\n");
   }
 
-  void RegisterMovieId(const int64_t req_id, const std::string& title, const std::string& movie_id, const std::map<std::string, std::string> & carrier) {
+  void RegisterMovieId(BaseRpcResponse& _return, const int64_t req_id, const std::string& title, const std::string& movie_id, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("RegisterMovieId\n");
   }
@@ -34,11 +34,11 @@ class MovieIdServiceHandler : virtual public MovieIdServiceIf {
 
 int main(int argc, char **argv) {
   int port = 9090;
-  ::apache::thrift::stdcxx::shared_ptr<MovieIdServiceHandler> handler(new MovieIdServiceHandler());
-  ::apache::thrift::stdcxx::shared_ptr<TProcessor> processor(new MovieIdServiceProcessor(handler));
-  ::apache::thrift::stdcxx::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
-  ::apache::thrift::stdcxx::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
-  ::apache::thrift::stdcxx::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
+  ::std::shared_ptr<MovieIdServiceHandler> handler(new MovieIdServiceHandler());
+  ::std::shared_ptr<TProcessor> processor(new MovieIdServiceProcessor(handler));
+  ::std::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
+  ::std::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
+  ::std::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
 
   TSimpleServer server(processor, serverTransport, transportFactory, protocolFactory);
   server.serve();

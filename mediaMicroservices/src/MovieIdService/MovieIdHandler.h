@@ -31,9 +31,9 @@ class MovieIdHandler : public MovieIdServiceIf {
       ClientPool<ThriftClient<ComposeReviewServiceClient>> *,
       ClientPool<ThriftClient<RatingServiceClient>> *);
   ~MovieIdHandler() override = default;
-  void UploadMovieId(int64_t, const std::string &, int32_t,
+  void UploadMovieId(BaseRpcResponse&, int64_t, const std::string &, int32_t,
                      const std::map<std::string, std::string> &) override;
-  void RegisterMovieId(int64_t, const std::string &, const std::string &,
+  void RegisterMovieId(BaseRpcResponse&, int64_t, const std::string &, const std::string &,
                        const std::map<std::string, std::string> &) override;
 
  private:
@@ -55,6 +55,7 @@ MovieIdHandler::MovieIdHandler(
 }
 
 void MovieIdHandler::UploadMovieId(
+    BaseRpcResponse &response,
     int64_t req_id,
     const std::string &title,
     int32_t rating,
@@ -251,7 +252,10 @@ void MovieIdHandler::UploadMovieId(
     auto compose_client = compose_client_wrapper->GetClient();
     try {
       writer_text_map["baggage"] = GET_CURRENT_BAGGAGE().str();
-      compose_client->UploadMovieId(req_id, movie_id_str, writer_text_map);
+      BaseRpcResponse response;
+      compose_client->UploadMovieId(response, req_id, movie_id_str, writer_text_map);
+      Baggage b = Baggage::deserialize(response.baggage);
+      JOIN_CURRENT_BAGGAGE(b);
     } catch (...) {
       _compose_client_pool->Push(compose_client_wrapper);
       LOG(error) << "Failed to upload movie_id to compose-review-service";
@@ -275,7 +279,10 @@ void MovieIdHandler::UploadMovieId(
     auto rating_client = rating_client_wrapper->GetClient();
     try {
       writer_text_map["baggage"] = GET_CURRENT_BAGGAGE().str();
-      rating_client->UploadRating(req_id, movie_id_str, rating, writer_text_map);
+      BaseRpcResponse response;
+      rating_client->UploadRating(response, req_id, movie_id_str, rating, writer_text_map);
+      Baggage b = Baggage::deserialize(response.baggage);
+      JOIN_CURRENT_BAGGAGE(b);
     } catch (...) {
       _rating_client_pool->Push(rating_client_wrapper);
       LOG(error) << "Failed to upload rating to rating-service";
@@ -297,10 +304,12 @@ void MovieIdHandler::UploadMovieId(
 
   span->Finish();
   XTRACE("MovieHandler::UploadMovieId complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 
 void MovieIdHandler::RegisterMovieId (
+    BaseRpcResponse &response,
     const int64_t req_id,
     const std::string &title,
     const std::string &movie_id,
@@ -405,6 +414,7 @@ void MovieIdHandler::RegisterMovieId (
 
   span->Finish();
   XTRACE("MovieIdService::RegisterMovieId complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 } // namespace media_service

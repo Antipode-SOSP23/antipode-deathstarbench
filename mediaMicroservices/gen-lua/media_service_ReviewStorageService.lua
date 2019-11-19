@@ -15,7 +15,7 @@ ReviewStorageServiceClient = __TObject.new(__TClient, {
 
 function ReviewStorageServiceClient:StoreReview(req_id, review, carrier)
   self:send_StoreReview(req_id, review, carrier)
-  self:recv_StoreReview(req_id, review, carrier)
+  return self:recv_StoreReview(req_id, review, carrier)
 end
 
 function ReviewStorageServiceClient:send_StoreReview(req_id, review, carrier)
@@ -40,6 +40,12 @@ function ReviewStorageServiceClient:recv_StoreReview(req_id, review, carrier)
   local result = StoreReview_result:new{}
   result:read(self.iprot)
   self.iprot:readMessageEnd()
+  if result.success ~= nil then
+    return result.success
+  elseif result.se then
+    error(result.se)
+  end
+  error(TApplicationException:new{errorCode = TApplicationException.MISSING_RESULT})
 end
 
 function ReviewStorageServiceClient:ReadReviews(req_id, review_ids, carrier)
@@ -176,11 +182,11 @@ function StoreReview_args:read(iprot)
     elseif fid == 3 then
       if ftype == TType.MAP then
         self.carrier = {}
-        local _ktype157, _vtype158, _size156 = iprot:readMapBegin() 
-        for _i=1,_size156 do
-          local _key160 = iprot:readString()
-          local _val161 = iprot:readString()
-          self.carrier[_key160] = _val161
+        local _ktype169, _vtype170, _size168 = iprot:readMapBegin() 
+        for _i=1,_size168 do
+          local _key172 = iprot:readString()
+          local _val173 = iprot:readString()
+          self.carrier[_key172] = _val173
         end
         iprot:readMapEnd()
       else
@@ -209,9 +215,9 @@ function StoreReview_args:write(oprot)
   if self.carrier ~= nil then
     oprot:writeFieldBegin('carrier', TType.MAP, 3)
     oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
-    for kiter162,viter163 in pairs(self.carrier) do
-      oprot:writeString(kiter162)
-      oprot:writeString(viter163)
+    for kiter174,viter175 in pairs(self.carrier) do
+      oprot:writeString(kiter174)
+      oprot:writeString(viter175)
     end
     oprot:writeMapEnd()
     oprot:writeFieldEnd()
@@ -221,6 +227,7 @@ function StoreReview_args:write(oprot)
 end
 
 StoreReview_result = __TObject:new{
+  success,
   se
 }
 
@@ -230,6 +237,13 @@ function StoreReview_result:read(iprot)
     local fname, ftype, fid = iprot:readFieldBegin()
     if ftype == TType.STOP then
       break
+    elseif fid == 0 then
+      if ftype == TType.STRUCT then
+        self.success = BaseRpcResponse:new{}
+        self.success:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
     elseif fid == 1 then
       if ftype == TType.STRUCT then
         self.se = ServiceException:new{}
@@ -247,6 +261,11 @@ end
 
 function StoreReview_result:write(oprot)
   oprot:writeStructBegin('StoreReview_result')
+  if self.success ~= nil then
+    oprot:writeFieldBegin('success', TType.STRUCT, 0)
+    self.success:write(oprot)
+    oprot:writeFieldEnd()
+  end
   if self.se ~= nil then
     oprot:writeFieldBegin('se', TType.STRUCT, 1)
     self.se:write(oprot)
@@ -277,10 +296,10 @@ function ReadReviews_args:read(iprot)
     elseif fid == 2 then
       if ftype == TType.LIST then
         self.review_ids = {}
-        local _etype167, _size164 = iprot:readListBegin()
-        for _i=1,_size164 do
-          local _elem168 = iprot:readI64()
-          table.insert(self.review_ids, _elem168)
+        local _etype179, _size176 = iprot:readListBegin()
+        for _i=1,_size176 do
+          local _elem180 = iprot:readI64()
+          table.insert(self.review_ids, _elem180)
         end
         iprot:readListEnd()
       else
@@ -289,11 +308,11 @@ function ReadReviews_args:read(iprot)
     elseif fid == 3 then
       if ftype == TType.MAP then
         self.carrier = {}
-        local _ktype170, _vtype171, _size169 = iprot:readMapBegin() 
-        for _i=1,_size169 do
-          local _key173 = iprot:readString()
-          local _val174 = iprot:readString()
-          self.carrier[_key173] = _val174
+        local _ktype182, _vtype183, _size181 = iprot:readMapBegin() 
+        for _i=1,_size181 do
+          local _key185 = iprot:readString()
+          local _val186 = iprot:readString()
+          self.carrier[_key185] = _val186
         end
         iprot:readMapEnd()
       else
@@ -317,8 +336,8 @@ function ReadReviews_args:write(oprot)
   if self.review_ids ~= nil then
     oprot:writeFieldBegin('review_ids', TType.LIST, 2)
     oprot:writeListBegin(TType.I64, #self.review_ids)
-    for _,iter175 in ipairs(self.review_ids) do
-      oprot:writeI64(iter175)
+    for _,iter187 in ipairs(self.review_ids) do
+      oprot:writeI64(iter187)
     end
     oprot:writeListEnd()
     oprot:writeFieldEnd()
@@ -326,9 +345,9 @@ function ReadReviews_args:write(oprot)
   if self.carrier ~= nil then
     oprot:writeFieldBegin('carrier', TType.MAP, 3)
     oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
-    for kiter176,viter177 in pairs(self.carrier) do
-      oprot:writeString(kiter176)
-      oprot:writeString(viter177)
+    for kiter188,viter189 in pairs(self.carrier) do
+      oprot:writeString(kiter188)
+      oprot:writeString(viter189)
     end
     oprot:writeMapEnd()
     oprot:writeFieldEnd()
@@ -349,15 +368,9 @@ function ReadReviews_result:read(iprot)
     if ftype == TType.STOP then
       break
     elseif fid == 0 then
-      if ftype == TType.LIST then
-        self.success = {}
-        local _etype181, _size178 = iprot:readListBegin()
-        for _i=1,_size178 do
-          local _elem182 = Review:new{}
-          _elem182:read(iprot)
-          table.insert(self.success, _elem182)
-        end
-        iprot:readListEnd()
+      if ftype == TType.STRUCT then
+        self.success = ReviewListRpcResponse:new{}
+        self.success:read(iprot)
       else
         iprot:skip(ftype)
       end
@@ -379,12 +392,8 @@ end
 function ReadReviews_result:write(oprot)
   oprot:writeStructBegin('ReadReviews_result')
   if self.success ~= nil then
-    oprot:writeFieldBegin('success', TType.LIST, 0)
-    oprot:writeListBegin(TType.STRUCT, #self.success)
-    for _,iter183 in ipairs(self.success) do
-      iter183:write(oprot)
-    end
-    oprot:writeListEnd()
+    oprot:writeFieldBegin('success', TType.STRUCT, 0)
+    self.success:write(oprot)
     oprot:writeFieldEnd()
   end
   if self.se ~= nil then

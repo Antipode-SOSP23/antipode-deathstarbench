@@ -38,15 +38,15 @@ class ComposeReviewHandler : public ComposeReviewServiceIf {
       ClientPool<ThriftClient<MovieReviewServiceClient>> *);
   ~ComposeReviewHandler() override = default;
 
-  void UploadText(int64_t, const std::string &,
+  void UploadText(BaseRpcResponse &, int64_t, const std::string &,
       const std::map<std::string, std::string> &) override;
-  void UploadRating(int64_t, int32_t,
+  void UploadRating(BaseRpcResponse &, int64_t, int32_t,
       const std::map<std::string, std::string> &) override;
-  void UploadUniqueId(int64_t, int64_t,
+  void UploadUniqueId(BaseRpcResponse &, int64_t, int64_t,
       const std::map<std::string, std::string> &) override;
-  void UploadMovieId(int64_t, const std::string &,
+  void UploadMovieId(BaseRpcResponse &, int64_t, const std::string &,
                      const std::map<std::string, std::string> &) override;
-  void UploadUserId(int64_t, int64_t,
+  void UploadUserId(BaseRpcResponse &, int64_t, int64_t,
       const std::map<std::string, std::string> &) override;
 
 
@@ -214,7 +214,10 @@ void ComposeReviewHandler::_ComposeAndUpload(
     auto review_storage_client = review_storage_client_wrapper->GetClient();
     try {
       writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
-      review_storage_client->StoreReview(req_id, new_review, writer_text_map);
+      BaseRpcResponse response;
+      review_storage_client->StoreReview(response,req_id, new_review, writer_text_map);
+      Baggage b = Baggage::deserialize(response.baggage);
+      JOIN_CURRENT_BAGGAGE(b);
     } catch (...) {
       _review_storage_client_pool->Push(review_storage_client_wrapper);
       LOG(error) << "Failed to upload review to review-storage-service";
@@ -242,8 +245,11 @@ void ComposeReviewHandler::_ComposeAndUpload(
     auto user_review_client = user_review_client_wrapper->GetClient();
     try {
       writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
-      user_review_client->UploadUserReview(req_id, new_review.user_id,
+      BaseRpcResponse response;
+      user_review_client->UploadUserReview(response,req_id, new_review.user_id,
           new_review.review_id, new_review.timestamp, writer_text_map);
+      Baggage b = Baggage::deserialize(response.baggage);
+      JOIN_CURRENT_BAGGAGE(b);
     } catch (...) {
       _user_review_client_pool->Push(user_review_client_wrapper);
       LOG(error) << "Failed to upload review to user-review-service";
@@ -271,8 +277,11 @@ void ComposeReviewHandler::_ComposeAndUpload(
     auto movie_review_client = movie_review_client_wrapper->GetClient();
     try {
       writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
-      movie_review_client->UploadMovieReview(req_id, new_review.movie_id,
+      BaseRpcResponse response;
+      movie_review_client->UploadMovieReview(response,req_id, new_review.movie_id,
           new_review.review_id, new_review.timestamp, writer_text_map);
+      Baggage b = Baggage::deserialize(response.baggage);
+      JOIN_CURRENT_BAGGAGE(b);
     } catch (...) {
       _movie_review_client_pool->Push(movie_review_client_wrapper);
       LOG(error) << "Failed to upload review to movie-review-service";
@@ -295,6 +304,7 @@ void ComposeReviewHandler::_ComposeAndUpload(
 }
 
 void ComposeReviewHandler::UploadMovieId(
+    BaseRpcResponse &response,
     int64_t req_id,
     const std::string &movie_id,
     const std::map<std::string, std::string> & carrier) {
@@ -419,10 +429,12 @@ void ComposeReviewHandler::UploadMovieId(
   }
   span->Finish();
   XTRACE("ComposeReviewHandler::UploadMovieId complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 
 void ComposeReviewHandler::UploadUserId(
+    BaseRpcResponse &response,
     int64_t req_id, int64_t user_id,
     const std::map<std::string, std::string> & carrier) {
 
@@ -548,10 +560,12 @@ void ComposeReviewHandler::UploadUserId(
   }
   span->Finish();
   XTRACE("ComposeReviewHandler::UploadUserId complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 
 void ComposeReviewHandler::UploadUniqueId(
+    BaseRpcResponse &response,
     int64_t req_id, int64_t review_id,
     const std::map<std::string, std::string> & carrier) {
 
@@ -677,10 +691,12 @@ void ComposeReviewHandler::UploadUniqueId(
   }
   span->Finish();
   XTRACE("ComposeReviewHandler::UploadReviewId complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 
 void ComposeReviewHandler::UploadText(
+    BaseRpcResponse &response,
     int64_t req_id,
     const std::string &text,
     const std::map<std::string, std::string> & carrier) {
@@ -804,10 +820,12 @@ void ComposeReviewHandler::UploadText(
   }
   span->Finish();
   XTRACE("ComposeReviewHandler::UploadText complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 
 void ComposeReviewHandler::UploadRating(
+    BaseRpcResponse &response,
     int64_t req_id, int32_t rating, const std::map<std::string, std::string> & carrier) {
 
   std::map<std::string, std::string>::const_iterator baggage_it = carrier.find("baggage");
@@ -929,6 +947,7 @@ void ComposeReviewHandler::UploadRating(
   }
   span->Finish();
   XTRACE("ComposeReview::UploadReview complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 

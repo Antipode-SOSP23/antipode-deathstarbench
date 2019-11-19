@@ -15,7 +15,7 @@ RatingServiceClient = __TObject.new(__TClient, {
 
 function RatingServiceClient:UploadRating(req_id, movie_id, rating, carrier)
   self:send_UploadRating(req_id, movie_id, rating, carrier)
-  self:recv_UploadRating(req_id, movie_id, rating, carrier)
+  return self:recv_UploadRating(req_id, movie_id, rating, carrier)
 end
 
 function RatingServiceClient:send_UploadRating(req_id, movie_id, rating, carrier)
@@ -41,6 +41,12 @@ function RatingServiceClient:recv_UploadRating(req_id, movie_id, rating, carrier
   local result = UploadRating_result:new{}
   result:read(self.iprot)
   self.iprot:readMessageEnd()
+  if result.success ~= nil then
+    return result.success
+  elseif result.se then
+    error(result.se)
+  end
+  error(TApplicationException:new{errorCode = TApplicationException.MISSING_RESULT})
 end
 RatingServiceIface = __TObject:new{
   __type = 'RatingServiceIface'
@@ -127,11 +133,11 @@ function UploadRating_args:read(iprot)
     elseif fid == 4 then
       if ftype == TType.MAP then
         self.carrier = {}
-        local _ktype69, _vtype70, _size68 = iprot:readMapBegin() 
-        for _i=1,_size68 do
-          local _key72 = iprot:readString()
-          local _val73 = iprot:readString()
-          self.carrier[_key72] = _val73
+        local _ktype81, _vtype82, _size80 = iprot:readMapBegin() 
+        for _i=1,_size80 do
+          local _key84 = iprot:readString()
+          local _val85 = iprot:readString()
+          self.carrier[_key84] = _val85
         end
         iprot:readMapEnd()
       else
@@ -165,9 +171,9 @@ function UploadRating_args:write(oprot)
   if self.carrier ~= nil then
     oprot:writeFieldBegin('carrier', TType.MAP, 4)
     oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
-    for kiter74,viter75 in pairs(self.carrier) do
-      oprot:writeString(kiter74)
-      oprot:writeString(viter75)
+    for kiter86,viter87 in pairs(self.carrier) do
+      oprot:writeString(kiter86)
+      oprot:writeString(viter87)
     end
     oprot:writeMapEnd()
     oprot:writeFieldEnd()
@@ -177,6 +183,7 @@ function UploadRating_args:write(oprot)
 end
 
 UploadRating_result = __TObject:new{
+  success,
   se
 }
 
@@ -186,6 +193,13 @@ function UploadRating_result:read(iprot)
     local fname, ftype, fid = iprot:readFieldBegin()
     if ftype == TType.STOP then
       break
+    elseif fid == 0 then
+      if ftype == TType.STRUCT then
+        self.success = BaseRpcResponse:new{}
+        self.success:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
     elseif fid == 1 then
       if ftype == TType.STRUCT then
         self.se = ServiceException:new{}
@@ -203,6 +217,11 @@ end
 
 function UploadRating_result:write(oprot)
   oprot:writeStructBegin('UploadRating_result')
+  if self.success ~= nil then
+    oprot:writeFieldBegin('success', TType.STRUCT, 0)
+    self.success:write(oprot)
+    oprot:writeFieldEnd()
+  end
   if self.se ~= nil then
     oprot:writeFieldBegin('se', TType.STRUCT, 1)
     self.se:write(oprot)

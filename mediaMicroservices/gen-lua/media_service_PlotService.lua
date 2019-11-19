@@ -6,265 +6,16 @@
 --
 
 
-local Thrift = require 'Thrift'
-local TType = Thrift.TType
-local TMessageType = Thrift.TMessageType
-local __TObject = Thrift.__TObject
-local TApplicationException = Thrift.TApplicationException
-local __TClient = Thrift.__TClient
-local __TProcessor = Thrift.__TProcessor
-local ttype = Thrift.ttype
-local ttable_size = Thrift.ttable_size
-local media_service_ttypes = require 'media_service_ttypes'
-local ServiceException = media_service_ttypes.ServiceException
+require 'Thrift'
+require 'media_service_ttypes'
 
--- HELPER FUNCTIONS AND STRUCTURES
-
-local WritePlot_args = __TObject:new{
-  req_id,
-  plot_id,
-  plot,
-  carrier
-}
-
-function WritePlot_args:read(iprot)
-  iprot:readStructBegin()
-  while true do
-    local fname, ftype, fid = iprot:readFieldBegin()
-    if ftype == TType.STOP then
-      break
-    elseif fid == 1 then
-      if ftype == TType.I64 then
-        self.req_id = iprot:readI64()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 2 then
-      if ftype == TType.I64 then
-        self.plot_id = iprot:readI64()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 3 then
-      if ftype == TType.STRING then
-        self.plot = iprot:readString()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 4 then
-      if ftype == TType.MAP then
-        self.carrier = {}
-        local _ktype257, _vtype258, _size256 = iprot:readMapBegin()
-        for _i=1,_size256 do
-          local _key260 = iprot:readString()
-          local _val261 = iprot:readString()
-          self.carrier[_key260] = _val261
-        end
-        iprot:readMapEnd()
-      else
-        iprot:skip(ftype)
-      end
-    else
-      iprot:skip(ftype)
-    end
-    iprot:readFieldEnd()
-  end
-  iprot:readStructEnd()
-end
-
-function WritePlot_args:write(oprot)
-  oprot:writeStructBegin('WritePlot_args')
-  if self.req_id ~= nil then
-    oprot:writeFieldBegin('req_id', TType.I64, 1)
-    oprot:writeI64(self.req_id)
-    oprot:writeFieldEnd()
-  end
-  if self.plot_id ~= nil then
-    oprot:writeFieldBegin('plot_id', TType.I64, 2)
-    oprot:writeI64(self.plot_id)
-    oprot:writeFieldEnd()
-  end
-  if self.plot ~= nil then
-    oprot:writeFieldBegin('plot', TType.STRING, 3)
-    oprot:writeString(self.plot)
-    oprot:writeFieldEnd()
-  end
-  if self.carrier ~= nil then
-    oprot:writeFieldBegin('carrier', TType.MAP, 4)
-    oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
-    for kiter262,viter263 in pairs(self.carrier) do
-      oprot:writeString(kiter262)
-      oprot:writeString(viter263)
-    end
-    oprot:writeMapEnd()
-    oprot:writeFieldEnd()
-  end
-  oprot:writeFieldStop()
-  oprot:writeStructEnd()
-end
-
-local WritePlot_result = __TObject:new{
-  se
-}
-
-function WritePlot_result:read(iprot)
-  iprot:readStructBegin()
-  while true do
-    local fname, ftype, fid = iprot:readFieldBegin()
-    if ftype == TType.STOP then
-      break
-    elseif fid == 1 then
-      if ftype == TType.STRUCT then
-        self.se = ServiceException:new{}
-        self.se:read(iprot)
-      else
-        iprot:skip(ftype)
-      end
-    else
-      iprot:skip(ftype)
-    end
-    iprot:readFieldEnd()
-  end
-  iprot:readStructEnd()
-end
-
-function WritePlot_result:write(oprot)
-  oprot:writeStructBegin('WritePlot_result')
-  if self.se ~= nil then
-    oprot:writeFieldBegin('se', TType.STRUCT, 1)
-    self.se:write(oprot)
-    oprot:writeFieldEnd()
-  end
-  oprot:writeFieldStop()
-  oprot:writeStructEnd()
-end
-
-local ReadPlot_args = __TObject:new{
-  req_id,
-  plot_id,
-  carrier
-}
-
-function ReadPlot_args:read(iprot)
-  iprot:readStructBegin()
-  while true do
-    local fname, ftype, fid = iprot:readFieldBegin()
-    if ftype == TType.STOP then
-      break
-    elseif fid == 1 then
-      if ftype == TType.I64 then
-        self.req_id = iprot:readI64()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 2 then
-      if ftype == TType.I64 then
-        self.plot_id = iprot:readI64()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 3 then
-      if ftype == TType.MAP then
-        self.carrier = {}
-        local _ktype265, _vtype266, _size264 = iprot:readMapBegin()
-        for _i=1,_size264 do
-          local _key268 = iprot:readString()
-          local _val269 = iprot:readString()
-          self.carrier[_key268] = _val269
-        end
-        iprot:readMapEnd()
-      else
-        iprot:skip(ftype)
-      end
-    else
-      iprot:skip(ftype)
-    end
-    iprot:readFieldEnd()
-  end
-  iprot:readStructEnd()
-end
-
-function ReadPlot_args:write(oprot)
-  oprot:writeStructBegin('ReadPlot_args')
-  if self.req_id ~= nil then
-    oprot:writeFieldBegin('req_id', TType.I64, 1)
-    oprot:writeI64(self.req_id)
-    oprot:writeFieldEnd()
-  end
-  if self.plot_id ~= nil then
-    oprot:writeFieldBegin('plot_id', TType.I64, 2)
-    oprot:writeI64(self.plot_id)
-    oprot:writeFieldEnd()
-  end
-  if self.carrier ~= nil then
-    oprot:writeFieldBegin('carrier', TType.MAP, 3)
-    oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
-    for kiter270,viter271 in pairs(self.carrier) do
-      oprot:writeString(kiter270)
-      oprot:writeString(viter271)
-    end
-    oprot:writeMapEnd()
-    oprot:writeFieldEnd()
-  end
-  oprot:writeFieldStop()
-  oprot:writeStructEnd()
-end
-
-local ReadPlot_result = __TObject:new{
-  success,
-  se
-}
-
-function ReadPlot_result:read(iprot)
-  iprot:readStructBegin()
-  while true do
-    local fname, ftype, fid = iprot:readFieldBegin()
-    if ftype == TType.STOP then
-      break
-    elseif fid == 0 then
-      if ftype == TType.STRING then
-        self.success = iprot:readString()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 1 then
-      if ftype == TType.STRUCT then
-        self.se = ServiceException:new{}
-        self.se:read(iprot)
-      else
-        iprot:skip(ftype)
-      end
-    else
-      iprot:skip(ftype)
-    end
-    iprot:readFieldEnd()
-  end
-  iprot:readStructEnd()
-end
-
-function ReadPlot_result:write(oprot)
-  oprot:writeStructBegin('ReadPlot_result')
-  if self.success ~= nil then
-    oprot:writeFieldBegin('success', TType.STRING, 0)
-    oprot:writeString(self.success)
-    oprot:writeFieldEnd()
-  end
-  if self.se ~= nil then
-    oprot:writeFieldBegin('se', TType.STRUCT, 1)
-    self.se:write(oprot)
-    oprot:writeFieldEnd()
-  end
-  oprot:writeFieldStop()
-  oprot:writeStructEnd()
-end
-
-local PlotServiceClient = __TObject.new(__TClient, {
+PlotServiceClient = __TObject.new(__TClient, {
   __type = 'PlotServiceClient'
 })
 
 function PlotServiceClient:WritePlot(req_id, plot_id, plot, carrier)
   self:send_WritePlot(req_id, plot_id, plot, carrier)
-  self:recv_WritePlot(req_id, plot_id, plot, carrier)
+  return self:recv_WritePlot(req_id, plot_id, plot, carrier)
 end
 
 function PlotServiceClient:send_WritePlot(req_id, plot_id, plot, carrier)
@@ -290,9 +41,12 @@ function PlotServiceClient:recv_WritePlot(req_id, plot_id, plot, carrier)
   local result = WritePlot_result:new{}
   result:read(self.iprot)
   self.iprot:readMessageEnd()
-  if result.se then
+  if result.success ~= nil then
+    return result.success
+  elseif result.se then
     error(result.se)
   end
+  error(TApplicationException:new{errorCode = TApplicationException.MISSING_RESULT})
 end
 
 function PlotServiceClient:ReadPlot(req_id, plot_id, carrier)
@@ -329,12 +83,12 @@ function PlotServiceClient:recv_ReadPlot(req_id, plot_id, carrier)
   end
   error(TApplicationException:new{errorCode = TApplicationException.MISSING_RESULT})
 end
-local PlotServiceIface = __TObject:new{
+PlotServiceIface = __TObject:new{
   __type = 'PlotServiceIface'
 }
 
 
-local PlotServiceProcessor = __TObject.new(__TProcessor
+PlotServiceProcessor = __TObject.new(__TProcessor
 , {
  __type = 'PlotServiceProcessor'
 })
@@ -399,4 +153,256 @@ function PlotServiceProcessor:process_ReadPlot(seqid, iprot, oprot, server_ctx)
   oprot.trans:flush()
 end
 
-return PlotServiceClient
+-- HELPER FUNCTIONS AND STRUCTURES
+
+WritePlot_args = __TObject:new{
+  req_id,
+  plot_id,
+  plot,
+  carrier
+}
+
+function WritePlot_args:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 1 then
+      if ftype == TType.I64 then
+        self.req_id = iprot:readI64()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 2 then
+      if ftype == TType.I64 then
+        self.plot_id = iprot:readI64()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 3 then
+      if ftype == TType.STRING then
+        self.plot = iprot:readString()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 4 then
+      if ftype == TType.MAP then
+        self.carrier = {}
+        local _ktype245, _vtype246, _size244 = iprot:readMapBegin() 
+        for _i=1,_size244 do
+          local _key248 = iprot:readString()
+          local _val249 = iprot:readString()
+          self.carrier[_key248] = _val249
+        end
+        iprot:readMapEnd()
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function WritePlot_args:write(oprot)
+  oprot:writeStructBegin('WritePlot_args')
+  if self.req_id ~= nil then
+    oprot:writeFieldBegin('req_id', TType.I64, 1)
+    oprot:writeI64(self.req_id)
+    oprot:writeFieldEnd()
+  end
+  if self.plot_id ~= nil then
+    oprot:writeFieldBegin('plot_id', TType.I64, 2)
+    oprot:writeI64(self.plot_id)
+    oprot:writeFieldEnd()
+  end
+  if self.plot ~= nil then
+    oprot:writeFieldBegin('plot', TType.STRING, 3)
+    oprot:writeString(self.plot)
+    oprot:writeFieldEnd()
+  end
+  if self.carrier ~= nil then
+    oprot:writeFieldBegin('carrier', TType.MAP, 4)
+    oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
+    for kiter250,viter251 in pairs(self.carrier) do
+      oprot:writeString(kiter250)
+      oprot:writeString(viter251)
+    end
+    oprot:writeMapEnd()
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+WritePlot_result = __TObject:new{
+  success,
+  se
+}
+
+function WritePlot_result:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 0 then
+      if ftype == TType.STRUCT then
+        self.success = BaseRpcResponse:new{}
+        self.success:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 1 then
+      if ftype == TType.STRUCT then
+        self.se = ServiceException:new{}
+        self.se:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function WritePlot_result:write(oprot)
+  oprot:writeStructBegin('WritePlot_result')
+  if self.success ~= nil then
+    oprot:writeFieldBegin('success', TType.STRUCT, 0)
+    self.success:write(oprot)
+    oprot:writeFieldEnd()
+  end
+  if self.se ~= nil then
+    oprot:writeFieldBegin('se', TType.STRUCT, 1)
+    self.se:write(oprot)
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+ReadPlot_args = __TObject:new{
+  req_id,
+  plot_id,
+  carrier
+}
+
+function ReadPlot_args:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 1 then
+      if ftype == TType.I64 then
+        self.req_id = iprot:readI64()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 2 then
+      if ftype == TType.I64 then
+        self.plot_id = iprot:readI64()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 3 then
+      if ftype == TType.MAP then
+        self.carrier = {}
+        local _ktype253, _vtype254, _size252 = iprot:readMapBegin() 
+        for _i=1,_size252 do
+          local _key256 = iprot:readString()
+          local _val257 = iprot:readString()
+          self.carrier[_key256] = _val257
+        end
+        iprot:readMapEnd()
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function ReadPlot_args:write(oprot)
+  oprot:writeStructBegin('ReadPlot_args')
+  if self.req_id ~= nil then
+    oprot:writeFieldBegin('req_id', TType.I64, 1)
+    oprot:writeI64(self.req_id)
+    oprot:writeFieldEnd()
+  end
+  if self.plot_id ~= nil then
+    oprot:writeFieldBegin('plot_id', TType.I64, 2)
+    oprot:writeI64(self.plot_id)
+    oprot:writeFieldEnd()
+  end
+  if self.carrier ~= nil then
+    oprot:writeFieldBegin('carrier', TType.MAP, 3)
+    oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
+    for kiter258,viter259 in pairs(self.carrier) do
+      oprot:writeString(kiter258)
+      oprot:writeString(viter259)
+    end
+    oprot:writeMapEnd()
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+ReadPlot_result = __TObject:new{
+  success,
+  se
+}
+
+function ReadPlot_result:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 0 then
+      if ftype == TType.STRUCT then
+        self.success = PlotRpcResponse:new{}
+        self.success:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 1 then
+      if ftype == TType.STRUCT then
+        self.se = ServiceException:new{}
+        self.se:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function ReadPlot_result:write(oprot)
+  oprot:writeStructBegin('ReadPlot_result')
+  if self.success ~= nil then
+    oprot:writeFieldBegin('success', TType.STRUCT, 0)
+    self.success:write(oprot)
+    oprot:writeFieldEnd()
+  end
+  if self.se ~= nil then
+    oprot:writeFieldBegin('se', TType.STRUCT, 1)
+    self.se:write(oprot)
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end

@@ -20,12 +20,12 @@ class MovieReviewServiceHandler : virtual public MovieReviewServiceIf {
     // Your initialization goes here
   }
 
-  void UploadMovieReview(const int64_t req_id, const std::string& movie_id, const int64_t review_id, const int64_t timestamp, const std::map<std::string, std::string> & carrier) {
+  void UploadMovieReview(BaseRpcResponse& _return, const int64_t req_id, const std::string& movie_id, const int64_t review_id, const int64_t timestamp, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("UploadMovieReview\n");
   }
 
-  void ReadMovieReviews(std::vector<Review> & _return, const int64_t req_id, const std::string& movie_id, const int32_t start, const int32_t stop, const std::map<std::string, std::string> & carrier) {
+  void ReadMovieReviews(ReviewListRpcResponse& _return, const int64_t req_id, const std::string& movie_id, const int32_t start, const int32_t stop, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("ReadMovieReviews\n");
   }
@@ -34,11 +34,11 @@ class MovieReviewServiceHandler : virtual public MovieReviewServiceIf {
 
 int main(int argc, char **argv) {
   int port = 9090;
-  ::apache::thrift::stdcxx::shared_ptr<MovieReviewServiceHandler> handler(new MovieReviewServiceHandler());
-  ::apache::thrift::stdcxx::shared_ptr<TProcessor> processor(new MovieReviewServiceProcessor(handler));
-  ::apache::thrift::stdcxx::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
-  ::apache::thrift::stdcxx::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
-  ::apache::thrift::stdcxx::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
+  ::std::shared_ptr<MovieReviewServiceHandler> handler(new MovieReviewServiceHandler());
+  ::std::shared_ptr<TProcessor> processor(new MovieReviewServiceProcessor(handler));
+  ::std::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
+  ::std::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
+  ::std::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
 
   TSimpleServer server(processor, serverTransport, transportFactory, protocolFactory);
   server.serve();

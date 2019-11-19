@@ -1,4 +1,5 @@
 local _M = {}
+local xtracer = require "luaxtrace"
 
 function _M.WritePlot()
   local bridge_tracer = require "opentracing_bridge_tracer"

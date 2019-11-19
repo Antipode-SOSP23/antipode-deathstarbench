@@ -6,166 +6,10 @@
 --
 
 
-local Thrift = require 'Thrift'
-local TType = Thrift.TType
-local TMessageType = Thrift.TMessageType
-local __TObject = Thrift.__TObject
-local TApplicationException = Thrift.TApplicationException
-local __TClient = Thrift.__TClient
-local __TProcessor = Thrift.__TProcessor
-local ttype = Thrift.ttype
-local ttable_size = Thrift.ttable_size
-local media_service_ttypes = require 'media_service_ttypes'
-local ServiceException = media_service_ttypes.ServiceException
-local Page = media_service_ttypes.Page
+require 'Thrift'
+require 'media_service_ttypes'
 
--- HELPER FUNCTIONS AND STRUCTURES
-
-local ReadPage_args = __TObject:new{
-  req_id,
-  movie_id,
-  review_start,
-  review_stop,
-  carrier
-}
-
-function ReadPage_args:read(iprot)
-  iprot:readStructBegin()
-  while true do
-    local fname, ftype, fid = iprot:readFieldBegin()
-    if ftype == TType.STOP then
-      break
-    elseif fid == 1 then
-      if ftype == TType.I64 then
-        self.req_id = iprot:readI64()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 2 then
-      if ftype == TType.STRING then
-        self.movie_id = iprot:readString()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 3 then
-      if ftype == TType.I32 then
-        self.review_start = iprot:readI32()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 4 then
-      if ftype == TType.I32 then
-        self.review_stop = iprot:readI32()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 5 then
-      if ftype == TType.MAP then
-        self.carrier = {}
-        local _ktype321, _vtype322, _size320 = iprot:readMapBegin()
-        for _i=1,_size320 do
-          local _key324 = iprot:readString()
-          local _val325 = iprot:readString()
-          self.carrier[_key324] = _val325
-        end
-        iprot:readMapEnd()
-      else
-        iprot:skip(ftype)
-      end
-    else
-      iprot:skip(ftype)
-    end
-    iprot:readFieldEnd()
-  end
-  iprot:readStructEnd()
-end
-
-function ReadPage_args:write(oprot)
-  oprot:writeStructBegin('ReadPage_args')
-  if self.req_id ~= nil then
-    oprot:writeFieldBegin('req_id', TType.I64, 1)
-    oprot:writeI64(self.req_id)
-    oprot:writeFieldEnd()
-  end
-  if self.movie_id ~= nil then
-    oprot:writeFieldBegin('movie_id', TType.STRING, 2)
-    oprot:writeString(self.movie_id)
-    oprot:writeFieldEnd()
-  end
-  if self.review_start ~= nil then
-    oprot:writeFieldBegin('review_start', TType.I32, 3)
-    oprot:writeI32(self.review_start)
-    oprot:writeFieldEnd()
-  end
-  if self.review_stop ~= nil then
-    oprot:writeFieldBegin('review_stop', TType.I32, 4)
-    oprot:writeI32(self.review_stop)
-    oprot:writeFieldEnd()
-  end
-  if self.carrier ~= nil then
-    oprot:writeFieldBegin('carrier', TType.MAP, 5)
-    oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
-    for kiter326,viter327 in pairs(self.carrier) do
-      oprot:writeString(kiter326)
-      oprot:writeString(viter327)
-    end
-    oprot:writeMapEnd()
-    oprot:writeFieldEnd()
-  end
-  oprot:writeFieldStop()
-  oprot:writeStructEnd()
-end
-
-local ReadPage_result = __TObject:new{
-  success,
-  se
-}
-
-function ReadPage_result:read(iprot)
-  iprot:readStructBegin()
-  while true do
-    local fname, ftype, fid = iprot:readFieldBegin()
-    if ftype == TType.STOP then
-      break
-    elseif fid == 0 then
-      if ftype == TType.STRUCT then
-        self.success = Page:new{}
-        self.success:read(iprot)
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 1 then
-      if ftype == TType.STRUCT then
-        self.se = ServiceException:new{}
-        self.se:read(iprot)
-      else
-        iprot:skip(ftype)
-      end
-    else
-      iprot:skip(ftype)
-    end
-    iprot:readFieldEnd()
-  end
-  iprot:readStructEnd()
-end
-
-function ReadPage_result:write(oprot)
-  oprot:writeStructBegin('ReadPage_result')
-  if self.success ~= nil then
-    oprot:writeFieldBegin('success', TType.STRUCT, 0)
-    self.success:write(oprot)
-    oprot:writeFieldEnd()
-  end
-  if self.se ~= nil then
-    oprot:writeFieldBegin('se', TType.STRUCT, 1)
-    self.se:write(oprot)
-    oprot:writeFieldEnd()
-  end
-  oprot:writeFieldStop()
-  oprot:writeStructEnd()
-end
-
-local PageServiceClient = __TObject.new(__TClient, {
+PageServiceClient = __TObject.new(__TClient, {
   __type = 'PageServiceClient'
 })
 
@@ -205,12 +49,12 @@ function PageServiceClient:recv_ReadPage(req_id, movie_id, review_start, review_
   end
   error(TApplicationException:new{errorCode = TApplicationException.MISSING_RESULT})
 end
-local PageServiceIface = __TObject:new{
+PageServiceIface = __TObject:new{
   __type = 'PageServiceIface'
 }
 
 
-local PageServiceProcessor = __TObject.new(__TProcessor
+PageServiceProcessor = __TObject.new(__TProcessor
 , {
  __type = 'PageServiceProcessor'
 })
@@ -254,4 +98,148 @@ function PageServiceProcessor:process_ReadPage(seqid, iprot, oprot, server_ctx)
   oprot.trans:flush()
 end
 
-return PageServiceClient
+-- HELPER FUNCTIONS AND STRUCTURES
+
+ReadPage_args = __TObject:new{
+  req_id,
+  movie_id,
+  review_start,
+  review_stop,
+  carrier
+}
+
+function ReadPage_args:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 1 then
+      if ftype == TType.I64 then
+        self.req_id = iprot:readI64()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 2 then
+      if ftype == TType.STRING then
+        self.movie_id = iprot:readString()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 3 then
+      if ftype == TType.I32 then
+        self.review_start = iprot:readI32()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 4 then
+      if ftype == TType.I32 then
+        self.review_stop = iprot:readI32()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 5 then
+      if ftype == TType.MAP then
+        self.carrier = {}
+        local _ktype309, _vtype310, _size308 = iprot:readMapBegin() 
+        for _i=1,_size308 do
+          local _key312 = iprot:readString()
+          local _val313 = iprot:readString()
+          self.carrier[_key312] = _val313
+        end
+        iprot:readMapEnd()
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function ReadPage_args:write(oprot)
+  oprot:writeStructBegin('ReadPage_args')
+  if self.req_id ~= nil then
+    oprot:writeFieldBegin('req_id', TType.I64, 1)
+    oprot:writeI64(self.req_id)
+    oprot:writeFieldEnd()
+  end
+  if self.movie_id ~= nil then
+    oprot:writeFieldBegin('movie_id', TType.STRING, 2)
+    oprot:writeString(self.movie_id)
+    oprot:writeFieldEnd()
+  end
+  if self.review_start ~= nil then
+    oprot:writeFieldBegin('review_start', TType.I32, 3)
+    oprot:writeI32(self.review_start)
+    oprot:writeFieldEnd()
+  end
+  if self.review_stop ~= nil then
+    oprot:writeFieldBegin('review_stop', TType.I32, 4)
+    oprot:writeI32(self.review_stop)
+    oprot:writeFieldEnd()
+  end
+  if self.carrier ~= nil then
+    oprot:writeFieldBegin('carrier', TType.MAP, 5)
+    oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
+    for kiter314,viter315 in pairs(self.carrier) do
+      oprot:writeString(kiter314)
+      oprot:writeString(viter315)
+    end
+    oprot:writeMapEnd()
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+ReadPage_result = __TObject:new{
+  success,
+  se
+}
+
+function ReadPage_result:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 0 then
+      if ftype == TType.STRUCT then
+        self.success = PageRpcResponse:new{}
+        self.success:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 1 then
+      if ftype == TType.STRUCT then
+        self.se = ServiceException:new{}
+        self.se:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function ReadPage_result:write(oprot)
+  oprot:writeStructBegin('ReadPage_result')
+  if self.success ~= nil then
+    oprot:writeFieldBegin('success', TType.STRUCT, 0)
+    self.success:write(oprot)
+    oprot:writeFieldEnd()
+  end
+  if self.se ~= nil then
+    oprot:writeFieldBegin('se', TType.STRUCT, 1)
+    self.se:write(oprot)
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end

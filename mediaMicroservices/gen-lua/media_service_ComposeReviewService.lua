@@ -15,7 +15,7 @@ ComposeReviewServiceClient = __TObject.new(__TClient, {
 
 function ComposeReviewServiceClient:UploadText(req_id, text, carrier)
   self:send_UploadText(req_id, text, carrier)
-  self:recv_UploadText(req_id, text, carrier)
+  return self:recv_UploadText(req_id, text, carrier)
 end
 
 function ComposeReviewServiceClient:send_UploadText(req_id, text, carrier)
@@ -40,11 +40,17 @@ function ComposeReviewServiceClient:recv_UploadText(req_id, text, carrier)
   local result = UploadText_result:new{}
   result:read(self.iprot)
   self.iprot:readMessageEnd()
+  if result.success ~= nil then
+    return result.success
+  elseif result.se then
+    error(result.se)
+  end
+  error(TApplicationException:new{errorCode = TApplicationException.MISSING_RESULT})
 end
 
 function ComposeReviewServiceClient:UploadRating(req_id, rating, carrier)
   self:send_UploadRating(req_id, rating, carrier)
-  self:recv_UploadRating(req_id, rating, carrier)
+  return self:recv_UploadRating(req_id, rating, carrier)
 end
 
 function ComposeReviewServiceClient:send_UploadRating(req_id, rating, carrier)
@@ -69,11 +75,17 @@ function ComposeReviewServiceClient:recv_UploadRating(req_id, rating, carrier)
   local result = UploadRating_result:new{}
   result:read(self.iprot)
   self.iprot:readMessageEnd()
+  if result.success ~= nil then
+    return result.success
+  elseif result.se then
+    error(result.se)
+  end
+  error(TApplicationException:new{errorCode = TApplicationException.MISSING_RESULT})
 end
 
 function ComposeReviewServiceClient:UploadMovieId(req_id, movie_id, carrier)
   self:send_UploadMovieId(req_id, movie_id, carrier)
-  self:recv_UploadMovieId(req_id, movie_id, carrier)
+  return self:recv_UploadMovieId(req_id, movie_id, carrier)
 end
 
 function ComposeReviewServiceClient:send_UploadMovieId(req_id, movie_id, carrier)
@@ -98,11 +110,17 @@ function ComposeReviewServiceClient:recv_UploadMovieId(req_id, movie_id, carrier
   local result = UploadMovieId_result:new{}
   result:read(self.iprot)
   self.iprot:readMessageEnd()
+  if result.success ~= nil then
+    return result.success
+  elseif result.se then
+    error(result.se)
+  end
+  error(TApplicationException:new{errorCode = TApplicationException.MISSING_RESULT})
 end
 
 function ComposeReviewServiceClient:UploadUniqueId(req_id, unique_id, carrier)
   self:send_UploadUniqueId(req_id, unique_id, carrier)
-  self:recv_UploadUniqueId(req_id, unique_id, carrier)
+  return self:recv_UploadUniqueId(req_id, unique_id, carrier)
 end
 
 function ComposeReviewServiceClient:send_UploadUniqueId(req_id, unique_id, carrier)
@@ -127,11 +145,17 @@ function ComposeReviewServiceClient:recv_UploadUniqueId(req_id, unique_id, carri
   local result = UploadUniqueId_result:new{}
   result:read(self.iprot)
   self.iprot:readMessageEnd()
+  if result.success ~= nil then
+    return result.success
+  elseif result.se then
+    error(result.se)
+  end
+  error(TApplicationException:new{errorCode = TApplicationException.MISSING_RESULT})
 end
 
 function ComposeReviewServiceClient:UploadUserId(req_id, user_id, carrier)
   self:send_UploadUserId(req_id, user_id, carrier)
-  self:recv_UploadUserId(req_id, user_id, carrier)
+  return self:recv_UploadUserId(req_id, user_id, carrier)
 end
 
 function ComposeReviewServiceClient:send_UploadUserId(req_id, user_id, carrier)
@@ -156,6 +180,12 @@ function ComposeReviewServiceClient:recv_UploadUserId(req_id, user_id, carrier)
   local result = UploadUserId_result:new{}
   result:read(self.iprot)
   self.iprot:readMessageEnd()
+  if result.success ~= nil then
+    return result.success
+  elseif result.se then
+    error(result.se)
+  end
+  error(TApplicationException:new{errorCode = TApplicationException.MISSING_RESULT})
 end
 ComposeReviewServiceIface = __TObject:new{
   __type = 'ComposeReviewServiceIface'
@@ -319,11 +349,11 @@ function UploadText_args:read(iprot)
     elseif fid == 3 then
       if ftype == TType.MAP then
         self.carrier = {}
-        local _ktype117, _vtype118, _size116 = iprot:readMapBegin() 
-        for _i=1,_size116 do
-          local _key120 = iprot:readString()
-          local _val121 = iprot:readString()
-          self.carrier[_key120] = _val121
+        local _ktype129, _vtype130, _size128 = iprot:readMapBegin() 
+        for _i=1,_size128 do
+          local _key132 = iprot:readString()
+          local _val133 = iprot:readString()
+          self.carrier[_key132] = _val133
         end
         iprot:readMapEnd()
       else
@@ -352,9 +382,9 @@ function UploadText_args:write(oprot)
   if self.carrier ~= nil then
     oprot:writeFieldBegin('carrier', TType.MAP, 3)
     oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
-    for kiter122,viter123 in pairs(self.carrier) do
-      oprot:writeString(kiter122)
-      oprot:writeString(viter123)
+    for kiter134,viter135 in pairs(self.carrier) do
+      oprot:writeString(kiter134)
+      oprot:writeString(viter135)
     end
     oprot:writeMapEnd()
     oprot:writeFieldEnd()
@@ -364,6 +394,7 @@ function UploadText_args:write(oprot)
 end
 
 UploadText_result = __TObject:new{
+  success,
   se
 }
 
@@ -373,6 +404,13 @@ function UploadText_result:read(iprot)
     local fname, ftype, fid = iprot:readFieldBegin()
     if ftype == TType.STOP then
       break
+    elseif fid == 0 then
+      if ftype == TType.STRUCT then
+        self.success = BaseRpcResponse:new{}
+        self.success:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
     elseif fid == 1 then
       if ftype == TType.STRUCT then
         self.se = ServiceException:new{}
@@ -390,6 +428,11 @@ end
 
 function UploadText_result:write(oprot)
   oprot:writeStructBegin('UploadText_result')
+  if self.success ~= nil then
+    oprot:writeFieldBegin('success', TType.STRUCT, 0)
+    self.success:write(oprot)
+    oprot:writeFieldEnd()
+  end
   if self.se ~= nil then
     oprot:writeFieldBegin('se', TType.STRUCT, 1)
     self.se:write(oprot)
@@ -426,11 +469,11 @@ function UploadRating_args:read(iprot)
     elseif fid == 3 then
       if ftype == TType.MAP then
         self.carrier = {}
-        local _ktype125, _vtype126, _size124 = iprot:readMapBegin() 
-        for _i=1,_size124 do
-          local _key128 = iprot:readString()
-          local _val129 = iprot:readString()
-          self.carrier[_key128] = _val129
+        local _ktype137, _vtype138, _size136 = iprot:readMapBegin() 
+        for _i=1,_size136 do
+          local _key140 = iprot:readString()
+          local _val141 = iprot:readString()
+          self.carrier[_key140] = _val141
         end
         iprot:readMapEnd()
       else
@@ -459,9 +502,9 @@ function UploadRating_args:write(oprot)
   if self.carrier ~= nil then
     oprot:writeFieldBegin('carrier', TType.MAP, 3)
     oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
-    for kiter130,viter131 in pairs(self.carrier) do
-      oprot:writeString(kiter130)
-      oprot:writeString(viter131)
+    for kiter142,viter143 in pairs(self.carrier) do
+      oprot:writeString(kiter142)
+      oprot:writeString(viter143)
     end
     oprot:writeMapEnd()
     oprot:writeFieldEnd()
@@ -471,6 +514,7 @@ function UploadRating_args:write(oprot)
 end
 
 UploadRating_result = __TObject:new{
+  success,
   se
 }
 
@@ -480,6 +524,13 @@ function UploadRating_result:read(iprot)
     local fname, ftype, fid = iprot:readFieldBegin()
     if ftype == TType.STOP then
       break
+    elseif fid == 0 then
+      if ftype == TType.STRUCT then
+        self.success = BaseRpcResponse:new{}
+        self.success:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
     elseif fid == 1 then
       if ftype == TType.STRUCT then
         self.se = ServiceException:new{}
@@ -497,6 +548,11 @@ end
 
 function UploadRating_result:write(oprot)
   oprot:writeStructBegin('UploadRating_result')
+  if self.success ~= nil then
+    oprot:writeFieldBegin('success', TType.STRUCT, 0)
+    self.success:write(oprot)
+    oprot:writeFieldEnd()
+  end
   if self.se ~= nil then
     oprot:writeFieldBegin('se', TType.STRUCT, 1)
     self.se:write(oprot)
@@ -533,11 +589,11 @@ function UploadMovieId_args:read(iprot)
     elseif fid == 3 then
       if ftype == TType.MAP then
         self.carrier = {}
-        local _ktype133, _vtype134, _size132 = iprot:readMapBegin() 
-        for _i=1,_size132 do
-          local _key136 = iprot:readString()
-          local _val137 = iprot:readString()
-          self.carrier[_key136] = _val137
+        local _ktype145, _vtype146, _size144 = iprot:readMapBegin() 
+        for _i=1,_size144 do
+          local _key148 = iprot:readString()
+          local _val149 = iprot:readString()
+          self.carrier[_key148] = _val149
         end
         iprot:readMapEnd()
       else
@@ -566,9 +622,9 @@ function UploadMovieId_args:write(oprot)
   if self.carrier ~= nil then
     oprot:writeFieldBegin('carrier', TType.MAP, 3)
     oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
-    for kiter138,viter139 in pairs(self.carrier) do
-      oprot:writeString(kiter138)
-      oprot:writeString(viter139)
+    for kiter150,viter151 in pairs(self.carrier) do
+      oprot:writeString(kiter150)
+      oprot:writeString(viter151)
     end
     oprot:writeMapEnd()
     oprot:writeFieldEnd()
@@ -578,6 +634,7 @@ function UploadMovieId_args:write(oprot)
 end
 
 UploadMovieId_result = __TObject:new{
+  success,
   se
 }
 
@@ -587,6 +644,13 @@ function UploadMovieId_result:read(iprot)
     local fname, ftype, fid = iprot:readFieldBegin()
     if ftype == TType.STOP then
       break
+    elseif fid == 0 then
+      if ftype == TType.STRUCT then
+        self.success = BaseRpcResponse:new{}
+        self.success:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
     elseif fid == 1 then
       if ftype == TType.STRUCT then
         self.se = ServiceException:new{}
@@ -604,6 +668,11 @@ end
 
 function UploadMovieId_result:write(oprot)
   oprot:writeStructBegin('UploadMovieId_result')
+  if self.success ~= nil then
+    oprot:writeFieldBegin('success', TType.STRUCT, 0)
+    self.success:write(oprot)
+    oprot:writeFieldEnd()
+  end
   if self.se ~= nil then
     oprot:writeFieldBegin('se', TType.STRUCT, 1)
     self.se:write(oprot)
@@ -640,11 +709,11 @@ function UploadUniqueId_args:read(iprot)
     elseif fid == 3 then
       if ftype == TType.MAP then
         self.carrier = {}
-        local _ktype141, _vtype142, _size140 = iprot:readMapBegin() 
-        for _i=1,_size140 do
-          local _key144 = iprot:readString()
-          local _val145 = iprot:readString()
-          self.carrier[_key144] = _val145
+        local _ktype153, _vtype154, _size152 = iprot:readMapBegin() 
+        for _i=1,_size152 do
+          local _key156 = iprot:readString()
+          local _val157 = iprot:readString()
+          self.carrier[_key156] = _val157
         end
         iprot:readMapEnd()
       else
@@ -673,9 +742,9 @@ function UploadUniqueId_args:write(oprot)
   if self.carrier ~= nil then
     oprot:writeFieldBegin('carrier', TType.MAP, 3)
     oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
-    for kiter146,viter147 in pairs(self.carrier) do
-      oprot:writeString(kiter146)
-      oprot:writeString(viter147)
+    for kiter158,viter159 in pairs(self.carrier) do
+      oprot:writeString(kiter158)
+      oprot:writeString(viter159)
     end
     oprot:writeMapEnd()
     oprot:writeFieldEnd()
@@ -685,6 +754,7 @@ function UploadUniqueId_args:write(oprot)
 end
 
 UploadUniqueId_result = __TObject:new{
+  success,
   se
 }
 
@@ -694,6 +764,13 @@ function UploadUniqueId_result:read(iprot)
     local fname, ftype, fid = iprot:readFieldBegin()
     if ftype == TType.STOP then
       break
+    elseif fid == 0 then
+      if ftype == TType.STRUCT then
+        self.success = BaseRpcResponse:new{}
+        self.success:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
     elseif fid == 1 then
       if ftype == TType.STRUCT then
         self.se = ServiceException:new{}
@@ -711,6 +788,11 @@ end
 
 function UploadUniqueId_result:write(oprot)
   oprot:writeStructBegin('UploadUniqueId_result')
+  if self.success ~= nil then
+    oprot:writeFieldBegin('success', TType.STRUCT, 0)
+    self.success:write(oprot)
+    oprot:writeFieldEnd()
+  end
   if self.se ~= nil then
     oprot:writeFieldBegin('se', TType.STRUCT, 1)
     self.se:write(oprot)
@@ -747,11 +829,11 @@ function UploadUserId_args:read(iprot)
     elseif fid == 4 then
       if ftype == TType.MAP then
         self.carrier = {}
-        local _ktype149, _vtype150, _size148 = iprot:readMapBegin() 
-        for _i=1,_size148 do
-          local _key152 = iprot:readString()
-          local _val153 = iprot:readString()
-          self.carrier[_key152] = _val153
+        local _ktype161, _vtype162, _size160 = iprot:readMapBegin() 
+        for _i=1,_size160 do
+          local _key164 = iprot:readString()
+          local _val165 = iprot:readString()
+          self.carrier[_key164] = _val165
         end
         iprot:readMapEnd()
       else
@@ -780,9 +862,9 @@ function UploadUserId_args:write(oprot)
   if self.carrier ~= nil then
     oprot:writeFieldBegin('carrier', TType.MAP, 4)
     oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
-    for kiter154,viter155 in pairs(self.carrier) do
-      oprot:writeString(kiter154)
-      oprot:writeString(viter155)
+    for kiter166,viter167 in pairs(self.carrier) do
+      oprot:writeString(kiter166)
+      oprot:writeString(viter167)
     end
     oprot:writeMapEnd()
     oprot:writeFieldEnd()
@@ -792,6 +874,7 @@ function UploadUserId_args:write(oprot)
 end
 
 UploadUserId_result = __TObject:new{
+  success,
   se
 }
 
@@ -801,6 +884,13 @@ function UploadUserId_result:read(iprot)
     local fname, ftype, fid = iprot:readFieldBegin()
     if ftype == TType.STOP then
       break
+    elseif fid == 0 then
+      if ftype == TType.STRUCT then
+        self.success = BaseRpcResponse:new{}
+        self.success:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
     elseif fid == 1 then
       if ftype == TType.STRUCT then
         self.se = ServiceException:new{}
@@ -818,6 +908,11 @@ end
 
 function UploadUserId_result:write(oprot)
   oprot:writeStructBegin('UploadUserId_result')
+  if self.success ~= nil then
+    oprot:writeFieldBegin('success', TType.STRUCT, 0)
+    self.success:write(oprot)
+    oprot:writeFieldEnd()
+  end
   if self.se ~= nil then
     oprot:writeFieldBegin('se', TType.STRUCT, 1)
     self.se:write(oprot)

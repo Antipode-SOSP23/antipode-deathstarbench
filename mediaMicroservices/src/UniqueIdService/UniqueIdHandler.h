@@ -56,7 +56,7 @@ class UniqueIdHandler : public UniqueIdServiceIf {
       const std::string &,
       ClientPool<ThriftClient<ComposeReviewServiceClient>> *);
 
-  void UploadUniqueId(int64_t, const std::map<std::string, std::string> &) override;
+  void UploadUniqueId(BaseRpcResponse&, int64_t, const std::map<std::string, std::string> &) override;
 
  private:
   std::mutex *_thread_lock;
@@ -74,6 +74,7 @@ UniqueIdHandler::UniqueIdHandler(
 }
 
 void UniqueIdHandler::UploadUniqueId(
+    BaseRpcResponse & response,
     int64_t req_id,
     const std::map<std::string, std::string> & carrier) {
 
@@ -141,7 +142,10 @@ void UniqueIdHandler::UploadUniqueId(
   auto compose_client = compose_client_wrapper->GetClient();
   try {
     writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
-    compose_client->UploadUniqueId(req_id, review_id, writer_text_map);
+    BaseRpcResponse response;
+    compose_client->UploadUniqueId(response, req_id, review_id, writer_text_map);
+    Baggage b = Baggage::deserialize(response.baggage);
+    JOIN_CURRENT_BAGGAGE(b);
   } catch (...) {
     _compose_client_pool->Push(compose_client_wrapper);
     LOG(error) << "Failed to upload movie_id to compose-review-service";
@@ -152,6 +156,7 @@ void UniqueIdHandler::UploadUniqueId(
 
   span->Finish();
   XTRACE("UniqueIdHandler::UploadUniqueId complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 

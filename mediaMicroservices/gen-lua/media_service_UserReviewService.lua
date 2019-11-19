@@ -6,313 +6,16 @@
 --
 
 
-local Thrift = require 'Thrift'
-local TType = Thrift.TType
-local TMessageType = Thrift.TMessageType
-local __TObject = Thrift.__TObject
-local TApplicationException = Thrift.TApplicationException
-local __TClient = Thrift.__TClient
-local __TProcessor = Thrift.__TProcessor
-local ttype = Thrift.ttype
-local ttable_size = Thrift.ttable_size
-local media_service_ttypes = require 'media_service_ttypes'
-local ServiceException = media_service_ttypes.ServiceException
-local Review = media_service_ttypes.Review
+require 'Thrift'
+require 'media_service_ttypes'
 
--- HELPER FUNCTIONS AND STRUCTURES
-
-local UploadUserReview_args = __TObject:new{
-  req_id,
-  user_id,
-  review_id,
-  timestamp,
-  carrier
-}
-
-function UploadUserReview_args:read(iprot)
-  iprot:readStructBegin()
-  while true do
-    local fname, ftype, fid = iprot:readFieldBegin()
-    if ftype == TType.STOP then
-      break
-    elseif fid == 1 then
-      if ftype == TType.I64 then
-        self.req_id = iprot:readI64()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 2 then
-      if ftype == TType.I64 then
-        self.user_id = iprot:readI64()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 3 then
-      if ftype == TType.I64 then
-        self.review_id = iprot:readI64()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 4 then
-      if ftype == TType.I64 then
-        self.timestamp = iprot:readI64()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 5 then
-      if ftype == TType.MAP then
-        self.carrier = {}
-        local _ktype207, _vtype208, _size206 = iprot:readMapBegin()
-        for _i=1,_size206 do
-          local _key210 = iprot:readString()
-          local _val211 = iprot:readString()
-          self.carrier[_key210] = _val211
-        end
-        iprot:readMapEnd()
-      else
-        iprot:skip(ftype)
-      end
-    else
-      iprot:skip(ftype)
-    end
-    iprot:readFieldEnd()
-  end
-  iprot:readStructEnd()
-end
-
-function UploadUserReview_args:write(oprot)
-  oprot:writeStructBegin('UploadUserReview_args')
-  if self.req_id ~= nil then
-    oprot:writeFieldBegin('req_id', TType.I64, 1)
-    oprot:writeI64(self.req_id)
-    oprot:writeFieldEnd()
-  end
-  if self.user_id ~= nil then
-    oprot:writeFieldBegin('user_id', TType.I64, 2)
-    oprot:writeI64(self.user_id)
-    oprot:writeFieldEnd()
-  end
-  if self.review_id ~= nil then
-    oprot:writeFieldBegin('review_id', TType.I64, 3)
-    oprot:writeI64(self.review_id)
-    oprot:writeFieldEnd()
-  end
-  if self.timestamp ~= nil then
-    oprot:writeFieldBegin('timestamp', TType.I64, 4)
-    oprot:writeI64(self.timestamp)
-    oprot:writeFieldEnd()
-  end
-  if self.carrier ~= nil then
-    oprot:writeFieldBegin('carrier', TType.MAP, 5)
-    oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
-    for kiter212,viter213 in pairs(self.carrier) do
-      oprot:writeString(kiter212)
-      oprot:writeString(viter213)
-    end
-    oprot:writeMapEnd()
-    oprot:writeFieldEnd()
-  end
-  oprot:writeFieldStop()
-  oprot:writeStructEnd()
-end
-
-local UploadUserReview_result = __TObject:new{
-  se
-}
-
-function UploadUserReview_result:read(iprot)
-  iprot:readStructBegin()
-  while true do
-    local fname, ftype, fid = iprot:readFieldBegin()
-    if ftype == TType.STOP then
-      break
-    elseif fid == 1 then
-      if ftype == TType.STRUCT then
-        self.se = ServiceException:new{}
-        self.se:read(iprot)
-      else
-        iprot:skip(ftype)
-      end
-    else
-      iprot:skip(ftype)
-    end
-    iprot:readFieldEnd()
-  end
-  iprot:readStructEnd()
-end
-
-function UploadUserReview_result:write(oprot)
-  oprot:writeStructBegin('UploadUserReview_result')
-  if self.se ~= nil then
-    oprot:writeFieldBegin('se', TType.STRUCT, 1)
-    self.se:write(oprot)
-    oprot:writeFieldEnd()
-  end
-  oprot:writeFieldStop()
-  oprot:writeStructEnd()
-end
-
-local ReadUserReviews_args = __TObject:new{
-  req_id,
-  user_id,
-  start,
-  stop,
-  carrier
-}
-
-function ReadUserReviews_args:read(iprot)
-  iprot:readStructBegin()
-  while true do
-    local fname, ftype, fid = iprot:readFieldBegin()
-    if ftype == TType.STOP then
-      break
-    elseif fid == 1 then
-      if ftype == TType.I64 then
-        self.req_id = iprot:readI64()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 2 then
-      if ftype == TType.I64 then
-        self.user_id = iprot:readI64()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 3 then
-      if ftype == TType.I32 then
-        self.start = iprot:readI32()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 4 then
-      if ftype == TType.I32 then
-        self.stop = iprot:readI32()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 5 then
-      if ftype == TType.MAP then
-        self.carrier = {}
-        local _ktype215, _vtype216, _size214 = iprot:readMapBegin()
-        for _i=1,_size214 do
-          local _key218 = iprot:readString()
-          local _val219 = iprot:readString()
-          self.carrier[_key218] = _val219
-        end
-        iprot:readMapEnd()
-      else
-        iprot:skip(ftype)
-      end
-    else
-      iprot:skip(ftype)
-    end
-    iprot:readFieldEnd()
-  end
-  iprot:readStructEnd()
-end
-
-function ReadUserReviews_args:write(oprot)
-  oprot:writeStructBegin('ReadUserReviews_args')
-  if self.req_id ~= nil then
-    oprot:writeFieldBegin('req_id', TType.I64, 1)
-    oprot:writeI64(self.req_id)
-    oprot:writeFieldEnd()
-  end
-  if self.user_id ~= nil then
-    oprot:writeFieldBegin('user_id', TType.I64, 2)
-    oprot:writeI64(self.user_id)
-    oprot:writeFieldEnd()
-  end
-  if self.start ~= nil then
-    oprot:writeFieldBegin('start', TType.I32, 3)
-    oprot:writeI32(self.start)
-    oprot:writeFieldEnd()
-  end
-  if self.stop ~= nil then
-    oprot:writeFieldBegin('stop', TType.I32, 4)
-    oprot:writeI32(self.stop)
-    oprot:writeFieldEnd()
-  end
-  if self.carrier ~= nil then
-    oprot:writeFieldBegin('carrier', TType.MAP, 5)
-    oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
-    for kiter220,viter221 in pairs(self.carrier) do
-      oprot:writeString(kiter220)
-      oprot:writeString(viter221)
-    end
-    oprot:writeMapEnd()
-    oprot:writeFieldEnd()
-  end
-  oprot:writeFieldStop()
-  oprot:writeStructEnd()
-end
-
-local ReadUserReviews_result = __TObject:new{
-  success,
-  se
-}
-
-function ReadUserReviews_result:read(iprot)
-  iprot:readStructBegin()
-  while true do
-    local fname, ftype, fid = iprot:readFieldBegin()
-    if ftype == TType.STOP then
-      break
-    elseif fid == 0 then
-      if ftype == TType.LIST then
-        self.success = {}
-        local _etype225, _size222 = iprot:readListBegin()
-        for _i=1,_size222 do
-          local _elem226 = Review:new{}
-          _elem226:read(iprot)
-          table.insert(self.success, _elem226)
-        end
-        iprot:readListEnd()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 1 then
-      if ftype == TType.STRUCT then
-        self.se = ServiceException:new{}
-        self.se:read(iprot)
-      else
-        iprot:skip(ftype)
-      end
-    else
-      iprot:skip(ftype)
-    end
-    iprot:readFieldEnd()
-  end
-  iprot:readStructEnd()
-end
-
-function ReadUserReviews_result:write(oprot)
-  oprot:writeStructBegin('ReadUserReviews_result')
-  if self.success ~= nil then
-    oprot:writeFieldBegin('success', TType.LIST, 0)
-    oprot:writeListBegin(TType.STRUCT, #self.success)
-    for _,iter227 in ipairs(self.success) do
-      iter227:write(oprot)
-    end
-    oprot:writeListEnd()
-    oprot:writeFieldEnd()
-  end
-  if self.se ~= nil then
-    oprot:writeFieldBegin('se', TType.STRUCT, 1)
-    self.se:write(oprot)
-    oprot:writeFieldEnd()
-  end
-  oprot:writeFieldStop()
-  oprot:writeStructEnd()
-end
-
-local UserReviewServiceClient = __TObject.new(__TClient, {
+UserReviewServiceClient = __TObject.new(__TClient, {
   __type = 'UserReviewServiceClient'
 })
 
 function UserReviewServiceClient:UploadUserReview(req_id, user_id, review_id, timestamp, carrier)
   self:send_UploadUserReview(req_id, user_id, review_id, timestamp, carrier)
-  self:recv_UploadUserReview(req_id, user_id, review_id, timestamp, carrier)
+  return self:recv_UploadUserReview(req_id, user_id, review_id, timestamp, carrier)
 end
 
 function UserReviewServiceClient:send_UploadUserReview(req_id, user_id, review_id, timestamp, carrier)
@@ -339,9 +42,12 @@ function UserReviewServiceClient:recv_UploadUserReview(req_id, user_id, review_i
   local result = UploadUserReview_result:new{}
   result:read(self.iprot)
   self.iprot:readMessageEnd()
-  if result.se then
+  if result.success ~= nil then
+    return result.success
+  elseif result.se then
     error(result.se)
   end
+  error(TApplicationException:new{errorCode = TApplicationException.MISSING_RESULT})
 end
 
 function UserReviewServiceClient:ReadUserReviews(req_id, user_id, start, stop, carrier)
@@ -380,12 +86,12 @@ function UserReviewServiceClient:recv_ReadUserReviews(req_id, user_id, start, st
   end
   error(TApplicationException:new{errorCode = TApplicationException.MISSING_RESULT})
 end
-local UserReviewServiceIface = __TObject:new{
+UserReviewServiceIface = __TObject:new{
   __type = 'UserReviewServiceIface'
 }
 
 
-local UserReviewServiceProcessor = __TObject.new(__TProcessor
+UserReviewServiceProcessor = __TObject.new(__TProcessor
 , {
  __type = 'UserReviewServiceProcessor'
 })
@@ -450,4 +156,292 @@ function UserReviewServiceProcessor:process_ReadUserReviews(seqid, iprot, oprot,
   oprot.trans:flush()
 end
 
-return UserReviewServiceClient
+-- HELPER FUNCTIONS AND STRUCTURES
+
+UploadUserReview_args = __TObject:new{
+  req_id,
+  user_id,
+  review_id,
+  timestamp,
+  carrier
+}
+
+function UploadUserReview_args:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 1 then
+      if ftype == TType.I64 then
+        self.req_id = iprot:readI64()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 2 then
+      if ftype == TType.I64 then
+        self.user_id = iprot:readI64()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 3 then
+      if ftype == TType.I64 then
+        self.review_id = iprot:readI64()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 4 then
+      if ftype == TType.I64 then
+        self.timestamp = iprot:readI64()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 5 then
+      if ftype == TType.MAP then
+        self.carrier = {}
+        local _ktype207, _vtype208, _size206 = iprot:readMapBegin() 
+        for _i=1,_size206 do
+          local _key210 = iprot:readString()
+          local _val211 = iprot:readString()
+          self.carrier[_key210] = _val211
+        end
+        iprot:readMapEnd()
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function UploadUserReview_args:write(oprot)
+  oprot:writeStructBegin('UploadUserReview_args')
+  if self.req_id ~= nil then
+    oprot:writeFieldBegin('req_id', TType.I64, 1)
+    oprot:writeI64(self.req_id)
+    oprot:writeFieldEnd()
+  end
+  if self.user_id ~= nil then
+    oprot:writeFieldBegin('user_id', TType.I64, 2)
+    oprot:writeI64(self.user_id)
+    oprot:writeFieldEnd()
+  end
+  if self.review_id ~= nil then
+    oprot:writeFieldBegin('review_id', TType.I64, 3)
+    oprot:writeI64(self.review_id)
+    oprot:writeFieldEnd()
+  end
+  if self.timestamp ~= nil then
+    oprot:writeFieldBegin('timestamp', TType.I64, 4)
+    oprot:writeI64(self.timestamp)
+    oprot:writeFieldEnd()
+  end
+  if self.carrier ~= nil then
+    oprot:writeFieldBegin('carrier', TType.MAP, 5)
+    oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
+    for kiter212,viter213 in pairs(self.carrier) do
+      oprot:writeString(kiter212)
+      oprot:writeString(viter213)
+    end
+    oprot:writeMapEnd()
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+UploadUserReview_result = __TObject:new{
+  success,
+  se
+}
+
+function UploadUserReview_result:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 0 then
+      if ftype == TType.STRUCT then
+        self.success = BaseRpcResponse:new{}
+        self.success:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 1 then
+      if ftype == TType.STRUCT then
+        self.se = ServiceException:new{}
+        self.se:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function UploadUserReview_result:write(oprot)
+  oprot:writeStructBegin('UploadUserReview_result')
+  if self.success ~= nil then
+    oprot:writeFieldBegin('success', TType.STRUCT, 0)
+    self.success:write(oprot)
+    oprot:writeFieldEnd()
+  end
+  if self.se ~= nil then
+    oprot:writeFieldBegin('se', TType.STRUCT, 1)
+    self.se:write(oprot)
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+ReadUserReviews_args = __TObject:new{
+  req_id,
+  user_id,
+  start,
+  stop,
+  carrier
+}
+
+function ReadUserReviews_args:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 1 then
+      if ftype == TType.I64 then
+        self.req_id = iprot:readI64()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 2 then
+      if ftype == TType.I64 then
+        self.user_id = iprot:readI64()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 3 then
+      if ftype == TType.I32 then
+        self.start = iprot:readI32()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 4 then
+      if ftype == TType.I32 then
+        self.stop = iprot:readI32()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 5 then
+      if ftype == TType.MAP then
+        self.carrier = {}
+        local _ktype215, _vtype216, _size214 = iprot:readMapBegin() 
+        for _i=1,_size214 do
+          local _key218 = iprot:readString()
+          local _val219 = iprot:readString()
+          self.carrier[_key218] = _val219
+        end
+        iprot:readMapEnd()
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function ReadUserReviews_args:write(oprot)
+  oprot:writeStructBegin('ReadUserReviews_args')
+  if self.req_id ~= nil then
+    oprot:writeFieldBegin('req_id', TType.I64, 1)
+    oprot:writeI64(self.req_id)
+    oprot:writeFieldEnd()
+  end
+  if self.user_id ~= nil then
+    oprot:writeFieldBegin('user_id', TType.I64, 2)
+    oprot:writeI64(self.user_id)
+    oprot:writeFieldEnd()
+  end
+  if self.start ~= nil then
+    oprot:writeFieldBegin('start', TType.I32, 3)
+    oprot:writeI32(self.start)
+    oprot:writeFieldEnd()
+  end
+  if self.stop ~= nil then
+    oprot:writeFieldBegin('stop', TType.I32, 4)
+    oprot:writeI32(self.stop)
+    oprot:writeFieldEnd()
+  end
+  if self.carrier ~= nil then
+    oprot:writeFieldBegin('carrier', TType.MAP, 5)
+    oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
+    for kiter220,viter221 in pairs(self.carrier) do
+      oprot:writeString(kiter220)
+      oprot:writeString(viter221)
+    end
+    oprot:writeMapEnd()
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+ReadUserReviews_result = __TObject:new{
+  success,
+  se
+}
+
+function ReadUserReviews_result:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 0 then
+      if ftype == TType.STRUCT then
+        self.success = ReviewListRpcResponse:new{}
+        self.success:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 1 then
+      if ftype == TType.STRUCT then
+        self.se = ServiceException:new{}
+        self.se:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function ReadUserReviews_result:write(oprot)
+  oprot:writeStructBegin('ReadUserReviews_result')
+  if self.success ~= nil then
+    oprot:writeFieldBegin('success', TType.STRUCT, 0)
+    self.success:write(oprot)
+    oprot:writeFieldEnd()
+  end
+  if self.se ~= nil then
+    oprot:writeFieldBegin('se', TType.STRUCT, 1)
+    self.se:write(oprot)
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end

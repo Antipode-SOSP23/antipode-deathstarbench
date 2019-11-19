@@ -20,12 +20,12 @@ class ReviewStorageServiceHandler : virtual public ReviewStorageServiceIf {
     // Your initialization goes here
   }
 
-  void StoreReview(const int64_t req_id, const Review& review, const std::map<std::string, std::string> & carrier) {
+  void StoreReview(BaseRpcResponse& _return, const int64_t req_id, const Review& review, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("StoreReview\n");
   }
 
-  void ReadReviews(std::vector<Review> & _return, const int64_t req_id, const std::vector<int64_t> & review_ids, const std::map<std::string, std::string> & carrier) {
+  void ReadReviews(ReviewListRpcResponse& _return, const int64_t req_id, const std::vector<int64_t> & review_ids, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("ReadReviews\n");
   }
@@ -34,11 +34,11 @@ class ReviewStorageServiceHandler : virtual public ReviewStorageServiceIf {
 
 int main(int argc, char **argv) {
   int port = 9090;
-  ::apache::thrift::stdcxx::shared_ptr<ReviewStorageServiceHandler> handler(new ReviewStorageServiceHandler());
-  ::apache::thrift::stdcxx::shared_ptr<TProcessor> processor(new ReviewStorageServiceProcessor(handler));
-  ::apache::thrift::stdcxx::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
-  ::apache::thrift::stdcxx::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
-  ::apache::thrift::stdcxx::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
+  ::std::shared_ptr<ReviewStorageServiceHandler> handler(new ReviewStorageServiceHandler());
+  ::std::shared_ptr<TProcessor> processor(new ReviewStorageServiceProcessor(handler));
+  ::std::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
+  ::std::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
+  ::std::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
 
   TSimpleServer server(processor, serverTransport, transportFactory, protocolFactory);
   server.serve();

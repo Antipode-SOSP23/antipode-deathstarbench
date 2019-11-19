@@ -24,9 +24,9 @@ class PlotHandler : public PlotServiceIf {
       mongoc_client_pool_t *);
   ~PlotHandler() override = default;
 
-  void WritePlot(int64_t req_id, int64_t plot_id, const std::string& plot,
+  void WritePlot(BaseRpcResponse &response, int64_t req_id, int64_t plot_id, const std::string& plot,
       const std::map<std::string, std::string> & carrier) override;
-  void ReadPlot(std::string& _return, int64_t req_id, int64_t plot_id,
+  void ReadPlot(PlotRpcResponse &response, int64_t req_id, int64_t plot_id,
       const std::map<std::string, std::string> & carrier) override;
 
  private:
@@ -42,11 +42,12 @@ PlotHandler::PlotHandler(
 }
 
 void PlotHandler::ReadPlot(
-    std::string &_return,
+    PlotRpcResponse &response,
     int64_t req_id,
     int64_t plot_id,
     const std::map<std::string, std::string> & carrier) {
 
+  std::string _return;
   std::map<std::string, std::string>::const_iterator baggage_it = carrier.find("baggage");
   if (baggage_it != carrier.end()) {
     SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
@@ -217,11 +218,14 @@ void PlotHandler::ReadPlot(
   }
   span->Finish();
   XTRACE("PlotHandler::WritePlot complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
+  response.result = _return;
   DELETE_CURRENT_BAGGAGE();
 
 }
 
 void PlotHandler::WritePlot(
+    BaseRpcResponse &response,
     int64_t req_id,
     int64_t plot_id,
     const std::string &plot,
@@ -296,6 +300,7 @@ void PlotHandler::WritePlot(
 
   span->Finish();
   XTRACE("PlotHandler::WritePlot complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 

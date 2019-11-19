@@ -6,12 +6,10 @@
 --
 
 
-local Thrift = require 'Thrift'
-local TType = Thrift.TType
-local __TObject = Thrift.__TObject
-local TException = Thrift.TException
+require 'Thrift'
+require 'media_service_constants'
 
-local ErrorCode = {
+ErrorCode = {
   SE_THRIFT_CONNPOOL_TIMEOUT = 0,
   SE_THRIFT_CONN_ERROR = 1,
   SE_UNAUTHORIZED = 2,
@@ -21,7 +19,7 @@ local ErrorCode = {
   SE_THRIFT_HANDLER_ERROR = 6
 }
 
-local User = __TObject:new{
+User = __TObject:new{
   user_id,
   first_name,
   last_name,
@@ -116,7 +114,7 @@ function User:write(oprot)
   oprot:writeStructEnd()
 end
 
-local Review = __TObject:new{
+Review = __TObject:new{
   review_id,
   user_id,
   req_id,
@@ -223,7 +221,7 @@ function Review:write(oprot)
   oprot:writeStructEnd()
 end
 
-local CastInfo = __TObject:new{
+CastInfo = __TObject:new{
   cast_info_id,
   name,
   gender,
@@ -294,7 +292,7 @@ function CastInfo:write(oprot)
   oprot:writeStructEnd()
 end
 
-local Cast = __TObject:new{
+Cast = __TObject:new{
   cast_id,
   character,
   cast_info_id
@@ -353,7 +351,7 @@ function Cast:write(oprot)
   oprot:writeStructEnd()
 end
 
-local MovieInfo = __TObject:new{
+MovieInfo = __TObject:new{
   movie_id,
   title,
   casts,
@@ -525,7 +523,7 @@ function MovieInfo:write(oprot)
   oprot:writeStructEnd()
 end
 
-local Page = __TObject:new{
+Page = __TObject:new{
   movie_info,
   reviews,
   cast_infos,
@@ -619,7 +617,348 @@ function Page:write(oprot)
   oprot:writeStructEnd()
 end
 
-local ServiceException = TException:new{
+BaseRpcResponse = __TObject:new{
+  baggage
+}
+
+function BaseRpcResponse:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 1 then
+      if ftype == TType.STRING then
+        self.baggage = iprot:readString()
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function BaseRpcResponse:write(oprot)
+  oprot:writeStructBegin('BaseRpcResponse')
+  if self.baggage ~= nil then
+    oprot:writeFieldBegin('baggage', TType.STRING, 1)
+    oprot:writeString(self.baggage)
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+LoginRpcResponse = __TObject:new{
+  baggage,
+  result
+}
+
+function LoginRpcResponse:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 1 then
+      if ftype == TType.STRING then
+        self.baggage = iprot:readString()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 2 then
+      if ftype == TType.STRING then
+        self.result = iprot:readString()
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function LoginRpcResponse:write(oprot)
+  oprot:writeStructBegin('LoginRpcResponse')
+  if self.baggage ~= nil then
+    oprot:writeFieldBegin('baggage', TType.STRING, 1)
+    oprot:writeString(self.baggage)
+    oprot:writeFieldEnd()
+  end
+  if self.result ~= nil then
+    oprot:writeFieldBegin('result', TType.STRING, 2)
+    oprot:writeString(self.result)
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+ReviewListRpcResponse = __TObject:new{
+  baggage,
+  result
+}
+
+function ReviewListRpcResponse:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 1 then
+      if ftype == TType.STRING then
+        self.baggage = iprot:readString()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 2 then
+      if ftype == TType.LIST then
+        self.result = {}
+        local _etype39, _size36 = iprot:readListBegin()
+        for _i=1,_size36 do
+          local _elem40 = Review:new{}
+          _elem40:read(iprot)
+          table.insert(self.result, _elem40)
+        end
+        iprot:readListEnd()
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function ReviewListRpcResponse:write(oprot)
+  oprot:writeStructBegin('ReviewListRpcResponse')
+  if self.baggage ~= nil then
+    oprot:writeFieldBegin('baggage', TType.STRING, 1)
+    oprot:writeString(self.baggage)
+    oprot:writeFieldEnd()
+  end
+  if self.result ~= nil then
+    oprot:writeFieldBegin('result', TType.LIST, 2)
+    oprot:writeListBegin(TType.STRUCT, #self.result)
+    for _,iter41 in ipairs(self.result) do
+      iter41:write(oprot)
+    end
+    oprot:writeListEnd()
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+CastInfoListRpcResponse = __TObject:new{
+  baggage,
+  result
+}
+
+function CastInfoListRpcResponse:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 1 then
+      if ftype == TType.STRING then
+        self.baggage = iprot:readString()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 2 then
+      if ftype == TType.LIST then
+        self.result = {}
+        local _etype45, _size42 = iprot:readListBegin()
+        for _i=1,_size42 do
+          local _elem46 = CastInfo:new{}
+          _elem46:read(iprot)
+          table.insert(self.result, _elem46)
+        end
+        iprot:readListEnd()
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function CastInfoListRpcResponse:write(oprot)
+  oprot:writeStructBegin('CastInfoListRpcResponse')
+  if self.baggage ~= nil then
+    oprot:writeFieldBegin('baggage', TType.STRING, 1)
+    oprot:writeString(self.baggage)
+    oprot:writeFieldEnd()
+  end
+  if self.result ~= nil then
+    oprot:writeFieldBegin('result', TType.LIST, 2)
+    oprot:writeListBegin(TType.STRUCT, #self.result)
+    for _,iter47 in ipairs(self.result) do
+      iter47:write(oprot)
+    end
+    oprot:writeListEnd()
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+PlotRpcResponse = __TObject:new{
+  baggage,
+  result
+}
+
+function PlotRpcResponse:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 1 then
+      if ftype == TType.STRING then
+        self.baggage = iprot:readString()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 2 then
+      if ftype == TType.STRING then
+        self.result = iprot:readString()
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function PlotRpcResponse:write(oprot)
+  oprot:writeStructBegin('PlotRpcResponse')
+  if self.baggage ~= nil then
+    oprot:writeFieldBegin('baggage', TType.STRING, 1)
+    oprot:writeString(self.baggage)
+    oprot:writeFieldEnd()
+  end
+  if self.result ~= nil then
+    oprot:writeFieldBegin('result', TType.STRING, 2)
+    oprot:writeString(self.result)
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+MovieInfoRpcResponse = __TObject:new{
+  baggage,
+  result
+}
+
+function MovieInfoRpcResponse:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 1 then
+      if ftype == TType.STRING then
+        self.baggage = iprot:readString()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 2 then
+      if ftype == TType.STRUCT then
+        self.result = MovieInfo:new{}
+        self.result:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function MovieInfoRpcResponse:write(oprot)
+  oprot:writeStructBegin('MovieInfoRpcResponse')
+  if self.baggage ~= nil then
+    oprot:writeFieldBegin('baggage', TType.STRING, 1)
+    oprot:writeString(self.baggage)
+    oprot:writeFieldEnd()
+  end
+  if self.result ~= nil then
+    oprot:writeFieldBegin('result', TType.STRUCT, 2)
+    self.result:write(oprot)
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+PageRpcResponse = __TObject:new{
+  baggage,
+  result
+}
+
+function PageRpcResponse:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 1 then
+      if ftype == TType.STRING then
+        self.baggage = iprot:readString()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 2 then
+      if ftype == TType.STRUCT then
+        self.result = Page:new{}
+        self.result:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function PageRpcResponse:write(oprot)
+  oprot:writeStructBegin('PageRpcResponse')
+  if self.baggage ~= nil then
+    oprot:writeFieldBegin('baggage', TType.STRING, 1)
+    oprot:writeString(self.baggage)
+    oprot:writeFieldEnd()
+  end
+  if self.result ~= nil then
+    oprot:writeFieldBegin('result', TType.STRUCT, 2)
+    self.result:write(oprot)
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+ServiceException = TException:new{
   __type = 'ServiceException',
   errorCode,
   message
@@ -666,6 +1005,3 @@ function ServiceException:write(oprot)
   oprot:writeFieldStop()
   oprot:writeStructEnd()
 end
-
-return {ErrorCode, User=User, Review=Review, CastInfo=CastInfo, Cast=Cast,
-        MovieInfo=MovieInfo, Page=Page, ServiceException=ServiceException}

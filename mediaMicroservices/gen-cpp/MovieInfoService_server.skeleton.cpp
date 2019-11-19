@@ -20,17 +20,17 @@ class MovieInfoServiceHandler : virtual public MovieInfoServiceIf {
     // Your initialization goes here
   }
 
-  void WriteMovieInfo(const int64_t req_id, const std::string& movie_id, const std::string& title, const std::vector<Cast> & casts, const int64_t plot_id, const std::vector<std::string> & thumbnail_ids, const std::vector<std::string> & photo_ids, const std::vector<std::string> & video_ids, const std::string& avg_rating, const int32_t num_rating, const std::map<std::string, std::string> & carrier) {
+  void WriteMovieInfo(BaseRpcResponse& _return, const int64_t req_id, const std::string& movie_id, const std::string& title, const std::vector<Cast> & casts, const int64_t plot_id, const std::vector<std::string> & thumbnail_ids, const std::vector<std::string> & photo_ids, const std::vector<std::string> & video_ids, const std::string& avg_rating, const int32_t num_rating, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("WriteMovieInfo\n");
   }
 
-  void ReadMovieInfo(MovieInfo& _return, const int64_t req_id, const std::string& movie_id, const std::map<std::string, std::string> & carrier) {
+  void ReadMovieInfo(MovieInfoRpcResponse& _return, const int64_t req_id, const std::string& movie_id, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("ReadMovieInfo\n");
   }
 
-  void UpdateRating(const int64_t req_id, const std::string& movie_id, const int32_t sum_uncommitted_rating, const int32_t num_uncommitted_rating, const std::map<std::string, std::string> & carrier) {
+  void UpdateRating(BaseRpcResponse& _return, const int64_t req_id, const std::string& movie_id, const int32_t sum_uncommitted_rating, const int32_t num_uncommitted_rating, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("UpdateRating\n");
   }
@@ -39,11 +39,11 @@ class MovieInfoServiceHandler : virtual public MovieInfoServiceIf {
 
 int main(int argc, char **argv) {
   int port = 9090;
-  ::apache::thrift::stdcxx::shared_ptr<MovieInfoServiceHandler> handler(new MovieInfoServiceHandler());
-  ::apache::thrift::stdcxx::shared_ptr<TProcessor> processor(new MovieInfoServiceProcessor(handler));
-  ::apache::thrift::stdcxx::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
-  ::apache::thrift::stdcxx::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
-  ::apache::thrift::stdcxx::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
+  ::std::shared_ptr<MovieInfoServiceHandler> handler(new MovieInfoServiceHandler());
+  ::std::shared_ptr<TProcessor> processor(new MovieInfoServiceProcessor(handler));
+  ::std::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
+  ::std::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
+  ::std::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
 
   TSimpleServer server(processor, serverTransport, transportFactory, protocolFactory);
   server.serve();

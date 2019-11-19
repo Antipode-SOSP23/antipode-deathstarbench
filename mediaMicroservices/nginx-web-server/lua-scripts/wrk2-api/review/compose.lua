@@ -1,10 +1,11 @@
 local _M = {}
+local xtracer = require "luaxtrace"
 
 local function _StrIsEmpty(s)
   return s == nil or s == ''
 end
 
-local function _UploadUserId(req_id, post, carrier)
+local function _UploadUserId(req_id, post, carrier, baggage)
   local GenericObjectPool = require "GenericObjectPool"
   local UserServiceClient = require 'media_service_UserService'
   local user_client = GenericObjectPool:connection(
@@ -13,7 +14,7 @@ local function _UploadUserId(req_id, post, carrier)
   GenericObjectPool:returnConnection(user_client)
 end
 
-local function _UploadText(req_id, post, carrier)
+local function _UploadText(req_id, post, carrier, baggage)
   local GenericObjectPool = require "GenericObjectPool"
   local TextServiceClient = require 'media_service_TextService'
   local text_client = GenericObjectPool:connection(
@@ -22,7 +23,7 @@ local function _UploadText(req_id, post, carrier)
   GenericObjectPool:returnConnection(text_client)
 end
 
-local function _UploadMovieId(req_id, post, carrier)
+local function _UploadMovieId(req_id, post, carrier, baggage)
   local GenericObjectPool = require "GenericObjectPool"
   local MovieIdServiceClient = require 'media_service_MovieIdService'
   local movie_id_client = GenericObjectPool:connection(
@@ -31,12 +32,15 @@ local function _UploadMovieId(req_id, post, carrier)
   GenericObjectPool:returnConnection(movie_id_client)
 end
 
-local function _UploadUniqueId(req_id, carrier)
+local function _UploadUniqueId(req_id, carrier, baggage)
+  xtracer.SetBaggage(baggage)
   local GenericObjectPool = require "GenericObjectPool"
   local UniqueIdServiceClient = require 'media_service_UniqueIdService'
+  carrier["baggage"] = xtracer.BranchBaggage()
   local unique_id_client = GenericObjectPool:connection(
     UniqueIdServiceClient,"unique-id-service",9090)
-  unique_id_client:UploadUniqueId(req_id, carrier)
+  status, err = unique_id_client:UploadUniqueId(req_id, carrier)
+  xtracer.JoinBaggage(err.baggage)
   GenericObjectPool:returnConnection(unique_id_client)
 end
 
@@ -44,6 +48,8 @@ function _M.ComposeReview()
   local bridge_tracer = require "opentracing_bridge_tracer"
   local ngx = ngx
 
+  xtracer.StartLuaTrace("NginxWebServer5", "ComposeReview");
+  xtracer.LogXTrace("Processing Request")
   local req_id = tonumber(string.sub(ngx.var.request_id, 0, 15), 16)
   local tracer = bridge_tracer.new_from_global()
   local parent_span_context = tracer:binary_extract(ngx.var.opentracing_binary_context)
@@ -63,6 +69,10 @@ function _M.ComposeReview()
     ngx.exit(ngx.HTTP_BAD_REQUEST)
   end
 
+  local movieid_baggage = xtracer.BranchBaggage()
+  local userid_baggage = xtracer.BranchBaggage()
+  local text_baggage = xtracer.BranchBaggage()
+  local uuid_baggage = xtracer.BranchBaggage()
   local threads = {
     ngx.thread.spawn(_UploadUserId, req_id, post, carrier),
     ngx.thread.spawn(_UploadMovieId, req_id, post, carrier),
@@ -70,15 +80,26 @@ function _M.ComposeReview()
     ngx.thread.spawn(_UploadUniqueId, req_id, carrier)
   }
 
+  local baggages = {
+    userid_baggage,
+    movieid_baggage,
+    text_baggage,
+    uuid_baggage
+  }
+
   local status = ngx.HTTP_OK
   for i = 1, #threads do
     local ok, res = ngx.thread.wait(threads[i])
+    xtracer.JoinBaggage(baggages[i])
     if not ok then
       status = ngx.HTTP_INTERNAL_SERVER_ERROR
+      xtracer.LogXTrace("Internal Server error")
     end
   end
   span:finish()
+  xtrace.LogXTrace("Request processing finished")
   ngx.exit(status)
+  xtrace.DeleteBaggage()
   
 end
 

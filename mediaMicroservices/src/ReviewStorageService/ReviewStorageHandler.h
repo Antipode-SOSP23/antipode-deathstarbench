@@ -22,9 +22,9 @@ class ReviewStorageHandler : public ReviewStorageServiceIf{
  public:
   ReviewStorageHandler(memcached_pool_st *, mongoc_client_pool_t *);
   ~ReviewStorageHandler() override = default;
-  void StoreReview(int64_t, const Review &, 
+  void StoreReview(BaseRpcResponse &, int64_t, const Review &, 
       const std::map<std::string, std::string> &) override;
-  void ReadReviews(std::vector<Review> &, int64_t, const std::vector<int64_t> &,
+  void ReadReviews(ReviewListRpcResponse &, int64_t, const std::vector<int64_t> &,
                    const std::map<std::string, std::string> &) override;
   
  private:
@@ -40,6 +40,7 @@ ReviewStorageHandler::ReviewStorageHandler(
 }
 
 void ReviewStorageHandler::StoreReview(
+    BaseRpcResponse &response,
     int64_t req_id, 
     const Review &review,
     const std::map<std::string, std::string> & carrier) {
@@ -121,14 +122,16 @@ void ReviewStorageHandler::StoreReview(
 
   span->Finish();
   XTRACE("ReviewStorageHandler::StoreReview complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 void ReviewStorageHandler::ReadReviews(
-    std::vector<Review> & _return,
+    ReviewListRpcResponse &response,
     int64_t req_id,
     const std::vector<int64_t> &review_ids,
     const std::map<std::string, std::string> &carrier) {
 
+  std::vector<Review> _return;
   std::map<std::string, std::string>::const_iterator baggage_it = carrier.find("baggage");
   if (baggage_it != carrier.end()) {
     SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
@@ -405,6 +408,8 @@ void ReviewStorageHandler::ReadReviews(
   }
 
   XTRACE("ReviewStorageService::ReadReviews complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
+  response.result = _return;
   DELETE_CURRENT_BAGGAGE();
   
 }

@@ -5,134 +5,17 @@
 -- @generated
 --
 
-local Thrift = require 'Thrift'
-local TType = Thrift.TType
-local TMessageType = Thrift.TMessageType
-local __TObject = Thrift.__TObject
-local TApplicationException = Thrift.TApplicationException
-local __TClient = Thrift.__TClient
-local __TProcessor = Thrift.__TProcessor
-local ttype = Thrift.ttype
-local ttable_size = Thrift.ttable_size
-local media_service_ttypes = require 'media_service_ttypes'
-local ServiceException = media_service_ttypes.ServiceException
 
--- HELPER FUNCTIONS AND STRUCTURES
+require 'Thrift'
+require 'media_service_ttypes'
 
-local UploadText_args = __TObject:new{
-  req_id,
-  text,
-  carrier
-}
-
-function UploadText_args:read(iprot)
-  iprot:readStructBegin()
-  while true do
-    local fname, ftype, fid = iprot:readFieldBegin()
-    if ftype == TType.STOP then
-      break
-    elseif fid == 1 then
-      if ftype == TType.I64 then
-        self.req_id = iprot:readI64()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 2 then
-      if ftype == TType.STRING then
-        self.text = iprot:readString()
-      else
-        iprot:skip(ftype)
-      end
-    elseif fid == 3 then
-      if ftype == TType.MAP then
-        self.carrier = {}
-        local _ktype61, _vtype62, _size60 = iprot:readMapBegin()
-        for _i=1,_size60 do
-          local _key64 = iprot:readString()
-          local _val65 = iprot:readString()
-          self.carrier[_key64] = _val65
-        end
-        iprot:readMapEnd()
-      else
-        iprot:skip(ftype)
-      end
-    else
-      iprot:skip(ftype)
-    end
-    iprot:readFieldEnd()
-  end
-  iprot:readStructEnd()
-end
-
-function UploadText_args:write(oprot)
-  oprot:writeStructBegin('UploadText_args')
-  if self.req_id ~= nil then
-    oprot:writeFieldBegin('req_id', TType.I64, 1)
-    oprot:writeI64(self.req_id)
-    oprot:writeFieldEnd()
-  end
-  if self.text ~= nil then
-    oprot:writeFieldBegin('text', TType.STRING, 2)
-    oprot:writeString(self.text)
-    oprot:writeFieldEnd()
-  end
-  if self.carrier ~= nil then
-    oprot:writeFieldBegin('carrier', TType.MAP, 3)
-    oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
-    for kiter66,viter67 in pairs(self.carrier) do
-      oprot:writeString(kiter66)
-      oprot:writeString(viter67)
-    end
-    oprot:writeMapEnd()
-    oprot:writeFieldEnd()
-  end
-  oprot:writeFieldStop()
-  oprot:writeStructEnd()
-end
-
-local UploadText_result = __TObject:new{
-  se
-}
-
-function UploadText_result:read(iprot)
-  iprot:readStructBegin()
-  while true do
-    local fname, ftype, fid = iprot:readFieldBegin()
-    if ftype == TType.STOP then
-      break
-    elseif fid == 1 then
-      if ftype == TType.STRUCT then
-        self.se = ServiceException:new{}
-        self.se:read(iprot)
-      else
-        iprot:skip(ftype)
-      end
-    else
-      iprot:skip(ftype)
-    end
-    iprot:readFieldEnd()
-  end
-  iprot:readStructEnd()
-end
-
-function UploadText_result:write(oprot)
-  oprot:writeStructBegin('UploadText_result')
-  if self.se ~= nil then
-    oprot:writeFieldBegin('se', TType.STRUCT, 1)
-    self.se:write(oprot)
-    oprot:writeFieldEnd()
-  end
-  oprot:writeFieldStop()
-  oprot:writeStructEnd()
-end
-
-local TextServiceClient = __TObject.new(__TClient, {
+TextServiceClient = __TObject.new(__TClient, {
   __type = 'TextServiceClient'
 })
 
 function TextServiceClient:UploadText(req_id, text, carrier)
   self:send_UploadText(req_id, text, carrier)
-  self:recv_UploadText(req_id, text, carrier)
+  return self:recv_UploadText(req_id, text, carrier)
 end
 
 function TextServiceClient:send_UploadText(req_id, text, carrier)
@@ -157,13 +40,19 @@ function TextServiceClient:recv_UploadText(req_id, text, carrier)
   local result = UploadText_result:new{}
   result:read(self.iprot)
   self.iprot:readMessageEnd()
+  if result.success ~= nil then
+    return result.success
+  elseif result.se then
+    error(result.se)
+  end
+  error(TApplicationException:new{errorCode = TApplicationException.MISSING_RESULT})
 end
-local TextServiceIface = __TObject:new{
+TextServiceIface = __TObject:new{
   __type = 'TextServiceIface'
 }
 
 
-local TextServiceProcessor = __TObject.new(__TProcessor
+TextServiceProcessor = __TObject.new(__TProcessor
 , {
  __type = 'TextServiceProcessor'
 })
@@ -207,4 +96,124 @@ function TextServiceProcessor:process_UploadText(seqid, iprot, oprot, server_ctx
   oprot.trans:flush()
 end
 
-return TextServiceClient
+-- HELPER FUNCTIONS AND STRUCTURES
+
+UploadText_args = __TObject:new{
+  req_id,
+  text,
+  carrier
+}
+
+function UploadText_args:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 1 then
+      if ftype == TType.I64 then
+        self.req_id = iprot:readI64()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 2 then
+      if ftype == TType.STRING then
+        self.text = iprot:readString()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 3 then
+      if ftype == TType.MAP then
+        self.carrier = {}
+        local _ktype73, _vtype74, _size72 = iprot:readMapBegin() 
+        for _i=1,_size72 do
+          local _key76 = iprot:readString()
+          local _val77 = iprot:readString()
+          self.carrier[_key76] = _val77
+        end
+        iprot:readMapEnd()
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function UploadText_args:write(oprot)
+  oprot:writeStructBegin('UploadText_args')
+  if self.req_id ~= nil then
+    oprot:writeFieldBegin('req_id', TType.I64, 1)
+    oprot:writeI64(self.req_id)
+    oprot:writeFieldEnd()
+  end
+  if self.text ~= nil then
+    oprot:writeFieldBegin('text', TType.STRING, 2)
+    oprot:writeString(self.text)
+    oprot:writeFieldEnd()
+  end
+  if self.carrier ~= nil then
+    oprot:writeFieldBegin('carrier', TType.MAP, 3)
+    oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.carrier))
+    for kiter78,viter79 in pairs(self.carrier) do
+      oprot:writeString(kiter78)
+      oprot:writeString(viter79)
+    end
+    oprot:writeMapEnd()
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+UploadText_result = __TObject:new{
+  success,
+  se
+}
+
+function UploadText_result:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 0 then
+      if ftype == TType.STRUCT then
+        self.success = BaseRpcResponse:new{}
+        self.success:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 1 then
+      if ftype == TType.STRUCT then
+        self.se = ServiceException:new{}
+        self.se:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function UploadText_result:write(oprot)
+  oprot:writeStructBegin('UploadText_result')
+  if self.success ~= nil then
+    oprot:writeFieldBegin('success', TType.STRUCT, 0)
+    self.success:write(oprot)
+    oprot:writeFieldEnd()
+  end
+  if self.se ~= nil then
+    oprot:writeFieldBegin('se', TType.STRUCT, 1)
+    self.se:write(oprot)
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end

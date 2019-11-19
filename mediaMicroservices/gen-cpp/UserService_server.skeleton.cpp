@@ -20,27 +20,27 @@ class UserServiceHandler : virtual public UserServiceIf {
     // Your initialization goes here
   }
 
-  void RegisterUser(const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier) {
+  void RegisterUser(BaseRpcResponse& _return, const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("RegisterUser\n");
   }
 
-  void RegisterUserWithId(const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const int64_t user_id, const std::map<std::string, std::string> & carrier) {
+  void RegisterUserWithId(BaseRpcResponse& _return, const int64_t req_id, const std::string& first_name, const std::string& last_name, const std::string& username, const std::string& password, const int64_t user_id, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("RegisterUserWithId\n");
   }
 
-  void Login(std::string& _return, const int64_t req_id, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier) {
+  void Login(LoginRpcResponse& _return, const int64_t req_id, const std::string& username, const std::string& password, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("Login\n");
   }
 
-  void UploadUserWithUserId(const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier) {
+  void UploadUserWithUserId(BaseRpcResponse& _return, const int64_t req_id, const int64_t user_id, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("UploadUserWithUserId\n");
   }
 
-  void UploadUserWithUsername(const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier) {
+  void UploadUserWithUsername(BaseRpcResponse& _return, const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("UploadUserWithUsername\n");
   }
@@ -49,11 +49,11 @@ class UserServiceHandler : virtual public UserServiceIf {
 
 int main(int argc, char **argv) {
   int port = 9090;
-  ::apache::thrift::stdcxx::shared_ptr<UserServiceHandler> handler(new UserServiceHandler());
-  ::apache::thrift::stdcxx::shared_ptr<TProcessor> processor(new UserServiceProcessor(handler));
-  ::apache::thrift::stdcxx::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
-  ::apache::thrift::stdcxx::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
-  ::apache::thrift::stdcxx::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
+  ::std::shared_ptr<UserServiceHandler> handler(new UserServiceHandler());
+  ::std::shared_ptr<TProcessor> processor(new UserServiceProcessor(handler));
+  ::std::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
+  ::std::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
+  ::std::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
 
   TSimpleServer server(processor, serverTransport, transportFactory, protocolFactory);
   server.serve();

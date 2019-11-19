@@ -27,11 +27,11 @@ class CastInfoHandler : public CastInfoServiceIf {
       mongoc_client_pool_t *);
   ~CastInfoHandler() override = default;
 
-  void WriteCastInfo(int64_t req_id, int64_t cast_info_id,
+  void WriteCastInfo(BaseRpcResponse &response, int64_t req_id, int64_t cast_info_id,
       const std::string &name, bool gender, const std::string &intro,
       const std::map<std::string, std::string>& carrier) override;
 
-  void ReadCastInfo(std::vector<CastInfo>& _return, int64_t req_id,
+  void ReadCastInfo(CastInfoListRpcResponse &response, int64_t req_id,
       const std::vector<int64_t> & cast_info_ids,
       const std::map<std::string, std::string>& carrier) override;
 
@@ -47,6 +47,7 @@ CastInfoHandler::CastInfoHandler(
   _mongodb_client_pool = mongodb_client_pool;
 }
 void CastInfoHandler::WriteCastInfo(
+    BaseRpcResponse &response,
     int64_t req_id,
     int64_t cast_info_id,
     const std::string &name,
@@ -128,15 +129,17 @@ void CastInfoHandler::WriteCastInfo(
   span->Finish();
   XTRACE("CastInfoHandler::WriteCastInfo complete");
 
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 
 void CastInfoHandler::ReadCastInfo(
-    std::vector<CastInfo> &_return,
+    CastInfoListRpcResponse &response,
     int64_t req_id,
     const std::vector<int64_t> &cast_info_ids,
     const std::map<std::string, std::string> &carrier) {
 
+  std::vector<CastInfo> _return;
   std::map<std::string, std::string>::const_iterator baggage_it = carrier.find("baggage");
   if (baggage_it != carrier.end()) {
     SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
@@ -409,6 +412,8 @@ void CastInfoHandler::ReadCastInfo(
   }
 
   XTRACE("CastInfoHandler::ReadCastInfo complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
+  response.result = _return;
   DELETE_CURRENT_BAGGAGE();
 }
 

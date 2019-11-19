@@ -24,7 +24,7 @@ class RatingHandler : public RatingServiceIf {
       ClientPool<ThriftClient<ComposeReviewServiceClient>> *,
       ClientPool<RedisClient> *);
   ~RatingHandler() override = default;
-  void UploadRating(int64_t, const std::string &, int32_t,
+  void UploadRating(BaseRpcResponse &, int64_t, const std::string &, int32_t,
       const std::map<std::string, std::string> &) override;
 
  private:
@@ -39,6 +39,7 @@ RatingHandler::RatingHandler(
   _redis_client_pool = redis_client_pool;
 }
 void RatingHandler::UploadRating(
+    BaseRpcResponse &response,
     int64_t req_id,
     const std::string &movie_id,
     int32_t rating,
@@ -80,7 +81,10 @@ void RatingHandler::UploadRating(
     auto compose_client = compose_client_wrapper->GetClient();
     try {
       writer_text_map["baggage"] = GET_CURRENT_BAGGAGE().str();
-      compose_client->UploadRating(req_id, rating, writer_text_map);
+      BaseRpcResponse response;
+      compose_client->UploadRating(response, req_id, rating, writer_text_map);
+      Baggage b = Baggage::deserialize(response.baggage);
+      JOIN_CURRENT_BAGGAGE(b);
     } catch (...) {
       _compose_client_pool->Push(compose_client_wrapper);
       LOG(error) << "Failed to upload rating to compose-review-service";
@@ -132,6 +136,7 @@ void RatingHandler::UploadRating(
   }
   span->Finish();
   XTRACE("RatingHandler::UploadRating complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 

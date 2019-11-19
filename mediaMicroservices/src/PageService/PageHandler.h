@@ -29,7 +29,7 @@ class PageHandler : public PageServiceIf {
       ClientPool<ThriftClient<PlotServiceClient>> *);
   ~PageHandler() override = default;
 
-  void ReadPage(Page& _return, int64_t req_id, const std::string& movie_id,
+  void ReadPage(PageRpcResponse &response, int64_t req_id, const std::string& movie_id,
                 int32_t review_start, int32_t review_stop,
                 const std::map<std::string, std::string> & carrier) override;
 
@@ -50,13 +50,14 @@ PageHandler::PageHandler(
   _plot_client_pool = plot_client_pool;
 }
 void PageHandler::ReadPage(
-    Page &_return,
+    PageRpcResponse &response,
     int64_t req_id,
     const std::string &movie_id,
     int32_t review_start,
     int32_t review_stop,
     const std::map<std::string, std::string> &carrier) {
 
+  Page _return;
   std::map<std::string, std::string>::const_iterator baggage_it = carrier.find("baggage");
   if (baggage_it != carrier.end()) {
     SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
@@ -98,8 +99,12 @@ void PageHandler::ReadPage(
     auto movie_info_client = movie_info_client_wrapper->GetClient();
     try {
       writer_text_map["baggage"] = GET_CURRENT_BAGGAGE().str();
-      movie_info_client->ReadMovieInfo(_reture_movie_info,
+      MovieInfoRpcResponse response;
+      movie_info_client->ReadMovieInfo(response,
           req_id, movie_id, writer_text_map);
+      Baggage b = Baggage::deserialize(response.baggage);
+      JOIN_CURRENT_BAGGAGE(b);
+      _reture_movie_info = response.result;
     } catch (...) {
       _movie_info_client_pool->Push(movie_info_client_wrapper);
       LOG(error) << "Failed to read movie_info to movie-info-service";
@@ -126,8 +131,12 @@ void PageHandler::ReadPage(
     auto movie_review_client = movie_review_client_wrapper->GetClient();
     try {
       writer_text_map["baggage"] = GET_CURRENT_BAGGAGE().str();
-      movie_review_client->ReadMovieReviews(_return_movie_reviews,
+      ReviewListRpcResponse response;
+      movie_review_client->ReadMovieReviews(response,
           req_id, movie_id, review_start, review_stop, writer_text_map);
+      Baggage b = Baggage::deserialize(response.baggage);
+      JOIN_CURRENT_BAGGAGE(b);
+      _return_movie_reviews = response.result;
     } catch (...) {
       _movie_review_client_pool->Push(movie_review_client_wrapper);
       LOG(error) << "Failed to read reviews to movie-review-service";
@@ -166,8 +175,12 @@ void PageHandler::ReadPage(
     auto cast_info_client = cast_info_client_wrapper->GetClient();
     try {
       writer_text_map["baggage"] = GET_CURRENT_BAGGAGE().str();
-      cast_info_client->ReadCastInfo(_return_cast_infos, req_id,
+      CastInfoListRpcResponse response;
+      cast_info_client->ReadCastInfo(response, req_id,
           cast_info_ids, writer_text_map);
+      Baggage b = Baggage::deserialize(response.baggage);
+      JOIN_CURRENT_BAGGAGE(b);
+      _return_cast_infos = response.result;
     } catch (...) {
       _cast_info_client_pool->Push(cast_info_client_wrapper);
       LOG(error) << "Failed to read cast-info to cast-info-service";
@@ -194,8 +207,12 @@ void PageHandler::ReadPage(
     auto plot_client = plot_client_wrapper->GetClient();
     try {
       writer_text_map["baggage"] = GET_CURRENT_BAGGAGE().str();
-      plot_client->ReadPlot(_return_plot, req_id, _return.movie_info.plot_id,
+      PlotRpcResponse response;
+      plot_client->ReadPlot(response, req_id, _return.movie_info.plot_id,
           writer_text_map);
+      Baggage b = Baggage::deserialize(response.baggage);
+      JOIN_CURRENT_BAGGAGE(b);
+      _return_plot = response.result;
     } catch (...) {
       _plot_client_pool->Push(plot_client_wrapper);
       LOG(error) << "Failed to read plot to plot-service";
@@ -218,6 +235,7 @@ void PageHandler::ReadPage(
   }
   span->Finish();
   XTRACE("PageHandler::ReadPage complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 

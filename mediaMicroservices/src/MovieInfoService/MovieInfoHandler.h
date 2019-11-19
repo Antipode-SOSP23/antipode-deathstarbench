@@ -25,17 +25,17 @@ class MovieInfoHandler : public MovieInfoServiceIf {
       memcached_pool_st *,
       mongoc_client_pool_t *);
   ~MovieInfoHandler() override = default;
-  void ReadMovieInfo(MovieInfo& _return, int64_t req_id,
+  void ReadMovieInfo(MovieInfoRpcResponse &response, int64_t req_id,
       const std::string& movie_id,
       const std::map<std::string, std::string> & carrier) override;
-  void WriteMovieInfo(int64_t req_id, const std::string& movie_id, 
+  void WriteMovieInfo(BaseRpcResponse &response, int64_t req_id, const std::string& movie_id, 
       const std::string& title, const std::vector<Cast> & casts,
       int64_t plot_id, const std::vector<std::string> & thumbnail_ids,
       const std::vector<std::string> & photo_ids,
       const std::vector<std::string> & video_ids,
       const std::string &avg_rating, int32_t num_rating,
       const std::map<std::string, std::string> & carrier) override;
-  void UpdateRating(int64_t req_id, const std::string& movie_id,
+  void UpdateRating(BaseRpcResponse &response, int64_t req_id, const std::string& movie_id,
       int32_t sum_uncommitted_rating, int32_t num_uncommitted_rating,
       const std::map<std::string, std::string> & carrier) override;
 
@@ -53,6 +53,7 @@ MovieInfoHandler::MovieInfoHandler(
 }
 
 void MovieInfoHandler::WriteMovieInfo(
+    BaseRpcResponse &response,
     int64_t req_id,
     const std::string &movie_id,
     const std::string &title,
@@ -185,15 +186,17 @@ void MovieInfoHandler::WriteMovieInfo(
 
   span->Finish();
   XTRACE("MovieInfoService::WriteMovieInfo complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 
 void MovieInfoHandler::ReadMovieInfo(
-    MovieInfo &_return,
+    MovieInfoRpcResponse &response,
     int64_t req_id,
     const std::string &movie_id,
     const std::map<std::string, std::string> &carrier) {
 
+  MovieInfo _return;
   std::map<std::string, std::string>::const_iterator baggage_it = carrier.find("baggage");
   if (baggage_it != carrier.end()) {
     SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
@@ -401,11 +404,13 @@ void MovieInfoHandler::ReadMovieInfo(
   }
   span->Finish();
   XTRACE("MovieInfoHandler::ReadMovieInfo complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
+  response.result = _return;
   DELETE_CURRENT_BAGGAGE();
 }
 
 void MovieInfoHandler::UpdateRating(
-    int64_t req_id, const std::string& movie_id,
+    BaseRpcResponse &response, int64_t req_id, const std::string& movie_id,
     int32_t sum_uncommitted_rating, int32_t num_uncommitted_rating,
     const std::map<std::string, std::string> & carrier) {
 
@@ -535,6 +540,7 @@ void MovieInfoHandler::UpdateRating(
 
   span->Finish();
   XTRACE("MovieInfoHandler::UpdateRating complete");
+  response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
 
