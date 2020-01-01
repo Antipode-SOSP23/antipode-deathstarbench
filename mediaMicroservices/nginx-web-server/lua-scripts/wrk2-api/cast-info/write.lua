@@ -1,10 +1,15 @@
 local _M = {}
+local xtracer = require "luaxtrace"
 
 function _M.WriteCastInfo()
   local bridge_tracer = require "opentracing_bridge_tracer"
   local GenericObjectPool = require "GenericObjectPool"
   local CastInfoServiceClient = require 'media_service_CastInfoService'
   local ngx = ngx
+
+  xtracer.StartLuaTrace("NginxWebServer", "WriteCastInfo")
+  xtracer.LogXTrace("Processing Request")
+
   local cjson = require("cjson")
 
   local req_id = tonumber(string.sub(ngx.var.request_id, 0, 15), 16)
@@ -21,6 +26,8 @@ function _M.WriteCastInfo()
     ngx.status = ngx.HTTP_BAD_REQUEST
     ngx.say("Empty body")
     ngx.log(ngx.ERR, "Empty body")
+    xtracer.LogXTrace("Empty body")
+    xtracer.DeleteBaggage()
     ngx.exit(ngx.HTTP_BAD_REQUEST)
   end
 
@@ -30,14 +37,18 @@ function _M.WriteCastInfo()
     ngx.status = ngx.HTTP_BAD_REQUEST
     ngx.say("Incomplete arguments")
     ngx.log(ngx.ERR, "Incomplete arguments")
+    xtracer.LogXTrace("Incomplete arguments")
+    xtracer.DeleteBaggage()
     ngx.exit(ngx.HTTP_BAD_REQUEST)
   end
 
+  carrier["baggage"] = xtracer.BranchBaggage()
   local client = GenericObjectPool:connection(CastInfoServiceClient, "cast-info-service", 9090)
-  client:WriteCastInfo(req_id, cast_info["cast_info_id"], cast_info["name"],
+  local status, err = client:WriteCastInfo(req_id, cast_info["cast_info_id"], cast_info["name"],
       cast_info["gender"], cast_info["intro"],  carrier)
+  xtracer.JoinBaggage(err.baggage)
   GenericObjectPool:returnConnection(client)
-
+  xtracer.DeleteBaggage()
 end
 
 return _M

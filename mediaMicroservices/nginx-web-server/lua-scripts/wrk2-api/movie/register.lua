@@ -1,4 +1,5 @@
 local _M = {}
+local xtracer = require "luaxtrace"
 
 local function _StrIsEmpty(s)
   return s == nil or s == ''
@@ -9,6 +10,9 @@ function _M.RegisterMovie()
   local GenericObjectPool = require "GenericObjectPool"
   local MovieIdServiceClient = require'media_service_MovieIdService'
   local ngx = ngx
+
+  xtracer.StartLuaTrace("NginxWebServer", "RegisterMovie")
+  xtracer.LogXTrace("Processing Request")
 
   local req_id = tonumber(string.sub(ngx.var.request_id, 0, 15), 16)
   local tracer = bridge_tracer.new_from_global()
@@ -24,15 +28,20 @@ function _M.RegisterMovie()
     ngx.status = ngx.HTTP_BAD_REQUEST
     ngx.say("Incomplete arguments")
     ngx.log(ngx.ERR, "Incomplete arguments")
+    xtracer.LogXTrace("Incomplete arguments")
+    xtracer.DeleteBaggage()
     ngx.exit(ngx.HTTP_BAD_REQUEST)
   end
 
+  carrier["baggage"] = xtracer.BranchBaggage()
   local client = GenericObjectPool:connection(MovieIdServiceClient,"movie-id-service",9090)
 
-  client:RegisterMovieId(req_id, post.title, tostring(post.movie_id), carrier)
+  local status, err = client:RegisterMovieId(req_id, post.title, tostring(post.movie_id), carrier)
+  xtracer.JoinBaggage(err.baggage)
   GenericObjectPool:returnConnection(client)
 
   span:finish()
+  xtracer.DeleteBaggage()
 end
 
 return _M

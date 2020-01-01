@@ -1,5 +1,5 @@
 local _M = {}
-
+local xtracer = require "luaxtrace"
 
 function _M.WriteMovieInfo()
   local bridge_tracer = require "opentracing_bridge_tracer"
@@ -9,6 +9,9 @@ function _M.WriteMovieInfo()
   local Cast = ttypes.Cast
   local ngx = ngx
   local cjson = require("cjson")
+
+  xtracer.StartLuaTrace("NginxWebServer", "WriteMovieInfo")
+  xtracer.LogXtrace("Processing Request")
 
   local req_id = tonumber(string.sub(ngx.var.request_id, 0, 15), 16)
   local tracer = bridge_tracer.new_from_global()
@@ -24,6 +27,8 @@ function _M.WriteMovieInfo()
     ngx.status = ngx.HTTP_BAD_REQUEST
     ngx.say("Empty body")
     ngx.log(ngx.ERR, "Empty body")
+    xtracer.LogXTrace("Empty body")
+    xtracer.DeleteBaggage()
     ngx.exit(ngx.HTTP_BAD_REQUEST)
   end
 
@@ -36,6 +41,8 @@ function _M.WriteMovieInfo()
     ngx.status = ngx.HTTP_BAD_REQUEST
     ngx.say("Incomplete arguments")
     ngx.log(ngx.ERR, "Incomplete arguments")
+    xtracer.LogXTrace("Incomplete arguments")
+    xtracer.DeleteBaggage()
     ngx.exit(ngx.HTTP_BAD_REQUEST)
   end
 
@@ -49,14 +56,17 @@ function _M.WriteMovieInfo()
   end
 
 
+  carrier["baggage"] = xtracer.BranchBaggage()
   local client = GenericObjectPool:connection(MovieInfoServiceClient, "movie-info-service", 9090)
-  client:WriteMovieInfo(req_id, movie_info["movie_id"], movie_info["title"],
+  local status, err = client:WriteMovieInfo(req_id, movie_info["movie_id"], movie_info["title"],
       casts, movie_info["plot_id"], movie_info["thumbnail_ids"],
       movie_info["photo_ids"], movie_info["video_ids"], tostring(movie_info["avg_rating"]),
       movie_info["num_rating"], carrier)
   ngx.say(movie_info["avg_rating"])
+  xtracer.JoinBaggag(err.baggage)
   GenericObjectPool:returnConnection(client)
 
+  xtracer.DeleteBaggage()
 end
 
 return _M

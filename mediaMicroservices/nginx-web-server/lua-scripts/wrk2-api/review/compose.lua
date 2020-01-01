@@ -6,29 +6,38 @@ local function _StrIsEmpty(s)
 end
 
 local function _UploadUserId(req_id, post, carrier, baggage)
+  xtracer.SetBaggage(baggage)
   local GenericObjectPool = require "GenericObjectPool"
   local UserServiceClient = require 'media_service_UserService'
+  carrier["baggage"] = xtracer.BranchBaggage()
   local user_client = GenericObjectPool:connection(
     UserServiceClient,"user-service",9090)
-  user_client:UploadUserWithUsername(req_id, post.username, carrier)
+  local status, err = user_client:UploadUserWithUsername(req_id, post.username, carrier)
+  xtracer.JoinBaggage(err.baggage)
   GenericObjectPool:returnConnection(user_client)
 end
 
 local function _UploadText(req_id, post, carrier, baggage)
+  xtracer.SetBaggage(baggage)
   local GenericObjectPool = require "GenericObjectPool"
   local TextServiceClient = require 'media_service_TextService'
+  carrier["baggage"] = xtracer.BranchBaggage()
   local text_client = GenericObjectPool:connection(
     TextServiceClient,"text-service",9090)
-  text_client:UploadText(req_id, post.text, carrier)
+  local status, err = text_client:UploadText(req_id, post.text, carrier)
+  xtracer.JoinBaggage(err.baggage)
   GenericObjectPool:returnConnection(text_client)
 end
 
 local function _UploadMovieId(req_id, post, carrier, baggage)
+  xtracer.SetBaggage(baggage)
   local GenericObjectPool = require "GenericObjectPool"
   local MovieIdServiceClient = require 'media_service_MovieIdService'
+  carrier["baggage"] = xtracer.BranchBaggage()
   local movie_id_client = GenericObjectPool:connection(
     MovieIdServiceClient,"movie-id-service",9090)
-  movie_id_client:UploadMovieId(req_id, post.title, tonumber(post.rating), carrier)
+  local status, err = movie_id_client:UploadMovieId(req_id, post.title, tonumber(post.rating), carrier)
+  xtracer.JoinBaggage(err.baggage)
   GenericObjectPool:returnConnection(movie_id_client)
 end
 
@@ -69,15 +78,15 @@ function _M.ComposeReview()
     ngx.exit(ngx.HTTP_BAD_REQUEST)
   end
 
-  local movieid_baggage = xtracer.BranchBaggage()
   local userid_baggage = xtracer.BranchBaggage()
+  local movieid_baggage = xtracer.BranchBaggage()
   local text_baggage = xtracer.BranchBaggage()
   local uuid_baggage = xtracer.BranchBaggage()
   local threads = {
-    ngx.thread.spawn(_UploadUserId, req_id, post, carrier),
-    ngx.thread.spawn(_UploadMovieId, req_id, post, carrier),
-    ngx.thread.spawn(_UploadText, req_id, post, carrier),
-    ngx.thread.spawn(_UploadUniqueId, req_id, carrier)
+    ngx.thread.spawn(_UploadUserId, req_id, post, carrier, userid_baggage),
+    ngx.thread.spawn(_UploadMovieId, req_id, post, carrier, movieid_baggage),
+    ngx.thread.spawn(_UploadText, req_id, post, carrier, text_baggage),
+    ngx.thread.spawn(_UploadUniqueId, req_id, carrier, uuid_baggage)
   }
 
   local baggages = {
