@@ -6,7 +6,10 @@
 --
 
 
-require 'Thrift'
+local Thrift = require 'Thrift'
+local TType = Thrift.TType
+local __TObject = Thrift.__TObject
+local TException = Thrift.TException
 require 'media_service_constants'
 
 ErrorCode = {
@@ -1005,3 +1008,6 @@ function ServiceException:write(oprot)
   oprot:writeFieldStop()
   oprot:writeStructEnd()
 end
+
+return {ErrorCode, User=User, Review=Review, CastInfo=CastInfo, Cast=Cast,
+        MovieInfo=MovieInfo, Page=Page, ServiceException=ServiceException}

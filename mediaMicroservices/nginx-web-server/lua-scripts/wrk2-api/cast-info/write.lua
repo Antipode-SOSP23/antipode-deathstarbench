@@ -44,9 +44,9 @@ function _M.WriteCastInfo()
 
   carrier["baggage"] = xtracer.BranchBaggage()
   local client = GenericObjectPool:connection(CastInfoServiceClient, "cast-info-service", 9090)
-  local status, err = client:WriteCastInfo(req_id, cast_info["cast_info_id"], cast_info["name"],
+  local status = client:WriteCastInfo(req_id, cast_info["cast_info_id"], cast_info["name"],
       cast_info["gender"], cast_info["intro"],  carrier)
-  xtracer.JoinBaggage(err.baggage)
+  xtracer.JoinBaggage(status.baggage)
   GenericObjectPool:returnConnection(client)
   xtracer.DeleteBaggage()
 end

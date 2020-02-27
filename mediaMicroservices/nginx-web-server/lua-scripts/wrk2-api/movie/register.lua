@@ -36,8 +36,8 @@ function _M.RegisterMovie()
   carrier["baggage"] = xtracer.BranchBaggage()
   local client = GenericObjectPool:connection(MovieIdServiceClient,"movie-id-service",9090)
 
-  local status, err = client:RegisterMovieId(req_id, post.title, tostring(post.movie_id), carrier)
-  xtracer.JoinBaggage(err.baggage)
+  local status = client:RegisterMovieId(req_id, post.title, tostring(post.movie_id), carrier)
+  xtracer.JoinBaggage(status.baggage)
   GenericObjectPool:returnConnection(client)
 
   span:finish()

@@ -6,8 +6,17 @@
 --
 
 
-require 'Thrift'
-require 'media_service_ttypes'
+local Thrift = require 'Thrift'
+local TType = Thrift.TType
+local TMessageType = Thrift.TMessageType
+local __TObject = Thrift.__TObject
+local TApplicationException = Thrift.TApplicationException
+local __TClient = Thrift.__TClient
+local __TProcessor = Thrift.__TProcessor
+local ttype = Thrift.ttype
+local ttable_size = Thrift.ttable_size
+local media_service_ttypes = require 'media_service_ttypes'
+local ServiceException = media_service_ttypes.ServiceException
 
 UniqueIdServiceClient = __TObject.new(__TClient, {
   __type = 'UniqueIdServiceClient'
@@ -204,3 +213,5 @@ function UploadUniqueId_result:write(oprot)
   oprot:writeFieldStop()
   oprot:writeStructEnd()
 end
+
+return UniqueIdServiceClient

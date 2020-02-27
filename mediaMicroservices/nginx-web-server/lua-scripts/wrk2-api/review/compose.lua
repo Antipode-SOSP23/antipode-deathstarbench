@@ -12,8 +12,9 @@ local function _UploadUserId(req_id, post, carrier, baggage)
   carrier["baggage"] = xtracer.BranchBaggage()
   local user_client = GenericObjectPool:connection(
     UserServiceClient,"user-service",9090)
-  local status, err = user_client:UploadUserWithUsername(req_id, post.username, carrier)
-  xtracer.JoinBaggage(err.baggage)
+  local status = user_client:UploadUserWithUsername(req_id, post.username, carrier)
+  print("Status is:", status)
+  xtracer.JoinBaggage(status.baggage)
   GenericObjectPool:returnConnection(user_client)
 end
 
@@ -24,8 +25,9 @@ local function _UploadText(req_id, post, carrier, baggage)
   carrier["baggage"] = xtracer.BranchBaggage()
   local text_client = GenericObjectPool:connection(
     TextServiceClient,"text-service",9090)
-  local status, err = text_client:UploadText(req_id, post.text, carrier)
-  xtracer.JoinBaggage(err.baggage)
+  local status = text_client:UploadText(req_id, post.text, carrier)
+  print("Status is:", status)
+  xtracer.JoinBaggage(status.baggage)
   GenericObjectPool:returnConnection(text_client)
 end
 
@@ -36,8 +38,9 @@ local function _UploadMovieId(req_id, post, carrier, baggage)
   carrier["baggage"] = xtracer.BranchBaggage()
   local movie_id_client = GenericObjectPool:connection(
     MovieIdServiceClient,"movie-id-service",9090)
-  local status, err = movie_id_client:UploadMovieId(req_id, post.title, tonumber(post.rating), carrier)
-  xtracer.JoinBaggage(err.baggage)
+  local status = movie_id_client:UploadMovieId(req_id, post.title, tonumber(post.rating), carrier)
+  print("Status is:", status)
+  xtracer.JoinBaggage(status.baggage)
   GenericObjectPool:returnConnection(movie_id_client)
 end
 
@@ -48,8 +51,9 @@ local function _UploadUniqueId(req_id, carrier, baggage)
   carrier["baggage"] = xtracer.BranchBaggage()
   local unique_id_client = GenericObjectPool:connection(
     UniqueIdServiceClient,"unique-id-service",9090)
-  status, err = unique_id_client:UploadUniqueId(req_id, carrier)
-  xtracer.JoinBaggage(err.baggage)
+  status = unique_id_client:UploadUniqueId(req_id, carrier)
+  print("Status is:", status)
+  xtracer.JoinBaggage(status.baggage)
   GenericObjectPool:returnConnection(unique_id_client)
 end
 
@@ -106,9 +110,9 @@ function _M.ComposeReview()
     end
   end
   span:finish()
-  xtrace.LogXTrace("Request processing finished")
+  xtracer.LogXTrace("Request processing finished")
   ngx.exit(status)
-  xtrace.DeleteBaggage()
+  xtracer.DeleteBaggage()
   
 end
 

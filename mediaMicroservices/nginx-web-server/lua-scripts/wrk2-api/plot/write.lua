@@ -42,8 +42,8 @@ function _M.WritePlot()
 
   carrier["baggage"] = xtracer.BranchBaggage()
   local client = GenericObjectPool:connection(PlotServiceClient, "plot-service", 9090)
-  local status, err = client:WritePlot(req_id, plot["plot_id"], plot["plot"], carrier)
-  xtracer.JoinBaggage(err.baggage)
+  local status = client:WritePlot(req_id, plot["plot_id"], plot["plot"], carrier)
+  xtracer.JoinBaggage(status.baggage)
   GenericObjectPool:returnConnection(client)
   xtracer.DeleteBaggage()
 end
