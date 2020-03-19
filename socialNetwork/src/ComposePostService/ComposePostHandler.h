@@ -876,7 +876,8 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
         ", \"user_id\": " + std::to_string(user_id) +
         ", \"timestamp\": " + std::to_string(timestamp) +
         ", \"user_mentions_id\": " + user_mentions_id_str +
-        ", \"carrier\": " + carrier_str + "}";
+        ", \"carrier\": " + carrier_str + 
+        ", \"baggage\": " + baggage.str() + "}";
 
     auto rabbitmq_client_wrapper = _rabbitmq_client_pool->Pop();
     if (!rabbitmq_client_wrapper) {
