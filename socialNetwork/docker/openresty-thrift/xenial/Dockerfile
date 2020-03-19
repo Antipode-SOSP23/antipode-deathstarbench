@@ -198,7 +198,7 @@ RUN cd /usr/local/openresty/lualib/thrift/src \
 ENV LUA_PATH=$LUA_PATH;/gen-lua/?.lua
 
 RUN luarocks install long \
-    && luarocks install lua-resty-jwt \
+    && luarocks install lua-resty-jwt 0.2.0-0 \
     && ldconfig
 
 RUN apt-get update \
