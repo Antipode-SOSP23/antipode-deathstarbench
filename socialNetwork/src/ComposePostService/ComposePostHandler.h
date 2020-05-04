@@ -572,7 +572,7 @@ void ComposePostHandler::_ComposeAndUpload(
 
   auto baggage_it = carrier.find("baggage");
   if (baggage_it != carrier.end()) {
-    SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second)); 
+    SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
   }
 
   if (!XTrace::IsTracing()) {
@@ -710,6 +710,7 @@ void ComposePostHandler::_ComposeAndUpload(
       post.post_id, post.creator.user_id, post.timestamp,
       std::ref(user_mentions_id), std::ref(carrier), std::ref(upload_home_timeline_helper_baggage), std::move(upload_home_promise));
 
+  // Use this join to force error
   upload_post_worker.join();
   upload_user_timeline_worker.join();
   upload_home_timeline_worker.join();
@@ -766,6 +767,10 @@ void ComposePostHandler::_UploadPostHelper(
     const Post &post,
     const std::map<std::string, std::string> &carrier,
     Baggage& baggage, std::promise<Baggage> baggage_promise) {
+
+  // induce ANTIPODE error by sleeping 5 mins
+  // sleep(300);
+
   BAGGAGE(baggage);
   TextMapReader reader(carrier);
   std::map<std::string, std::string> writer_text_map(carrier);
@@ -866,18 +871,28 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
     user_mentions_id_str += "]";
     std::string carrier_str = "{";
     for (auto &item : writer_text_map) {
-      carrier_str += "\"" + item.first + "\" : \"" + item.second + "\", ";
+      // baggages with chars that are NOT UTF-8
+      // this is a temporary fix so we are able to deserialize JSON with a baggage on it
+      if (item.first != "baggage") {
+        carrier_str += "\"" + item.first + "\" : \"" + item.second + "\", ";
+      }
     }
     carrier_str = carrier_str.substr(0, carrier_str.length() - 2);
     carrier_str += "}";
+
+    // baggages with chars that are NOT UTF-8
+    // this is a temporary fix so we are able to deserialize JSON with a baggage on it
+    // @jmace this should be handled on the XTrace repo
+    // ref: https://nlohmann.github.io/json/classnlohmann_1_1basic__json_a50ec80b02d0f3f51130d4abb5d1cfdc5.html
+    // json j_baggage = baggage.str();
+    // std::string baggage_str = j_baggage.dump(-1, ' ', false, json::error_handler_t::replace);
 
     std::string msg_str = "{ \"req_id\": " + std::to_string(req_id) +
         ", \"post_id\": " + std::to_string(post_id) +
         ", \"user_id\": " + std::to_string(user_id) +
         ", \"timestamp\": " + std::to_string(timestamp) +
         ", \"user_mentions_id\": " + user_mentions_id_str +
-        ", \"carrier\": " + carrier_str + 
-        ", \"baggage\": " + baggage.str() + "}";
+        ", \"carrier\": " + carrier_str + " }";
 
     auto rabbitmq_client_wrapper = _rabbitmq_client_pool->Pop();
     if (!rabbitmq_client_wrapper) {

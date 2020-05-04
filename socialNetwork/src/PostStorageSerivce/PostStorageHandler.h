@@ -180,7 +180,7 @@ void PostStorageHandler::StorePost(
   mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
 
   span->Finish();
-  XTRACE("PostStorageHandler::ReadPost complete");
+  XTRACE("PostStorageHandler::StorePost complete");
   response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
@@ -675,7 +675,7 @@ void PostStorageHandler::ReadPosts(
     set_baggages.emplace_back(set_future_baggage);
     set_futures.emplace_back(std::async(std::launch::async, [&]() {
       memcached_return_t _rc;
-      BAGGAGE(set_future_baggage); 
+      BAGGAGE(set_future_baggage);
       auto _memcached_client = memcached_pool_pop(
           _memcached_client_pool, true, &_rc);
       if (!_memcached_client) {

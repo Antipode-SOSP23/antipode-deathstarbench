@@ -262,4 +262,6 @@ services:
       - 4080:4080
       - 5563:5563
     restart: always
-
+    # disable logging for this container - too spammy
+    logging:
+      driver: none

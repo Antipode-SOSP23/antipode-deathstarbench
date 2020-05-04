@@ -118,6 +118,7 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     std::multimap<std::string, std::string> value =
         {{timestamp_str, post_id_str}};
 
+    // writes to the followers timeline
     for (auto &follower_id : followers_id_set) {
       redis_client->zadd(std::to_string(follower_id), options, value);
     }
