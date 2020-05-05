@@ -710,20 +710,21 @@ void ComposePostHandler::_ComposeAndUpload(
       post.post_id, post.creator.user_id, post.timestamp,
       std::ref(user_mentions_id), std::ref(carrier), std::ref(upload_home_timeline_helper_baggage), std::move(upload_home_promise));
 
-  // Use this join to force error
-  upload_post_worker.join();
+  // Detach this thread so it runs on the background
+  upload_post_worker.detach();
   upload_user_timeline_worker.join();
   upload_home_timeline_worker.join();
 
+  // These baggages are actively waiting on the future result, since we are detaching the upload post worker, we no longer wait for that
   try {
-    upload_post_helper_baggage = upload_post_future.get();
+    // upload_post_helper_baggage = upload_post_future.get();
     upload_user_timeline_helper_baggage = upload_user_future.get();
     upload_home_timeline_helper_baggage = upload_home_future.get();
   } catch (std::exception &) {
     XTRACE("Error whilst trying to get baggages from futures");
   }
 
-  JOIN_CURRENT_BAGGAGE(upload_post_helper_baggage);
+  // JOIN_CURRENT_BAGGAGE(upload_post_helper_baggage);
   JOIN_CURRENT_BAGGAGE(upload_user_timeline_helper_baggage);
   JOIN_CURRENT_BAGGAGE(upload_home_timeline_helper_baggage);
 
@@ -768,8 +769,8 @@ void ComposePostHandler::_UploadPostHelper(
     const std::map<std::string, std::string> &carrier,
     Baggage& baggage, std::promise<Baggage> baggage_promise) {
 
-  // induce ANTIPODE error by sleeping 5 mins
-  // sleep(300);
+  // induce ANTIPODE error by sleeping 2 mins
+  sleep(30);
 
   BAGGAGE(baggage);
   TextMapReader reader(carrier);
