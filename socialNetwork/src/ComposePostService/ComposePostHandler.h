@@ -711,6 +711,7 @@ void ComposePostHandler::_ComposeAndUpload(
       std::ref(user_mentions_id), std::ref(carrier), std::ref(upload_home_timeline_helper_baggage), std::move(upload_home_promise));
 
   // Detach this thread so it runs on the background
+  // upload_post_worker.join();
   upload_post_worker.detach();
   upload_user_timeline_worker.join();
   upload_home_timeline_worker.join();
@@ -770,9 +771,11 @@ void ComposePostHandler::_UploadPostHelper(
     Baggage& baggage, std::promise<Baggage> baggage_promise) {
 
   // induce ANTIPODE error by sleeping 2 mins
+  LOG(info) << "[ANTIPODE] Sleeping write to post ...";
   sleep(30);
+  LOG(info) << "[ANTIPODE] Done sleeping!";
 
-  BAGGAGE(baggage);
+  // BAGGAGE(baggage);
   TextMapReader reader(carrier);
   std::map<std::string, std::string> writer_text_map(carrier);
   TextMapWriter writer(writer_text_map);
@@ -787,14 +790,15 @@ void ComposePostHandler::_UploadPostHelper(
     }
     auto post_storage_client = post_storage_client_wrapper->GetClient();
     try {
-      writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
+      // writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
       BaseRpcResponse response;
-      post_storage_client->StorePost(response,req_id, post, writer_text_map);
-      Baggage b = Baggage::deserialize(response.baggage);
-      JOIN_CURRENT_BAGGAGE(b);
+      // HERE ITS BREAKING THE CONNECTION
+      post_storage_client->StorePost(response, req_id, post, writer_text_map);
+      // Baggage b = Baggage::deserialize(response.baggage);
+      // JOIN_CURRENT_BAGGAGE(b);
     } catch (...) {
-      _post_storage_client_pool->Push(post_storage_client_wrapper);
       LOG(error) << "Failed to store post to post-storage-service";
+      _post_storage_client_pool->Push(post_storage_client_wrapper);
       XTRACE("Failed to store post to post-storage-service");
       throw;
     }
@@ -804,8 +808,8 @@ void ComposePostHandler::_UploadPostHelper(
     XTRACE("Failed to connect to post-storage-service");
     _post_storage_teptr = std::current_exception();
   }
-  baggage_promise.set_value(BRANCH_CURRENT_BAGGAGE());
-  DELETE_CURRENT_BAGGAGE();
+  // baggage_promise.set_value(BRANCH_CURRENT_BAGGAGE());
+  // DELETE_CURRENT_BAGGAGE();
 }
 
 void ComposePostHandler::_UploadUserTimelineHelper(

@@ -61,6 +61,8 @@ void PostStorageHandler::StorePost(
     XTrace::StartTrace("PostStorageHandler");
   }
 
+  LOG(debug) << "[ANTIPODE] CHECK POST STORAGE: " << std::to_string(req_id);
+
   XTRACE("PostStorageHandler::StorePost", {{"RequestID", std::to_string(req_id)}});
   // Initialize a span
   TextMapReader reader(carrier);
