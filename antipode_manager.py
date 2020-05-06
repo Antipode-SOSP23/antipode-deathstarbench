@@ -8,6 +8,7 @@ from plumbum import local
 from plumbum import FG, BG
 from plumbum.cmd import docker_compose, docker
 from plumbum.cmd import make
+from plumbum.cmd import python
 import itertools
 import urllib.parse
 
@@ -31,16 +32,23 @@ AVAILABLE_APPLICATIONS = [
 AVAILABLE_WKLD_ENDPOINTS = {
   'socialNetwork': {
     'compose-post': {
+      'type': 'wrk2',
       'uri': 'wrk2-api/post/compose',
       'script_path': './wrk2/scripts/social-network/compose-post.lua',
     },
     'read-home-timeline': {
+      'type': 'wrk2',
       'uri': 'wrk2-api/home-timeline/read',
       'script_path': './wrk2/scripts/social-network/read-home-timeline.lua',
     },
     'read-user-timeline': {
+      'type': 'wrk2',
       'uri': 'wrk2-api/user-timeline/read',
       'script_path': './wrk2/scripts/social-network/read-user-timeline.lua',
+    },
+    'antipode-wht-error': {
+      'type': 'python',
+      'script_path': './scripts/antipode-wht-error.py',
     },
   }
 }
@@ -122,34 +130,50 @@ def clean(args):
 def wkld(args):
   app_dir = Path.cwd()
   try:
-    os.chdir(app_dir.joinpath('wrk2'))
-    # make workload
-    make & FG
-    # load bin
-    wrk = local["./wrk"]
+    wrk2_endpoints = [ endpoint for endpoint in args['endpoints'] if AVAILABLE_WKLD_ENDPOINTS[args['app']][endpoint]['type'] == 'wrk2' ]
+    py_endpoints = [ endpoint for endpoint in args['endpoints'] if AVAILABLE_WKLD_ENDPOINTS[args['app']][endpoint]['type'] == 'python' ]
 
-    # load existing options
-    wrk_args = []
-    if 'connections' in args:
-      wrk_args.extend(['--connections', args['connections']])
-    if 'duration' in args:
-      wrk_args.extend(['--duration', args['duration']])
-    if 'threads' in args:
-      wrk_args.extend(['--threads', args['threads']])
+    if wrk2_endpoints:
+      os.chdir(app_dir.joinpath('wrk2'))
+      # make workload
+      make & FG
+      # load bin
+      wrk = local["./wrk"]
 
-    # we run the workload for each endpoint
-    for endpoint in args['endpoints']:
-      # get details for the script and uri path
-      details = AVAILABLE_WKLD_ENDPOINTS[args['app']][endpoint]
-      script_path = app_dir.joinpath(details['script_path'])
-      uri = urllib.parse.urljoin('http://localhost:8080', details['uri'])
-      # add arguments to previous list
-      wrk_args.extend(['--latency', '--script', str(script_path), uri, '--rate', args['requests'] ])
-      # run workload for each endpoint
-      wrk[wrk_args] & FG
+      # load existing options
+      wrk_args = []
+      if 'connections' in args:
+        wrk_args.extend(['--connections', args['connections']])
+      if 'duration' in args:
+        wrk_args.extend(['--duration', args['duration']])
+      if 'threads' in args:
+        wrk_args.extend(['--threads', args['threads']])
 
-    # go back to the app directory
-    os.chdir(app_dir)
+      # we run the workload for each endpoint
+      for endpoint in wrk2_endpoints:
+        # get details for the script and uri path
+        details = AVAILABLE_WKLD_ENDPOINTS[args['app']][endpoint]
+        script_path = app_dir.joinpath(details['script_path'])
+        uri = urllib.parse.urljoin('http://localhost:8080', details['uri'])
+        # add arguments to previous list
+        wrk_args.extend(['--latency', '--script', str(script_path), uri, '--rate', args['requests'] ])
+        # run workload for each endpoint
+        wrk[wrk_args] & FG
+
+      # go back to the app directory
+      os.chdir(app_dir)
+
+    if py_endpoints:
+      # we run the workload for each endpoint
+      for endpoint in py_endpoints:
+        # get details for the script and uri path
+        details = AVAILABLE_WKLD_ENDPOINTS[args['app']][endpoint]
+        script_path = app_dir.joinpath(details['script_path'])
+
+        # run workload for each endpoint
+        python[script_path] & FG
+
+    exit()
 
   except KeyboardInterrupt:
     # if the compose gets interrupted we just continue with the script

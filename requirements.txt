@@ -1,0 +1,4 @@
+Faker==4.0.3
+plumbum==1.6.9
+python-dateutil==2.8.1
+text-unidecode==1.3
