@@ -204,12 +204,12 @@ RUN luarocks install long \
 RUN apt-get update \
   && apt-get install -y wget
 
-RUN apt-get update \ 
+RUN apt-get update \
   && apt-get install -y libboost-all-dev
 
 RUN apt-get install -y lua5.1 lua5.1-dev
 
-RUN cd /tmp \ 
+RUN cd /tmp \
   && wget https://github.com/google/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.gz \
   && gunzip protobuf-2.5.0.tar.gz \
   && tar -xvf protobuf-2.5.0.tar \

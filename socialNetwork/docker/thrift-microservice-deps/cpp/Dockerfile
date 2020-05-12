@@ -10,6 +10,7 @@ ARG LIB_CPP_JWT_VERSION=1.1.1
 ARG LIB_CPP_REDIS_VERSION=4.3.1
 ARG LIB_AMQP_CPP_VERSION=4.1.4
 ARG LIB_SIMPLEAMQPCLIENT_VERSION=2.4.0
+ARG LIB_PROTOBUF_VERSION=2.5.0
 
 ARG NUM_CPUS=12
 ARG BUILD_DEPS="ca-certificates g++ cmake wget git libmemcached-dev automake bison flex libboost-all-dev libevent-dev libssl-dev libtool make pkg-config librabbitmq-dev"
@@ -26,8 +27,8 @@ RUN apt-get update \
   && cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTS=0 -DENABLE_EXAMPLES=0 .. \
   && make -j${NUM_CPUS} \
   && make install \
-  && cd /tmp \
   # Install lib-thrift
+  && cd /tmp \
   && wget -O thrift-${LIB_THRIFT_VERSION}.tar.gz https://github.com/apache/thrift/archive/v${LIB_THRIFT_VERSION}.tar.gz \
   && tar -zxf thrift-${LIB_THRIFT_VERSION}.tar.gz \
   && cd thrift-${LIB_THRIFT_VERSION} \
@@ -36,8 +37,8 @@ RUN apt-get update \
   && cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=0 .. \
   && make -j${NUM_CPUS} \
   && make install \
-  && cd /tmp \
   # Install /nlohmann/json
+  && cd /tmp \
   && wget -O json-${LIB_JSON_VERSION}.tar.gz https://github.com/nlohmann/json/archive/v${LIB_JSON_VERSION}.tar.gz \
   && tar -zxf json-${LIB_JSON_VERSION}.tar.gz \
   && cd json-${LIB_JSON_VERSION} \
@@ -46,8 +47,8 @@ RUN apt-get update \
   && cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=0 .. \
   && make -j${NUM_CPUS} \
   && make install \
-  && cd /tmp \
   # Install yaml-cpp
+  && cd /tmp \
   && wget -O yaml-cpp-${LIB_YAML_VERSION}.tar.gz https://github.com/jbeder/yaml-cpp/archive/yaml-cpp-${LIB_YAML_VERSION}.tar.gz \
   && tar -zxf yaml-cpp-${LIB_YAML_VERSION}.tar.gz \
   && cd yaml-cpp-yaml-cpp-${LIB_YAML_VERSION} \
@@ -56,8 +57,8 @@ RUN apt-get update \
   && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-fPIC" -DYAML_CPP_BUILD_TESTS=0 .. \
   && make -j${NUM_CPUS} \
   && make install \
-  && cd /tmp \
   # Install opentracing-cpp
+  && cd /tmp \
   && wget -O opentracing-cpp-${LIB_OPENTRACING_VERSION}.tar.gz https://github.com/opentracing/opentracing-cpp/archive/v${LIB_OPENTRACING_VERSION}.tar.gz \
   && tar -zxf opentracing-cpp-${LIB_OPENTRACING_VERSION}.tar.gz \
   && cd opentracing-cpp-${LIB_OPENTRACING_VERSION} \
@@ -66,8 +67,8 @@ RUN apt-get update \
   && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-fPIC" -DBUILD_TESTING=0 .. \
   && make -j${NUM_CPUS} \
   && make install \
-  && cd /tmp \
   # Install jaeger-client-cpp
+  && cd /tmp \
   && wget -O jaeger-client-cpp-${LIB_JAEGER_VERSION}.tar.gz https://github.com/jaegertracing/jaeger-client-cpp/archive/v${LIB_JAEGER_VERSION}.tar.gz \
   && tar -zxf jaeger-client-cpp-${LIB_JAEGER_VERSION}.tar.gz \
   && cd jaeger-client-cpp-${LIB_JAEGER_VERSION} \
@@ -76,8 +77,8 @@ RUN apt-get update \
   && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-fPIC" -DHUNTER_ENABLED=0 -DBUILD_TESTING=0 -DJAEGERTRACING_WITH_YAML_CPP=1 -DJAEGERTRACING_BUILD_EXAMPLES=0 .. \
   && make -j${NUM_CPUS} \
   && make install \
-  && cd /tmp \
   # Install jwt
+  && cd /tmp \
   && wget -O cpp-jwt-${LIB_CPP_JWT_VERSION}.tar.gz https://github.com/arun11299/cpp-jwt/archive/v${LIB_CPP_JWT_VERSION}.tar.gz \
   && tar -zxf cpp-jwt-${LIB_CPP_JWT_VERSION}.tar.gz \
   && cd cpp-jwt-${LIB_CPP_JWT_VERSION} \
@@ -110,6 +111,7 @@ RUN apt-get update \
   && cmake .. -DCMAKE_BUILD_TYPE=Release \
   && make -j${NUM_CPUS} \
   && make install \
+  # Clean all libs instalations dirs
   && cd /tmp \
   && rm -rf \
     mongo-c-driver-${LIB_MONGOC_VERSION}.tar.gz \
@@ -132,7 +134,7 @@ RUN apt-get update \
 
 RUN apt-get install -y lua5.1 lua5.1-dev
 
-RUN cd /tmp \ 
+RUN cd /tmp \
   && wget https://github.com/google/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.gz \
   && gunzip protobuf-2.5.0.tar.gz \
   && tar -xvf protobuf-2.5.0.tar \

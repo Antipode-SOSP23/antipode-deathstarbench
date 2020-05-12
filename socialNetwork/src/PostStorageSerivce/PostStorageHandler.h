@@ -11,6 +11,9 @@
 #include <bson/bson.h>
 #include <nlohmann/json.hpp>
 
+#include <boost/asio/thread_pool.hpp>
+#include <boost/asio/post.hpp>
+
 #include "../../gen-cpp/PostStorageService.h"
 #include "../logger.h"
 #include "../tracing.h"
@@ -52,6 +55,8 @@ void PostStorageHandler::StorePost(
     int64_t req_id, const social_network::Post &post,
     const std::map<std::string, std::string> &carrier) {
 
+  boost::asio::post(pool, [] {});
+
   auto baggage_it = carrier.find("baggage");
   if (baggage_it != carrier.end()) {
     SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
@@ -60,8 +65,6 @@ void PostStorageHandler::StorePost(
   if (!XTrace::IsTracing()) {
     XTrace::StartTrace("PostStorageHandler");
   }
-
-  LOG(debug) << "[ANTIPODE] CHECK POST STORAGE: " << std::to_string(req_id);
 
   XTRACE("PostStorageHandler::StorePost", {{"RequestID", std::to_string(req_id)}});
   // Initialize a span
@@ -186,6 +189,9 @@ void PostStorageHandler::StorePost(
   response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
+
+
+boost::asio::thread_pool pool(4);
 
 
 void PostStorageHandler::ReadPost(
