@@ -11,6 +11,9 @@ find_package(Protobuf REQUIRED)
 
 
 set(Boost_USE_STATIC_LIBS ON)
+set(Boost_USE_MULTITHREADED ON)
+set(BOOST_LIBRARYDIR "/usr/local/lib")
+set(BOOST_ROOT "/usr/local/include/boost")
 find_package(Boost 1.68.0 REQUIRED COMPONENTS system log log_setup)
 if(Boost_FOUND)
   include_directories(${Boost_INCLUDE_DIRS})

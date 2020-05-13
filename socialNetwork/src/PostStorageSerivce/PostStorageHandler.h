@@ -55,7 +55,7 @@ void PostStorageHandler::StorePost(
     int64_t req_id, const social_network::Post &post,
     const std::map<std::string, std::string> &carrier) {
 
-  boost::asio::post(pool, [] {});
+  // boost::asio::post(pool, [] {});
 
   auto baggage_it = carrier.find("baggage");
   if (baggage_it != carrier.end()) {
