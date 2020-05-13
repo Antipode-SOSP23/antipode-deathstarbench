@@ -11,7 +11,7 @@ find_package(Protobuf REQUIRED)
 
 
 set(Boost_USE_STATIC_LIBS ON)
-find_package(Boost 1.54.0 REQUIRED COMPONENTS system log log_setup)
+find_package(Boost 1.68.0 REQUIRED COMPONENTS system log log_setup)
 if(Boost_FOUND)
   include_directories(${Boost_INCLUDE_DIRS})
   link_directories(${Boost_LIBRARY_DIRS})

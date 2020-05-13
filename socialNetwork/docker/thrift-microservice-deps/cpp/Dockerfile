@@ -10,7 +10,7 @@ ARG LIB_CPP_JWT_VERSION=1.1.1
 ARG LIB_CPP_REDIS_VERSION=4.3.1
 ARG LIB_AMQP_CPP_VERSION=4.1.4
 ARG LIB_SIMPLEAMQPCLIENT_VERSION=2.4.0
-ARG LIB_PROTOBUF_VERSION=2.5.0
+ARG LIB_PROTOBUF_VERSION=3.7.0
 
 ARG NUM_CPUS=12
 ARG BUILD_DEPS="ca-certificates g++ cmake wget git libmemcached-dev automake bison flex libboost-all-dev libevent-dev libssl-dev libtool make pkg-config librabbitmq-dev"
@@ -135,10 +135,10 @@ RUN apt-get update \
 RUN apt-get install -y lua5.1 lua5.1-dev
 
 RUN cd /tmp \
-  && wget https://github.com/google/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.gz \
-  && gunzip protobuf-2.5.0.tar.gz \
-  && tar -xvf protobuf-2.5.0.tar \
-  && cd protobuf-2.5.0 \
+  && wget https://github.com/protocolbuffers/protobuf/releases/download/v${LIB_PROTOBUF_VERSION}/protobuf-cpp-${LIB_PROTOBUF_VERSION}.tar.gz \
+  && gunzip protobuf-cpp-${LIB_PROTOBUF_VERSION}.tar.gz \
+  && tar -xvf protobuf-cpp-${LIB_PROTOBUF_VERSION}.tar \
+  && cd protobuf-${LIB_PROTOBUF_VERSION} \
   && ./configure --prefix=/usr \
   && make \
   && make install \
@@ -153,8 +153,8 @@ RUN cd /tmp \
   && make install \
   && cd /tmp \
   && rm -rf \
-      protobuf-2.5.0.tar \
-      protobuf-2.5.0 \
+      protobuf-cpp-${LIB_PROTOBUF_VERSION}.tar \
+      protobuf-${LIB_PROTOBUF_VERSION} \
       xtrace-cpp
 
 ENV LD_LIBRARY_PATH /usr/local/lib:${LD_LIBRARY_PATH}
