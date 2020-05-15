@@ -28,6 +28,8 @@ class PostStorageHandler : public PostStorageServiceIf {
   PostStorageHandler(memcached_pool_st *, mongoc_client_pool_t *);
   ~PostStorageHandler() override = default;
 
+  void StorePostAsync(BaseRpcResponse& response, int64_t req_id, const Post &post,
+      const std::map<std::string, std::string> &carrier);
   void StorePost(BaseRpcResponse& response, int64_t req_id, const Post &post,
       const std::map<std::string, std::string> &carrier) override;
 
@@ -50,12 +52,20 @@ PostStorageHandler::PostStorageHandler(
   _mongodb_client_pool = mongodb_client_pool;
 }
 
-void PostStorageHandler::StorePost(
+// Launch the pool with as much threads as cores
+int num_threads = std::thread::hardware_concurrency();
+boost::asio::thread_pool pool(num_threads);
+
+void PostStorageHandler::StorePostAsync(
     BaseRpcResponse &response,
     int64_t req_id, const social_network::Post &post,
     const std::map<std::string, std::string> &carrier) {
 
-  // boost::asio::post(pool, [] {});
+  // [ANTIPODE]
+  // force WritHomeTimeline to an error by sleeping
+  LOG(debug) << "[ANTIPODE] Sleeping ...";
+  std::this_thread::sleep_for (std::chrono::seconds(30));
+  LOG(debug) << "[ANTIPODE] Done Sleeping!";
 
   auto baggage_it = carrier.find("baggage");
   if (baggage_it != carrier.end()) {
@@ -190,9 +200,16 @@ void PostStorageHandler::StorePost(
   DELETE_CURRENT_BAGGAGE();
 }
 
+void PostStorageHandler::StorePost(
+    BaseRpcResponse &response,
+    int64_t req_id, const social_network::Post &post,
+    const std::map<std::string, std::string> &carrier) {
 
-boost::asio::thread_pool pool(4);
-
+  // [ANTIPODE]
+  // By using a threadpool we can return an OK to the caller, while on the threadpool we
+  // force an error by sleeping the thread
+  boost::asio::post(pool, std::bind(&PostStorageHandler::StorePostAsync, this, response, req_id, post, carrier));
+}
 
 void PostStorageHandler::ReadPost(
     PostRpcResponse& response,
