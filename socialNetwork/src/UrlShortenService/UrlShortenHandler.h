@@ -217,7 +217,7 @@ void UrlShortenHandler::UploadUrls(
 
   span->Finish();
 
-  XTRACE("TextHandler::UploadText complete");
+  XTRACE("UrlShortenHandler::UploadUrls complete");
 
   response.baggage = GET_CURRENT_BAGGAGE().str();
   response.result = _return;

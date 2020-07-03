@@ -62,11 +62,10 @@ class ComposePostHandler : public ComposePostServiceIf {
 
  private:
   ClientPool<RedisClient> *_redis_client_pool;
-  ClientPool<ThriftClient<PostStorageServiceClient>>
-      *_post_storage_client_pool;
-  ClientPool<ThriftClient<UserTimelineServiceClient>>
-      *_user_timeline_client_pool;
+  ClientPool<ThriftClient<PostStorageServiceClient>> *_post_storage_client_pool;
+  ClientPool<ThriftClient<UserTimelineServiceClient>> *_user_timeline_client_pool;
   ClientPool<RabbitmqClient> *_rabbitmq_client_pool;
+
   std::exception_ptr _rabbitmq_teptr;
   std::exception_ptr _post_storage_teptr;
   std::exception_ptr _user_timeline_teptr;
