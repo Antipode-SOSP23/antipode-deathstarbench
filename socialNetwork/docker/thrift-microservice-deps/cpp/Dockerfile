@@ -240,7 +240,8 @@ ARG RUN_DEPS="g++ \
               librabbitmq-dev \
               lua5.1 \
               lua5.1-dev \
-              libicu-dev"
+              libicu-dev \
+              libtbb-dev"
 # Development dependencies - comment if not needed
 ARG DEV_DEPS="tree \
               less \

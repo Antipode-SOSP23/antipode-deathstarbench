@@ -1,6 +1,7 @@
 include("../cmake/Findlibmemcached.cmake")
 include("../cmake/Findthrift.cmake")
 include("../cmake/FindLibevent.cmake")
+include("../cmake/FindTBB.cmake")
 
 find_package(libmongoc-1.0 1.13 REQUIRED)
 find_package(nlohmann_json 3.5.0 REQUIRED)
@@ -8,7 +9,8 @@ find_package(Threads)
 find_package(OpenSSL REQUIRED)
 find_package(amqpcpp REQUIRED)
 find_package(Protobuf REQUIRED)
-
+list(APPEND CMAKE_MODULE_PATH "/usr/include/tbb/")
+find_package(TBB COMPONENTS tbbmalloc tbbmalloc_proxy tbb_preview)
 
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
