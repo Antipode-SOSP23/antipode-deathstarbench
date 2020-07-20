@@ -55,3 +55,6 @@ add_subdirectory(UserMentionService)
 add_subdirectory(UrlShortenService)
 add_subdirectory(MediaService)
 add_subdirectory(HomeTimelineService)
+
+# ANTIPODE
+add_subdirectory(AntipodeOracle)

@@ -328,3 +328,13 @@ service MediaService {
       4: map<string, string> carrier
   ) throws (1: ServiceException se)
 }
+
+service AntipodeOracle {
+  bool MakeVisible(
+      1: i64 object_id
+  ) throws (1: ServiceException se)
+
+  bool IsVisible(
+      1: i64 object_id
+  ) throws (1: ServiceException se)
+}

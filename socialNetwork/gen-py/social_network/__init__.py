@@ -1,1 +1,1 @@
-__all__ = ['ttypes', 'constants', 'UniqueIdService', 'TextService', 'UserService', 'ComposePostService', 'PostStorageService', 'HomeTimelineService', 'UserTimelineService', 'SocialGraphService', 'UserMentionService', 'UrlShortenService', 'MediaService']
+__all__ = ['ttypes', 'constants', 'UniqueIdService', 'TextService', 'UserService', 'ComposePostService', 'PostStorageService', 'HomeTimelineService', 'UserTimelineService', 'SocialGraphService', 'UserMentionService', 'UrlShortenService', 'MediaService', 'AntipodeOracle']

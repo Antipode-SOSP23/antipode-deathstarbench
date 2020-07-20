@@ -99,5 +99,9 @@
   "home-timeline-service": {
     "addr": "home-timeline-service",
     "port": 9090
+  },
+  "antipode-oracle": {
+    "addr": "antipode-oracle",
+    "port": 9090
   }
 }

@@ -265,3 +265,11 @@ services:
     # disable logging for this container - too spammy
     logging:
       driver: none
+
+  antipode-oracle:
+    image: yg397/social-network-microservices
+    hostname: antipode-orable
+#    ports:
+#      - 10001:9090
+    restart: always
+    entrypoint: AntipodeOracle
