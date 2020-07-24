@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
   if (load_config_file("config/service-config.json", &config_json) != 0) {
     exit(EXIT_FAILURE);
   }
-  
+
   int port = config_json["post-storage-service"]["port"];
 
   memcached_client_pool =
@@ -62,10 +62,19 @@ int main(int argc, char *argv[]) {
   }
   mongoc_client_pool_push(mongodb_client_pool, mongodb_client);
 
+  int antipode_oracle_port = config_json["antipode-oracle"]["port"];
+  std::string antipode_oracle_addr = config_json["antipode-oracle"]["addr"];
+
+  ClientPool<ThriftClient<AntipodeOracleClient>>
+      antipode_oracle_client_pool("antipode-oracle", antipode_oracle_addr,
+                                antipode_oracle_port, 0, 128, 1000);
+
   TThreadedServer server (
       std::make_shared<PostStorageServiceProcessor>(
           std::make_shared<PostStorageHandler>(
-              memcached_client_pool, mongodb_client_pool)),
+              memcached_client_pool,
+              mongodb_client_pool,
+              &antipode_oracle_client_pool)),
       std::make_shared<TServerSocket>("0.0.0.0", port),
       std::make_shared<TFramedTransportFactory>(),
       std::make_shared<TBinaryProtocolFactory>()
@@ -74,4 +83,3 @@ int main(int argc, char *argv[]) {
   std::cout << "Starting the post-storage-service server..." << std::endl;
   server.serve();
 }
-

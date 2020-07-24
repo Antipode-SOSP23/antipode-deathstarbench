@@ -15,17 +15,24 @@
 #include <boost/asio/post.hpp>
 
 #include "../../gen-cpp/PostStorageService.h"
+#include "../ClientPool.h"
 #include "../logger.h"
 #include "../tracing.h"
+#include "../ThriftClient.h"
 #include <xtrace/xtrace.h>
 #include <xtrace/baggage.h>
+
+#include "../../gen-cpp/AntipodeOracle.h"
 
 namespace social_network {
 using json = nlohmann::json;
 
 class PostStorageHandler : public PostStorageServiceIf {
  public:
-  PostStorageHandler(memcached_pool_st *, mongoc_client_pool_t *);
+  PostStorageHandler(
+      memcached_pool_st *,
+      mongoc_client_pool_t *,
+      ClientPool<ThriftClient<AntipodeOracleClient>> *);
   ~PostStorageHandler() override = default;
 
   void StorePostAsync(BaseRpcResponse& response, int64_t req_id, const Post &post,
@@ -43,13 +50,21 @@ class PostStorageHandler : public PostStorageServiceIf {
  private:
   memcached_pool_st *_memcached_client_pool;
   mongoc_client_pool_t *_mongodb_client_pool;
+  ClientPool<ThriftClient<AntipodeOracleClient>> *_antipode_oracle_client_pool;
+
+  // ANTIPODE
+  // Just testing communication not supposed to be here
+  void _AntipodeIsVisible(int64_t post_id);
+  void _AntipodeMakeVisible(int64_t post_id);
 };
 
 PostStorageHandler::PostStorageHandler(
     memcached_pool_st *memcached_client_pool,
-    mongoc_client_pool_t *mongodb_client_pool) {
+    mongoc_client_pool_t *mongodb_client_pool,
+    ClientPool<social_network::ThriftClient<AntipodeOracleClient>> *antipode_oracle_client_pool) {
   _memcached_client_pool = memcached_client_pool;
   _mongodb_client_pool = mongodb_client_pool;
+  _antipode_oracle_client_pool = antipode_oracle_client_pool;
 }
 
 // Launch the pool with as much threads as cores
@@ -176,6 +191,11 @@ void PostStorageHandler::StorePostAsync(
       collection, new_doc, nullptr, nullptr, &error);
   insert_span->Finish();
   XTRACE("MongoInsertPost complete");
+
+  // ANTIPODE
+  std::thread antipode_make_visible(
+      &PostStorageHandler::_AntipodeMakeVisible, this, post.post_id);
+  antipode_make_visible.join();
 
   if (!inserted) {
     LOG(error) << "Error: Failed to insert post to MongoDB: "
@@ -766,6 +786,29 @@ void PostStorageHandler::ReadPosts(
   response.baggage = GET_CURRENT_BAGGAGE().str();
   response.result = _return;
   DELETE_CURRENT_BAGGAGE();
+}
+
+void PostStorageHandler::_AntipodeMakeVisible(int64_t post_id) {
+  LOG(error) << "MOOOO22???? - _AntipodeMakeVisible";
+  auto antipode_orable_client_wrapper = _antipode_oracle_client_pool->Pop();
+  if (!antipode_orable_client_wrapper) {
+    ServiceException se;
+    se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
+    se.message = "22Failed to connect to antipode-oracle";
+    throw se;
+  }
+
+  auto antipode_oracle_client = antipode_orable_client_wrapper->GetClient();
+  try {
+    bool response;
+    response = antipode_oracle_client->MakeVisible(post_id);
+  } catch (...) {
+    LOG(error) << "22Failed to make post visible to antipode-oracle";
+    _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
+    throw;
+  }
+  LOG(error) << "22Post visible antipode-oracle successfuly";
+  _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
 }
 
 } // namespace social_network

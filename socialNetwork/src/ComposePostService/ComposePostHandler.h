@@ -94,7 +94,6 @@ class ComposePostHandler : public ComposePostServiceIf {
   // ANTIPODE
   // Just testing communication not supposed to be here
   void _AntipodeIsVisible(int64_t post_id);
-  void _AntipodeMakeVisible(int64_t post_id);
 };
 
 ComposePostHandler::ComposePostHandler(
@@ -719,14 +718,10 @@ void ComposePostHandler::_ComposeAndUpload(
   std::thread antipode_is_visible(
       &ComposePostHandler::_AntipodeIsVisible, this, post.post_id);
 
-  std::thread antipode_make_visible(
-      &ComposePostHandler::_AntipodeMakeVisible, this, post.post_id);
-
   upload_post_worker.join();
   upload_user_timeline_worker.join();
   upload_home_timeline_worker.join();
   antipode_is_visible.join();
-  antipode_make_visible.join();
 
   try {
     upload_post_helper_baggage = upload_post_future.get();
@@ -946,10 +941,6 @@ void ComposePostHandler::_AntipodeIsVisible(int64_t post_id) {
   }
   LOG(error) << "Asked antipode-oracle successfuly";
   _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
-}
-
-void ComposePostHandler::_AntipodeMakeVisible(int64_t post_id) {
-  LOG(error) << "MOOOO???? - _AntipodeMakeVisible";
 }
 
 } // namespace social_network
