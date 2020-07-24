@@ -42,9 +42,6 @@ int main(int argc, char *argv[]) {
   int user_timeline_port = config_json["user-timeline-service"]["port"];
   std::string user_timeline_addr = config_json["user-timeline-service"]["addr"];
 
-  int antipode_oracle_port = config_json["antipode-oracle"]["port"];
-  std::string antipode_oracle_addr = config_json["antipode-oracle"]["addr"];
-
 
   ClientPool<RedisClient> redis_client_pool("redis", redis_addr, redis_port,
                                             0, 128, 1000);
@@ -57,10 +54,6 @@ int main(int argc, char *argv[]) {
       user_timeline_client_pool("user-timeline-client", user_timeline_addr,
                                 user_timeline_port, 0, 128, 1000);
 
-  ClientPool<ThriftClient<AntipodeOracleClient>>
-      antipode_oracle_client_pool("antipode-oracle", antipode_oracle_addr,
-                                antipode_oracle_port, 0, 128, 1000);
-
   ClientPool<RabbitmqClient> rabbitmq_client_pool("rabbitmq", rabbitmq_addr,
       rabbitmq_port, 0, 128, 1000);
 
@@ -70,7 +63,6 @@ int main(int argc, char *argv[]) {
               &redis_client_pool,
               &post_storage_client_pool,
               &user_timeline_client_pool,
-              &antipode_oracle_client_pool,
               &rabbitmq_client_pool)),
       std::make_shared<TServerSocket>("0.0.0.0", port),
       std::make_shared<TFramedTransportFactory>(),

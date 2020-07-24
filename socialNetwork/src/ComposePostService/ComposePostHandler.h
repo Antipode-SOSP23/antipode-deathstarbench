@@ -13,7 +13,6 @@
 #include "../../gen-cpp/ComposePostService.h"
 #include "../../gen-cpp/PostStorageService.h"
 #include "../../gen-cpp/UserTimelineService.h"
-#include "../../gen-cpp/AntipodeOracle.h"
 #include "../ClientPool.h"
 #include "../logger.h"
 #include "../tracing.h"
@@ -38,7 +37,6 @@ class ComposePostHandler : public ComposePostServiceIf {
       ClientPool<RedisClient> *,
       ClientPool<ThriftClient<PostStorageServiceClient>> *,
       ClientPool<ThriftClient<UserTimelineServiceClient>> *,
-      ClientPool<ThriftClient<AntipodeOracleClient>> *,
       ClientPool<RabbitmqClient> *rabbitmq_client_pool);
   ~ComposePostHandler() override = default;
 
@@ -66,7 +64,6 @@ class ComposePostHandler : public ComposePostServiceIf {
   ClientPool<RedisClient> *_redis_client_pool;
   ClientPool<ThriftClient<PostStorageServiceClient>> *_post_storage_client_pool;
   ClientPool<ThriftClient<UserTimelineServiceClient>> *_user_timeline_client_pool;
-  ClientPool<ThriftClient<AntipodeOracleClient>> *_antipode_oracle_client_pool;
   ClientPool<RabbitmqClient> *_rabbitmq_client_pool;
 
   std::exception_ptr _rabbitmq_teptr;
@@ -90,21 +87,15 @@ class ComposePostHandler : public ComposePostServiceIf {
       const std::vector<int64_t> &user_mentions_id,
       const std::map<std::string, std::string> &carrier,
       Baggage& baggage, std::promise<Baggage> baggage_promise);
-
-  // ANTIPODE
-  // Just testing communication not supposed to be here
-  void _AntipodeIsVisible(int64_t post_id);
 };
 
 ComposePostHandler::ComposePostHandler(
     ClientPool<social_network::RedisClient> * redis_client_pool,
     ClientPool<social_network::ThriftClient<PostStorageServiceClient>> *post_storage_client_pool,
     ClientPool<social_network::ThriftClient<UserTimelineServiceClient>> *user_timeline_client_pool,
-    ClientPool<social_network::ThriftClient<AntipodeOracleClient>> *antipode_oracle_client_pool,
     ClientPool<RabbitmqClient> *rabbitmq_client_pool) {
   _redis_client_pool = redis_client_pool;
   _post_storage_client_pool = post_storage_client_pool;
-  _antipode_oracle_client_pool = antipode_oracle_client_pool;
   _user_timeline_client_pool = user_timeline_client_pool;
   _rabbitmq_client_pool = rabbitmq_client_pool;
   _rabbitmq_teptr = nullptr;
@@ -715,13 +706,9 @@ void ComposePostHandler::_ComposeAndUpload(
       post.post_id, post.creator.user_id, post.timestamp,
       std::ref(user_mentions_id), std::ref(carrier), std::ref(upload_home_timeline_helper_baggage), std::move(upload_home_promise));
 
-  std::thread antipode_is_visible(
-      &ComposePostHandler::_AntipodeIsVisible, this, post.post_id);
-
   upload_post_worker.join();
   upload_user_timeline_worker.join();
   upload_home_timeline_worker.join();
-  antipode_is_visible.join();
 
   try {
     upload_post_helper_baggage = upload_post_future.get();
@@ -918,29 +905,6 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
   }
   baggage_promise.set_value(BRANCH_CURRENT_BAGGAGE());
   DELETE_CURRENT_BAGGAGE();
-}
-
-void ComposePostHandler::_AntipodeIsVisible(int64_t post_id) {
-  LOG(error) << "MOOOO???? - _AntipodeIsVisible";
-  auto antipode_orable_client_wrapper = _antipode_oracle_client_pool->Pop();
-  if (!antipode_orable_client_wrapper) {
-    ServiceException se;
-    se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
-    se.message = "Failed to connect to antipode-oracle";
-    throw se;
-  }
-
-  auto antipode_oracle_client = antipode_orable_client_wrapper->GetClient();
-  try {
-    bool response;
-    response = antipode_oracle_client->MakeVisible(post_id);
-  } catch (...) {
-    LOG(error) << "Failed to ask antipode-oracle";
-    _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
-    throw;
-  }
-  LOG(error) << "Asked antipode-oracle successfuly";
-  _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
 }
 
 } // namespace social_network
