@@ -15,6 +15,7 @@
 #include "../utils.h"
 #include "../../gen-cpp/social_network_types.h"
 #include "../../gen-cpp/SocialGraphService.h"
+#include "../../gen-cpp/AntipodeOracle.h"
 #include <xtrace/xtrace.h>
 #include <xtrace/baggage.h>
 
@@ -24,8 +25,9 @@ using namespace social_network;
 
 static std::exception_ptr _teptr;
 static ClientPool<RedisClient> *_redis_client_pool;
-static ClientPool<ThriftClient<SocialGraphServiceClient>>
-    *_social_graph_client_pool;
+static ClientPool<ThriftClient<SocialGraphServiceClient>> *_social_graph_client_pool;
+static ClientPool<ThriftClient<AntipodeOracleClient>> *_antipode_oracle_client_pool;
+
 
 void sigintHandler(int sig) {
   exit(EXIT_SUCCESS);
@@ -67,6 +69,33 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     int64_t post_id = msg_json["post_id"];
     int64_t timestamp = msg_json["timestamp"];
     std::vector<int64_t> user_mentions_id = msg_json["user_mentions_id"];
+
+    //----------
+    // ANTIPODE
+    //----------
+    LOG(error) << "MOOOO22???? - _AntipodeIsVisible";
+    auto antipode_orable_client_wrapper = _antipode_oracle_client_pool->Pop();
+    if (!antipode_orable_client_wrapper) {
+      ServiceException se;
+      se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
+      se.message = "22Failed to connect to antipode-oracle";
+      throw se;
+    }
+
+    auto antipode_oracle_client = antipode_orable_client_wrapper->GetClient();
+    try {
+      bool response;
+      response = antipode_oracle_client->IsVisible(post_id);
+    } catch (...) {
+      LOG(error) << "22Failed to make post visible to antipode-oracle";
+      _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
+      throw;
+    }
+    LOG(error) << "22Post visible antipode-oracle successfuly";
+    _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
+    //----------
+    // ANTIPODE
+    //----------
 
     // Find followers of the user
     auto social_graph_client_wrapper = _social_graph_client_pool->Pop();
@@ -198,6 +227,9 @@ int main(int argc, char *argv[]) {
       config_json["social-graph-service"]["addr"];
   int social_graph_service_port = config_json["social-graph-service"]["port"];
 
+  int antipode_oracle_port = config_json["antipode-oracle"]["port"];
+  std::string antipode_oracle_addr = config_json["antipode-oracle"]["addr"];
+
   ClientPool<RedisClient> redis_client_pool("redis", redis_addr, redis_port,
                                             0, 128, 1000);
 
@@ -206,8 +238,13 @@ int main(int argc, char *argv[]) {
           "social-graph-service", social_graph_service_addr,
           social_graph_service_port, 0, 128, 1000);
 
+  ClientPool<ThriftClient<AntipodeOracleClient>>
+      antipode_oracle_client_pool("antipode-oracle", antipode_oracle_addr,
+                                antipode_oracle_port, 0, 128, 1000);
+
   _redis_client_pool = &redis_client_pool;
   _social_graph_client_pool = &social_graph_client_pool;
+  _antipode_oracle_client_pool = &antipode_oracle_client_pool;
 
   std::unique_ptr<std::thread> threads_ptr[NUM_WORKERS];
   for (auto & thread_ptr : threads_ptr) {
