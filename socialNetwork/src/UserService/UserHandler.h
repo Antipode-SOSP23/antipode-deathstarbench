@@ -161,7 +161,7 @@ void UserHandler::RegisterUserWithId(
     const std::string &password,
     const int64_t user_id,
     const std::map<std::string, std::string> &carrier) {
-  
+
   auto baggage_it = carrier.find("baggage");
   if (baggage_it != carrier.end()) {
     SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
@@ -288,7 +288,7 @@ void UserHandler::RegisterUserWithId(
     }
     _social_graph_client_pool->Push(social_graph_client_wrapper);
   }
-  
+
   span->Finish();
   XTRACE("UserHandler::RegisterUserWithUserId complete");
   response.baggage = GET_CURRENT_BAGGAGE().str();
@@ -408,7 +408,7 @@ void UserHandler::RegisterUser(
     BSON_APPEND_UTF8(new_doc, "salt", salt.c_str());
     std::string password_hashed = picosha2::hash256_hex_string(password + salt);
     BSON_APPEND_UTF8(new_doc, "password", password_hashed.c_str());
-    
+
     XTRACE("MongoInsertUser start");
     auto user_insert_span = opentracing::Tracer::Global()->StartSpan(
         "MongoInsertUser", { opentracing::ChildOf(&span->context()) });
@@ -995,7 +995,7 @@ void UserHandler::GetUserId(
     int64_t req_id,
     const std::string &username,
     const std::map<std::string, std::string> &carrier) {
-  
+
   auto baggage_it = carrier.find("baggage");
   if (baggage_it != carrier.end()) {
     SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
@@ -1175,6 +1175,7 @@ void UserHandler::GetUserId(
   span->Finish();
   XTRACE("UserHandler::GetUserId complete");
   response.baggage = GET_CURRENT_BAGGAGE().str();
+  response.result = user_id;
   DELETE_CURRENT_BAGGAGE();
 }
 
@@ -1247,6 +1248,3 @@ int GetMachineId (std::string *mac_hash) {
 } // namespace social_network
 
 #endif //SOCIAL_NETWORK_MICROSERVICES_USERHANDLER_H
-
-
-
