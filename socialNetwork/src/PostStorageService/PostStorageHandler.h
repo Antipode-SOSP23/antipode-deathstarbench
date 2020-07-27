@@ -189,26 +189,26 @@ void PostStorageHandler::StorePostAsync(
   //----------
   // ANTIPODE
   //----------
-  LOG(error) << "MOOOO22???? - _AntipodeMakeVisible";
+  LOG(debug) << "[ANTIPODE] Start MakeVisible for post_id: " << post.post_id;
   auto antipode_orable_client_wrapper = _antipode_oracle_client_pool->Pop();
   if (!antipode_orable_client_wrapper) {
     ServiceException se;
     se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
-    se.message = "22Failed to connect to antipode-oracle";
+    se.message = "[ANTIPODE] Failed to connect to antipode-oracle";
     throw se;
   }
 
   auto antipode_oracle_client = antipode_orable_client_wrapper->GetClient();
+  bool antipode_oracle_response;
   try {
-    bool response;
-    response = antipode_oracle_client->MakeVisible(post.post_id);
+    antipode_oracle_response = antipode_oracle_client->MakeVisible(post.post_id);
   } catch (...) {
-    LOG(error) << "22Failed to make post visible to antipode-oracle";
+    LOG(error) << "[ANTIPODE] Failed to write post visibility to Oracle";
     _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
     throw;
   }
-  LOG(error) << "22Post visible antipode-oracle successfuly";
   _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
+  LOG(debug) << "[ANTIPODE] Post successfuly marked as visible in Oracle with response: " << antipode_oracle_response;
   //----------
   // ANTIPODE
   //----------

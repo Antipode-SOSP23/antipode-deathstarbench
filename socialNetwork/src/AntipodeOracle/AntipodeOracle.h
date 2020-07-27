@@ -43,23 +43,22 @@ namespace social_network {
     }
 
     bool MakeVisible(const int64_t object_id) {
-      // Your implementation goes here
-      LOG(error) << "MakeVisible: " << object_id;
       cache.insert(object_id);
-
-      tbb::concurrent_unordered_set<int64_t, tbb::tbb_hash<int64_t>, std::equal_to<int>>::iterator cacheit;
-      cacheit = cache.begin();
-      while (cacheit != cache.end()){
-        LOG(error) << "cache: " << *cacheit;
-        ++cacheit;
-      }
-      return 0;
+      LOG(debug) << "[ANTIPODE] Making '" << object_id << "' visible ..." ;
+      return true;
     }
 
     bool IsVisible(const int64_t object_id) {
-      // Your implementation goes here
-      LOG(error) << "IsVisible: " << object_id;
-      cache.insert(object_id);
+      LOG(debug) << "[ANTIPODE] Checking '" << object_id << "' for visibility ..." ;
+
+      tbb::concurrent_unordered_set<int64_t, tbb::tbb_hash<int64_t>, std::equal_to<int>>::iterator cacheit;
+      cacheit = cache.find(object_id);
+      while (cacheit != cache.end()){
+        LOG(debug) << "[ANTIPODE] CHEKING FIND: " << *cacheit;
+        ++cacheit;
+        return true;
+      }
+      return false;
     }
   };
 

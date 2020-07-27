@@ -73,26 +73,29 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     //----------
     // ANTIPODE
     //----------
-    LOG(error) << "MOOOO22???? - _AntipodeIsVisible";
+    LOG(debug) << "[ANTIPODE] Start IsVisible for post_id: " << post_id;
     auto antipode_orable_client_wrapper = _antipode_oracle_client_pool->Pop();
     if (!antipode_orable_client_wrapper) {
       ServiceException se;
       se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
-      se.message = "22Failed to connect to antipode-oracle";
+      se.message = "[ANTIPODE] Failed to connect to antipode-oracle";
       throw se;
     }
-
     auto antipode_oracle_client = antipode_orable_client_wrapper->GetClient();
-    try {
-      bool response;
-      response = antipode_oracle_client->IsVisible(post_id);
-    } catch (...) {
-      LOG(error) << "22Failed to make post visible to antipode-oracle";
-      _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
-      throw;
+    // loop oracle calls until its visible
+    bool antipode_oracle_response = false;
+    while (!antipode_oracle_response) {
+      LOG(debug) << "[ANTIPODE] Still false ... " << post_id;
+      try {
+        antipode_oracle_response = antipode_oracle_client->IsVisible(post_id);
+      } catch (...) {
+        LOG(error) << "[ANTIPODE] Failed to check post visibility in Oracle";
+        _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
+        throw;
+      }
     }
-    LOG(error) << "22Post visible antipode-oracle successfuly";
     _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
+    LOG(debug) << "[ANTIPODE] Post successfuly checked as visible in Oracle with response: " << antipode_oracle_response;
     //----------
     // ANTIPODE
     //----------
