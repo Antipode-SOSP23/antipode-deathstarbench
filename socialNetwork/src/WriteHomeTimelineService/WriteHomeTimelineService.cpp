@@ -124,6 +124,9 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     }
     _social_graph_client_pool->Push(social_graph_client_wrapper);
 
+    std::string debug_str(followers_id.begin(), followers_id.end());
+    LOG(debug) << "Followers are: " << debug_str;
+
     std::set<int64_t> followers_id_set(followers_id.begin(),
         followers_id.end());
     followers_id_set.insert(user_mentions_id.begin(), user_mentions_id.end());

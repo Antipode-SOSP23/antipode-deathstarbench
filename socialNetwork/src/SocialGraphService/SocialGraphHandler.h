@@ -311,7 +311,7 @@ void SocialGraphHandler::Unfollow(
     int64_t user_id,
     int64_t followee_id,
     const std::map<std::string, std::string> &carrier) {
-  
+
   auto baggage_it = carrier.find("baggage");
   if (baggage_it != carrier.end()) {
     SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
@@ -974,7 +974,7 @@ void SocialGraphHandler::FollowWithUsername(
           LOG(error) << "Failed to get user_id from user-service";
           XTRACE("Failed to get user_id from user-service");
           throw;
-        }        
+        }
         _user_service_client_pool->Push(user_client_wrapper);
         return _return;
       });
@@ -1043,7 +1043,7 @@ void SocialGraphHandler::UnfollowWithUsername(
     const std::string &user_name,
     const std::string &followee_name,
     const std::map<std::string, std::string> &carrier) {
-  
+
   auto baggage_it = carrier.find("baggage");
   if (baggage_it != carrier.end()) {
     SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
@@ -1121,7 +1121,7 @@ void SocialGraphHandler::UnfollowWithUsername(
           LOG(error) << "Failed to get user_id from user-service";
           XTRACE("Failed to get user_id from user-service");
           throw;
-        }        
+        }
         _user_service_client_pool->Push(user_client_wrapper);
         return _return;
       });
