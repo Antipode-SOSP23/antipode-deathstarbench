@@ -6,42 +6,129 @@ from pprint import pprint
 import time
 import json
 
-# data common to both requests
+
+def _register_user(user_id):
+  data = {
+    'user_id' : user_id,
+    'username' : f"username_{user_id}",
+    'first_name': f"first_name_{user_id}",
+    'last_name': f"last_name_{user_id}",
+    'password': f"password_{user_id}",
+  }
+  # make first request to compose the post
+  headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+  r = requests.post('http://localhost:8080/wrk2-api/user/register', data=data, headers=headers)
+  print(f"[Register User] {r.status_code}, {r.reason}")
+  if r.status_code == 200:
+    pprint(data)
+  else:
+    print(f"[Register User] ERROR {r.status_code}, {r.reason}")
+    exit()
+
+
+def _follow_user(followee_id, follower_id):
+  data = {
+    'user_name': f"username_{follower_id}",
+    'followee_name' : f"username_{followee_id}",
+  }
+  # make first request to compose the post
+  headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+  r = requests.post('http://localhost:8080/wrk2-api/user/follow', data=data, headers=headers)
+  print(f"[Follow User] {r.status_code}, {r.reason}")
+  if r.status_code == 200:
+    pprint(data)
+  else:
+    print(f"[Follow User] ERROR {r.status_code}, {r.reason}")
+    exit()
+
+
+def _create_post(user_id):
+  # data for url request
+  data = {
+    'user_id' : user_id,
+    'username' : f"username_{user_id}",
+    'text' : fake.text(),
+    'media_ids' : [],
+    'media_types' : [],
+    'post_type' : 0,
+  }
+  # make first request to compose the post
+  headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+  r = requests.post('http://localhost:8080/wrk2-api/post/compose', data=data, headers=headers)
+  print(f"[Compose Post] {r.status_code}, {r.reason}")
+  if r.status_code == 200:
+    pprint(data)
+  else:
+    print(f"[Compose Post] ERROR {r.status_code}, {r.reason}")
+    exit()
+
+
+def _read_home_timeline(user_id):
+  # make second request to read the user timeline
+  wht_params = {
+    'user_id' : user_id,
+    'start' : 0,
+    'stop' : 100,
+  }
+  headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+  r = requests.get('http://localhost:8080/wrk2-api/home-timeline/read', params=wht_params)
+  print(f"[Read Home Timeline] {r.status_code}, {r.reason}")
+  if r.status_code == 200:
+    json_content = json.loads(r.content)
+    # obj = json_content[-1]
+    pprint(json_content)
+  else:
+    print(f"[Read Home Timeline] ERROR {r.status_code}, {r.reason}")
+
+
+def _read_user_timeline(user_id):
+  # make second request to read the user timeline
+  wht_params = {
+    'user_id' : user_id,
+    'start' : 0,
+    'stop' : 100,
+  }
+  headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+  r = requests.get('http://localhost:8080/wrk2-api/user-timeline/read', params=wht_params)
+  print(f"[Read User Timeline] {r.status_code}, {r.reason}")
+  if r.status_code == 200:
+    json_content = json.loads(r.content)
+    # obj = json_content[-1]
+    pprint(json_content)
+  else:
+    print(f"[Read User Timeline] ERROR {r.status_code}, {r.reason}")
+
+
+#---------
+# Create main user
+#
 user_id = random.randrange(1, 962)
-
-# data for url request
-compose_data = {
-  'user_id' : user_id,
-  'username' : f"username_{user_id}",
-  'text' : fake.text(),
-  'media_ids' : [],
-  'media_types' : [],
-  'post_type' : 0,
-}
-# make first request to compose the post
-headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-r = requests.post('http://localhost:8080/wrk2-api/post/compose', data=compose_data, headers=headers)
-print(f"[Compose Post] {r.status_code}, {r.reason}")
-if r.status_code == 200:
-  pprint(compose_data)
-else:
-  print(f"[Compose Post] ERROR {r.status_code}, {r.reason}")
-  exit()
+# user_id = 10
+_register_user(user_id)
 
 
+#---------
+# Create followers
+#
+follower_ids = []
+for i in range(3):
+  fid = None
+  while(True):
+    fid = random.randrange(1, 962)
+    # fid = user_id + i + 1
+    if user_id != fid:
+      break
+  _register_user(fid)
+  _follow_user(user_id, fid)
+  follower_ids.append(fid)
+
+#---------
+# Create post
+#
+_create_post(user_id)
+
+#---------
+# Read user timeline
+#
 input("Waiting for the post to be available...")
-
-# make second request to read the user timeline
-wht_params = {
-  'user_id' : user_id,
-  'start' : 0,
-  'stop' : 100,
-}
-headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-r = requests.get('http://localhost:8080/wrk2-api/user-timeline/read', params=wht_params)
-print(f"[Read User Timeline] {r.status_code}, {r.reason}")
-if r.status_code == 200:
-  obj = json.loads(r.content)[-1]
-  pprint(obj)
-else:
-  print(f"[Read User Timeline] ERROR {r.status_code}, {r.reason}")
+_read_home_timeline(follower_ids[0])
