@@ -60,7 +60,8 @@ function _M.Follow()
   GenericObjectPool:returnConnection(client)
   span:finish()
 
-  xtrace.DeleteBaggage()
+  -- [ANTIPODE] Found bug while performing this delete
+  -- xtrace.DeleteBaggage()
 end
 
 return _M
