@@ -52,11 +52,13 @@ namespace social_network {
       LOG(debug) << "[ANTIPODE] Checking '" << object_id << "' for visibility ..." ;
 
       tbb::concurrent_unordered_set<int64_t, tbb::tbb_hash<int64_t>, std::equal_to<int>>::iterator cacheit;
-      cacheit = cache.find(object_id);
-      while (cacheit != cache.end()){
-        LOG(debug) << "[ANTIPODE] CHEKING FIND: " << *cacheit;
-        ++cacheit;
-        return true;
+      while(true){
+        cacheit = cache.find(object_id);
+        while (cacheit != cache.end()){
+          LOG(debug) << "[ANTIPODE] CHEKING FIND: " << *cacheit;
+          ++cacheit;
+          return true;
+        }
       }
       return false;
     }

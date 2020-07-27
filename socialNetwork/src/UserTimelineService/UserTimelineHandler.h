@@ -270,7 +270,7 @@ void UserTimelineHandler::ReadUserTimeline(
     throw;
   }
   _redis_client_pool->Push(redis_client_wrapper);
-  
+
   std::vector<int64_t> post_ids;
   auto post_ids_reply_array = post_ids_reply.as_array();
   for (auto &post_id_reply : post_ids_reply_array) {

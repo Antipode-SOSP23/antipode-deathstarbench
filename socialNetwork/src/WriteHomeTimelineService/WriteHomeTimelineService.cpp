@@ -84,15 +84,12 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     auto antipode_oracle_client = antipode_orable_client_wrapper->GetClient();
     // loop oracle calls until its visible
     bool antipode_oracle_response = false;
-    while (!antipode_oracle_response) {
-      LOG(debug) << "[ANTIPODE] Still false ... " << post_id;
-      try {
-        antipode_oracle_response = antipode_oracle_client->IsVisible(post_id);
-      } catch (...) {
-        LOG(error) << "[ANTIPODE] Failed to check post visibility in Oracle";
-        _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
-        throw;
-      }
+    try {
+      antipode_oracle_response = antipode_oracle_client->IsVisible(post_id);
+    } catch (...) {
+      LOG(error) << "[ANTIPODE] Failed to check post visibility in Oracle";
+      _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
+      throw;
     }
     _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
     LOG(debug) << "[ANTIPODE] Post successfuly checked as visible in Oracle with response: " << antipode_oracle_response;
