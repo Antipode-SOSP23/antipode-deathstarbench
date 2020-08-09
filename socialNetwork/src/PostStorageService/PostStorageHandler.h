@@ -186,6 +186,23 @@ void PostStorageHandler::StorePostAsync(
   insert_span->Finish();
   XTRACE("MongoInsertPost complete");
 
+  if (!inserted) {
+    LOG(error) << "Error: Failed to insert post to MongoDB: "
+               << error.message;
+    ServiceException se;
+    se.errorCode = ErrorCode::SE_MONGODB_ERROR;
+    se.message = error.message;
+    bson_destroy(new_doc);
+    mongoc_collection_destroy(collection);
+    mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
+    XTRACE("Failed to insert post to MongoDB");
+    throw se;
+  }
+
+  bson_destroy(new_doc);
+  mongoc_collection_destroy(collection);
+  mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
+
   //----------
   // ANTIPODE
   //----------
@@ -212,23 +229,6 @@ void PostStorageHandler::StorePostAsync(
   //----------
   // ANTIPODE
   //----------
-
-  if (!inserted) {
-    LOG(error) << "Error: Failed to insert post to MongoDB: "
-               << error.message;
-    ServiceException se;
-    se.errorCode = ErrorCode::SE_MONGODB_ERROR;
-    se.message = error.message;
-    bson_destroy(new_doc);
-    mongoc_collection_destroy(collection);
-    mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
-    XTRACE("Failed to insert post to MongoDB");
-    throw se;
-  }
-
-  bson_destroy(new_doc);
-  mongoc_collection_destroy(collection);
-  mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
 
   span->Finish();
   XTRACE("PostStorageHandler::StorePost complete");
@@ -478,6 +478,7 @@ void PostStorageHandler::ReadPost(
   response.result = _return;
   DELETE_CURRENT_BAGGAGE();
 }
+
 void PostStorageHandler::ReadPosts(
     PostListRpcResponse& response,
     int64_t req_id,
@@ -532,6 +533,7 @@ void PostStorageHandler::ReadPosts(
     throw se;
   }
 
+
   char** keys;
   size_t *key_sizes;
   keys = new char* [post_ids.size()];
@@ -555,6 +557,7 @@ void PostStorageHandler::ReadPosts(
     XTRACE("Cannot get posts");
     throw se;
   }
+
 
   char return_key[MEMCACHED_MAX_KEY];
   size_t return_key_length;
@@ -616,6 +619,7 @@ void PostStorageHandler::ReadPosts(
     free(return_value);
   }
   get_span->Finish();
+
   XTRACE("MemcachedMget complete");
   memcached_quit(memcached_client);
   memcached_pool_push(_memcached_client_pool, memcached_client);
@@ -735,10 +739,13 @@ void PostStorageHandler::ReadPosts(
     Baggage set_future_baggage = BRANCH_CURRENT_BAGGAGE();
     set_baggages.emplace_back(set_future_baggage);
     set_futures.emplace_back(std::async(std::launch::async, [&]() {
+      // [ANTIPODE]
+      // These baggages were causing invalid pointers
+      // ----
+
       memcached_return_t _rc;
-      BAGGAGE(set_future_baggage);
-      auto _memcached_client = memcached_pool_pop(
-          _memcached_client_pool, true, &_rc);
+      // BAGGAGE(set_future_baggage);
+      auto _memcached_client = memcached_pool_pop(_memcached_client_pool, true, &_rc);
       if (!_memcached_client) {
         LOG(error) << "Failed to pop a client from memcached pool";
         ServiceException se;
@@ -748,8 +755,7 @@ void PostStorageHandler::ReadPosts(
         throw se;
       }
       XTRACE("MemcachedSetPost start");
-      auto set_span = opentracing::Tracer::Global()->StartSpan(
-          "MmcSetPost", {opentracing::ChildOf(&span->context())});
+      // auto set_span = opentracing::Tracer::Global()->StartSpan("MmcSetPost", {opentracing::ChildOf(&span->context())});
       for (auto & it : post_json_map) {
         std::string id_str = std::to_string(it.first);
         _rc = memcached_set(
@@ -762,10 +768,11 @@ void PostStorageHandler::ReadPosts(
             static_cast<uint32_t>(0));
       }
       memcached_pool_push(_memcached_client_pool, _memcached_client);
-      set_span->Finish();
-      XTRACE("MemcachedSetPost complete");
-      }));
+      // set_span->Finish();
+      // XTRACE("MemcachedSetPost complete");
+    }));
   }
+
 
   if (return_map.size() != post_ids.size()) {
     try {
