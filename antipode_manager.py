@@ -46,6 +46,11 @@ AVAILABLE_WKLD_ENDPOINTS = {
       'uri': 'wrk2-api/user-timeline/read',
       'script_path': './wrk2/scripts/social-network/read-user-timeline.lua',
     },
+    'sequence-compose-post-read-user-timeline': {
+      'type': 'wrk2',
+      'uri': 'wrk2-api/user-timeline/read',
+      'script_path': './wrk2/scripts/social-network/sequence-compose-post-read-user-timeline.lua',
+    },
     'antipode-wht-error': {
       'type': 'python',
       'script_path': './scripts/antipode-wht-error.py',
