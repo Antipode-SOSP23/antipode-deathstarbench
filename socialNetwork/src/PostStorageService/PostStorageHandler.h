@@ -70,11 +70,18 @@ void PostStorageHandler::StorePostAsync(
     int64_t req_id, const social_network::Post &post,
     const std::map<std::string, std::string> &carrier) {
 
-  // [ANTIPODE]
+  //----------
+  // ANTIPODE
+  //----------
+
   // force WritHomeTimeline to an error by sleeping
-  LOG(debug) << "[ANTIPODE] Sleeping ...";
-  std::this_thread::sleep_for (std::chrono::seconds(30));
-  LOG(debug) << "[ANTIPODE] Done Sleeping!";
+  // LOG(debug) << "[ANTIPODE] Sleeping ...";
+  // std::this_thread::sleep_for (std::chrono::seconds(30));
+  // LOG(debug) << "[ANTIPODE] Done Sleeping!";
+
+  //----------
+  // ANTIPODE
+  //----------
 
   auto baggage_it = carrier.find("baggage");
   if (baggage_it != carrier.end()) {
