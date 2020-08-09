@@ -5,6 +5,7 @@
 #include <thread>
 #include <sstream>
 #include <set>
+#include <chrono>
 
 #include "../AmqpLibeventHandler.h"
 #include "../ClientPool.h"
@@ -73,6 +74,9 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     //----------
     // ANTIPODE
     //----------
+    using namespace std::chrono;
+
+    high_resolution_clock::time_point t1 = high_resolution_clock::now();
     LOG(debug) << "[ANTIPODE] Start IsVisible for post_id: " << post_id;
     auto antipode_orable_client_wrapper = _antipode_oracle_client_pool->Pop();
     if (!antipode_orable_client_wrapper) {
@@ -92,6 +96,11 @@ void OnReceivedWorker(const AMQP::Message &msg) {
       throw;
     }
     _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
+
+    high_resolution_clock::time_point t2 = high_resolution_clock::now();
+    duration<double, std::milli> time_span = t2 - t1;
+
+    LOG(debug) << "[ANTIPODE] " << post_id << " TOOK " << time_span.count();
     LOG(debug) << "[ANTIPODE] Post successfuly checked as visible in Oracle with response: " << antipode_oracle_response;
     //----------
     // ANTIPODE
@@ -195,7 +204,7 @@ void WorkerThread(std::string &addr, int port) {
 
 
   std::thread heartbeat_thread(HeartbeatSend, std::ref(handler),
-      std::ref(connection), 30);
+      std::ref(connection), 60);
   heartbeat_thread.detach();
   handler.Start();
   LOG(debug) << "Closing connection.";
