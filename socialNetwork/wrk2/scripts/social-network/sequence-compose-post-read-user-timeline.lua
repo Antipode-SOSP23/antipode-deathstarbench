@@ -26,19 +26,36 @@ local function decRandom(length)
   end
 end
 
-user_id = 950
-
 request = function()
   local user_index = math.random(1, 962)
   local username = "username_" .. tostring(user_index)
   local user_id = tostring(user_index)
   local text = stringRandom(256)
-  local num_user_mentions = math.random(0, 5)
-  local num_urls = math.random(0, 5)
-  local num_media = math.random(0, 4)
+  local num_user_mentions = -1 -- math.random(0, 5)
+  local num_urls = -1 -- math.random(0, 5)
+  local num_media = -1 --math.random(0, 4)
   local media_ids = '['
   local media_types = '['
 
+  -- find follower
+  local dataset_path = debug.getinfo(1,'S').source:match("(.*/)")
+  dataset_path = string.sub(dataset_path, 2)
+  dataset_path = dataset_path .. "../../../datasets/social-graph/socfb-Reed98/socfb-Reed98.mtx"
+
+  local followers = {}
+  for line in io.lines(dataset_path) do
+    local id1, id2 = string.match(line, "(%d+)%s+(%d+)")
+
+    if id1 == user_id then
+      table.insert(followers, id2)
+    end
+    if id2 == user_id then
+      table.insert(followers, id1)
+    end
+  end
+  follower_id = followers[math.random(#followers)]
+
+  -- compose post
   for i = 0, num_user_mentions, 1 do
     local user_mention_id
     while (true) do
@@ -68,34 +85,9 @@ request = function()
   local headers = {}
   local body
   headers["Content-Type"] = "application/x-www-form-urlencoded"
-  if num_media then
-    body   = "username=" .. username .. "&user_id=" .. user_id ..
-        "&text=" .. text .. "&media_ids=" .. media_ids ..
-        "&media_types=" .. media_types .. "&post_type=0"
-  else
-    body   = "username=" .. username .. "&user_id=" .. user_id ..
-        "&text=" .. text .. "&media_ids=" .. "&post_type=0"
-  end
+  body = "username=" .. username .. "&user_id=" .. user_id ..
+         "&text=" .. text .. "&post_type=0"
 
-  -- read followers
-  local dataset_path = debug.getinfo(1,'S').source:match("(.*/)")
-  dataset_path = string.sub(dataset_path, 2)
-  dataset_path = dataset_path .. "../../../datasets/social-graph/socfb-Reed98/socfb-Reed98.mtx"
-
-  local followers = {}
-  for line in io.lines(dataset_path) do
-    local id1, id2 = string.match(line, "(%d+)%s+(%d+)")
-
-    if id1 == tostring(user_id) then
-      table.insert(followers, id2)
-    end
-    if id2 == tostring(user_id) then
-      table.insert(followers, id1)
-    end
-  end
-  follower_id = followers[math.random(#followers)]
-
-  -- call compose post
   local http = require("socket.http")
   local body, code, headers, status = http.request(path, body)
 
@@ -107,6 +99,6 @@ request = function()
   local method = "GET"
   local headers = {}
   headers["Content-Type"] = "application/x-www-form-urlencoded"
-  local path = "http://localhost:8080/wrk2-api/home-timeline/read?" .. args
+  local path = "http://localhost:8080/wrk2-api/user-timeline/read?" .. args
   return wrk.format(method, path, headers, nil)
 end
