@@ -199,6 +199,7 @@ ENV LUA_PATH=$LUA_PATH;/gen-lua/?.lua
 
 RUN luarocks install long \
     && luarocks install lua-resty-jwt 0.2.0-0 \
+    && luarocks install penlight \
     && ldconfig
 
 RUN apt-get update \
