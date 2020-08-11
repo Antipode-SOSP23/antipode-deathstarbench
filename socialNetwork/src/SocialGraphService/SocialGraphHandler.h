@@ -568,13 +568,13 @@ void SocialGraphHandler::GetFollowers(
         _return.emplace_back(std::stoul(item.as_string()));
       }
       _redis_client_pool->Push(redis_client_wrapper);
-      return;
     } else {
       ServiceException se;
       se.message = "Failed to get followers from Redis";
       se.errorCode = ErrorCode::SE_REDIS_ERROR;
       _redis_client_pool->Push(redis_client_wrapper);
       XTRACE("Failed to get followers from Redis");
+      LOG(error) << "Failed to get followers from Redis";
       throw se;
     }
   } else {
