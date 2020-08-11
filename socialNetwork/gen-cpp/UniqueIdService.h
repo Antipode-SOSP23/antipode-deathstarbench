@@ -15,13 +15,13 @@ namespace social_network {
 
 #ifdef _MSC_VER
   #pragma warning( push )
-  #pragma warning (disable : 4250 ) //inheriting methods via dominance 
+  #pragma warning (disable : 4250 ) //inheriting methods via dominance
 #endif
 
 class UniqueIdServiceIf {
  public:
   virtual ~UniqueIdServiceIf() {}
-  virtual void UploadUniqueId(BaseRpcResponse& _return, const int64_t req_id, const PostType::type post_type, const std::map<std::string, std::string> & carrier) = 0;
+  virtual void UploadUniqueId(UserIdRpcResponse& _return, const int64_t req_id, const PostType::type post_type, const std::map<std::string, std::string> & carrier) = 0;
 };
 
 class UniqueIdServiceIfFactory {
@@ -51,7 +51,7 @@ class UniqueIdServiceIfSingletonFactory : virtual public UniqueIdServiceIfFactor
 class UniqueIdServiceNull : virtual public UniqueIdServiceIf {
  public:
   virtual ~UniqueIdServiceNull() {}
-  void UploadUniqueId(BaseRpcResponse& /* _return */, const int64_t /* req_id */, const PostType::type /* post_type */, const std::map<std::string, std::string> & /* carrier */) {
+  void UploadUniqueId(UserIdRpcResponse& /* _return */, const int64_t /* req_id */, const PostType::type /* post_type */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
 };
@@ -134,12 +134,12 @@ class UniqueIdService_UploadUniqueId_result {
   }
 
   virtual ~UniqueIdService_UploadUniqueId_result() throw();
-  BaseRpcResponse success;
+  UserIdRpcResponse success;
   ServiceException se;
 
   _UniqueIdService_UploadUniqueId_result__isset __isset;
 
-  void __set_success(const BaseRpcResponse& val);
+  void __set_success(const UserIdRpcResponse& val);
 
   void __set_se(const ServiceException& val);
 
@@ -173,7 +173,7 @@ class UniqueIdService_UploadUniqueId_presult {
 
 
   virtual ~UniqueIdService_UploadUniqueId_presult() throw();
-  BaseRpcResponse* success;
+  UserIdRpcResponse* success;
   ServiceException se;
 
   _UniqueIdService_UploadUniqueId_presult__isset __isset;
@@ -207,9 +207,9 @@ class UniqueIdServiceClient : virtual public UniqueIdServiceIf {
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> getOutputProtocol() {
     return poprot_;
   }
-  void UploadUniqueId(BaseRpcResponse& _return, const int64_t req_id, const PostType::type post_type, const std::map<std::string, std::string> & carrier);
+  void UploadUniqueId(UserIdRpcResponse& _return, const int64_t req_id, const PostType::type post_type, const std::map<std::string, std::string> & carrier);
   void send_UploadUniqueId(const int64_t req_id, const PostType::type post_type, const std::map<std::string, std::string> & carrier);
-  void recv_UploadUniqueId(BaseRpcResponse& _return);
+  void recv_UploadUniqueId(UserIdRpcResponse& _return);
  protected:
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;
@@ -258,7 +258,7 @@ class UniqueIdServiceMultiface : virtual public UniqueIdServiceIf {
     ifaces_.push_back(iface);
   }
  public:
-  void UploadUniqueId(BaseRpcResponse& _return, const int64_t req_id, const PostType::type post_type, const std::map<std::string, std::string> & carrier) {
+  void UploadUniqueId(UserIdRpcResponse& _return, const int64_t req_id, const PostType::type post_type, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
@@ -298,9 +298,9 @@ class UniqueIdServiceConcurrentClient : virtual public UniqueIdServiceIf {
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> getOutputProtocol() {
     return poprot_;
   }
-  void UploadUniqueId(BaseRpcResponse& _return, const int64_t req_id, const PostType::type post_type, const std::map<std::string, std::string> & carrier);
+  void UploadUniqueId(UserIdRpcResponse& _return, const int64_t req_id, const PostType::type post_type, const std::map<std::string, std::string> & carrier);
   int32_t send_UploadUniqueId(const int64_t req_id, const PostType::type post_type, const std::map<std::string, std::string> & carrier);
-  void recv_UploadUniqueId(BaseRpcResponse& _return, const int32_t seqid);
+  void recv_UploadUniqueId(UserIdRpcResponse& _return, const int32_t seqid);
  protected:
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;

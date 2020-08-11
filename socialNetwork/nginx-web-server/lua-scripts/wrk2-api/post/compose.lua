@@ -117,6 +117,7 @@ function _M.ComposePost()
 
   xtracer.StartLuaTrace("NginxWebServer5", "ComposePost");
   xtracer.LogXTrace("Processing request")
+  local original_req_id = ngx.var.request_id
   local req_id = tonumber(string.sub(ngx.var.request_id, 0, 15), 16)
   local tracer = bridge_tracer.new_from_global()
   local parent_span_context = tracer:binary_extract(ngx.var.opentracing_binary_context)
@@ -166,7 +167,7 @@ function _M.ComposePost()
       ngx.exit(status)
     end
   end
-  ngx.say("Successfully upload post")
+  ngx.say("Successfully uploaded post #"..original_req_id)
   span:finish()
   xtracer.LogXTrace("Successfully uploaded post")
   ngx.exit(status)

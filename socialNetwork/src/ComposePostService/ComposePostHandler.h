@@ -643,8 +643,7 @@ void ComposePostHandler::_ComposeAndUpload(
   post.req_id = req_id;
   post.text = text_reply.as_string();
   post.post_id = std::stoul(post_id_reply.as_string());
-  post.timestamp = duration_cast<milliseconds>(
-      system_clock::now().time_since_epoch()).count();
+  post.timestamp = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
   post.post_type = static_cast<PostType::type>(stoi(post_type_reply.as_string()));
 
   LOG(debug) << creator_reply.as_string();

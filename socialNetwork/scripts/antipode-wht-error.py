@@ -68,13 +68,14 @@ def _read_home_timeline(user_id):
   wht_params = {
     'user_id' : user_id,
     'start' : 0,
-    'stop' : 100,
+    'stop' : 10000,
   }
   headers = {'Content-Type': 'application/x-www-form-urlencoded'}
   r = requests.get('http://localhost:8080/wrk2-api/home-timeline/read', params=wht_params)
   print(f"[Read Home Timeline] {r.status_code}, {r.reason}")
   if r.status_code == 200:
     json_content = json.loads(r.content)
+    print(f"[Read Home Timeline] Loaded {len(json_content)} records")
     # obj = json_content[-1]
     pprint(json_content)
   else:

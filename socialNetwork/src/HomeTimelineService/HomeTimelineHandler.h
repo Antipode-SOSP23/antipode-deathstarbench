@@ -84,8 +84,7 @@ void ReadHomeTimelineHandler::ReadHomeTimeline(
   XTRACE("RedisFind start");
   auto redis_span = opentracing::Tracer::Global()->StartSpan(
       "RedisFind", {opentracing::ChildOf(&span->context())});
-  auto post_ids_future = redis_client->zrevrange(
-      std::to_string(user_id), start, stop - 1);
+  auto post_ids_future = redis_client->zrevrange(std::to_string(user_id), start, stop - 1);
   redis_client->sync_commit();
   _redis_client_pool->Push(redis_client_wrapper);
   redis_span->Finish();

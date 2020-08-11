@@ -101,7 +101,7 @@ struct UrlListRpcResponse {
 }
 
 service UniqueIdService {
-  BaseRpcResponse UploadUniqueId (
+  UserIdRpcResponse UploadUniqueId (
       1: i64 req_id,
       2: PostType post_type,
       3: map<string, string> carrier

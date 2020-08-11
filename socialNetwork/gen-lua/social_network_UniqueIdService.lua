@@ -133,7 +133,7 @@ function UploadUniqueId_args:read(iprot)
     elseif fid == 3 then
       if ftype == TType.MAP then
         self.carrier = {}
-        local _ktype37, _vtype38, _size36 = iprot:readMapBegin() 
+        local _ktype37, _vtype38, _size36 = iprot:readMapBegin()
         for _i=1,_size36 do
           local _key40 = iprot:readString()
           local _val41 = iprot:readString()
@@ -190,7 +190,7 @@ function UploadUniqueId_result:read(iprot)
       break
     elseif fid == 0 then
       if ftype == TType.STRUCT then
-        self.success = BaseRpcResponse:new{}
+        self.success = UserIdRpcResponse:new{}
         self.success:read(iprot)
       else
         iprot:skip(ftype)

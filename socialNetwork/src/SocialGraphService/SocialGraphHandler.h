@@ -550,10 +550,8 @@ void SocialGraphHandler::GetFollowers(
   auto redis_client = redis_client_wrapper->GetClient();
 
   XTRACE("RedisGet start");
-  auto redis_span = opentracing::Tracer::Global()->StartSpan(
-      "RedisGet", {opentracing::ChildOf(&span->context())});
-  auto num_follower = redis_client->zcard(
-      std::to_string(user_id) + ":followers");
+  auto redis_span = opentracing::Tracer::Global()->StartSpan("RedisGet", {opentracing::ChildOf(&span->context())});
+  auto num_follower = redis_client->zcard(std::to_string(user_id) + ":followers");
   redis_client->sync_commit();
   auto num_follower_reply = num_follower.get();
 

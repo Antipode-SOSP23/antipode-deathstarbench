@@ -124,7 +124,7 @@ function _M.ReadHomeTimeline()
       xtracer.LogXTrace("Loading timeline")
       local home_timeline = _LoadTimeline(ret.result)
       ngx.header.content_type = "application/json; charset=utf-8"
-      ngx.say(cjson.encode(home_timeline) )
+      ngx.say(cjson.encode(home_timeline))
     end
   end
   xtracer.DeleteBaggage()
