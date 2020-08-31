@@ -120,8 +120,7 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     try {
       writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
       UidListRpcResponse response;
-      social_graph_client->GetFollowers(response, req_id, user_id,
-                                        writer_text_map);
+      social_graph_client->GetFollowers(response, req_id, user_id, writer_text_map);
       followers_id = response.result;
       Baggage b = Baggage::deserialize(response.baggage);
       JOIN_CURRENT_BAGGAGE(b);
@@ -133,8 +132,7 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     }
     _social_graph_client_pool->Push(social_graph_client_wrapper);
 
-    std::set<int64_t> followers_id_set(followers_id.begin(),
-        followers_id.end());
+    std::set<int64_t> followers_id_set(followers_id.begin(), followers_id.end());
     followers_id_set.insert(user_mentions_id.begin(), user_mentions_id.end());
 
     // Update Redis ZSet
@@ -153,11 +151,11 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     std::vector<std::string> options{"NX"};
     std::string post_id_str = std::to_string(post_id);
     std::string timestamp_str = std::to_string(timestamp);
-    std::multimap<std::string, std::string> value =
-        {{timestamp_str, post_id_str}};
+    std::multimap<std::string, std::string> value = {{timestamp_str, post_id_str}};
 
     // writes to the followers timeline
     for (auto &follower_id : followers_id_set) {
+      // LOG(debug) << "WRITING " << post_id_str << " TO FOLLOWER " << std::to_string(follower_id);
       redis_client->zadd(std::to_string(follower_id), options, value);
     }
 

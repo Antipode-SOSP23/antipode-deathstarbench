@@ -20,7 +20,7 @@ class UniqueIdServiceHandler : virtual public UniqueIdServiceIf {
     // Your initialization goes here
   }
 
-  void UploadUniqueId(BaseRpcResponse& _return, const int64_t req_id, const PostType::type post_type, const std::map<std::string, std::string> & carrier) {
+  void UploadUniqueId(LoginRpcResponse& _return, const int64_t req_id, const PostType::type post_type, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("UploadUniqueId\n");
   }
@@ -39,4 +39,3 @@ int main(int argc, char **argv) {
   server.serve();
   return 0;
 }
-

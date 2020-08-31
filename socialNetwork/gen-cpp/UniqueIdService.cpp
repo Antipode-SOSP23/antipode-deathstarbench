@@ -282,7 +282,7 @@ uint32_t UniqueIdService_UploadUniqueId_presult::read(::apache::thrift::protocol
   return xfer;
 }
 
-void UniqueIdServiceClient::UploadUniqueId(UserIdRpcResponse& _return, const int64_t req_id, const PostType::type post_type, const std::map<std::string, std::string> & carrier)
+void UniqueIdServiceClient::UploadUniqueId(LoginRpcResponse& _return, const int64_t req_id, const PostType::type post_type, const std::map<std::string, std::string> & carrier)
 {
   send_UploadUniqueId(req_id, post_type, carrier);
   recv_UploadUniqueId(_return);
@@ -304,7 +304,7 @@ void UniqueIdServiceClient::send_UploadUniqueId(const int64_t req_id, const Post
   oprot_->getTransport()->flush();
 }
 
-void UniqueIdServiceClient::recv_UploadUniqueId(UserIdRpcResponse& _return)
+void UniqueIdServiceClient::recv_UploadUniqueId(LoginRpcResponse& _return)
 {
 
   int32_t rseqid = 0;
@@ -428,7 +428,7 @@ void UniqueIdServiceProcessor::process_UploadUniqueId(int32_t seqid, ::apache::t
   return processor;
 }
 
-void UniqueIdServiceConcurrentClient::UploadUniqueId(UserIdRpcResponse& _return, const int64_t req_id, const PostType::type post_type, const std::map<std::string, std::string> & carrier)
+void UniqueIdServiceConcurrentClient::UploadUniqueId(LoginRpcResponse& _return, const int64_t req_id, const PostType::type post_type, const std::map<std::string, std::string> & carrier)
 {
   int32_t seqid = send_UploadUniqueId(req_id, post_type, carrier);
   recv_UploadUniqueId(_return, seqid);
@@ -454,7 +454,7 @@ int32_t UniqueIdServiceConcurrentClient::send_UploadUniqueId(const int64_t req_i
   return cseqid;
 }
 
-void UniqueIdServiceConcurrentClient::recv_UploadUniqueId(UserIdRpcResponse& _return, const int32_t seqid)
+void UniqueIdServiceConcurrentClient::recv_UploadUniqueId(LoginRpcResponse& _return, const int32_t seqid)
 {
 
   int32_t rseqid = 0;

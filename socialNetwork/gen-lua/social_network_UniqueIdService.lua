@@ -190,7 +190,7 @@ function UploadUniqueId_result:read(iprot)
       break
     elseif fid == 0 then
       if ftype == TType.STRUCT then
-        self.success = UserIdRpcResponse:new{}
+        self.success = LoginRpcResponse:new{}
         self.success:read(iprot)
       else
         iprot:skip(ftype)

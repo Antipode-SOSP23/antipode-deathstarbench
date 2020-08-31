@@ -1,6 +1,8 @@
 require "socket"
 math.randomseed(socket.gettime()*1000)
 math.random(); math.random(); math.random()
+JSON = require("JSON")
+stringx = require "pl.stringx"
 
 local charset = {'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', 'a', 's',
   'd', 'f', 'g', 'h', 'j', 'k', 'l', 'z', 'x', 'c', 'v', 'b', 'n', 'm', 'Q',
@@ -26,8 +28,20 @@ local function decRandom(length)
   end
 end
 
+local function findPostId(entries, post_id)
+  for _,entry in ipairs(entries) do
+    if entry['post_id'] == post_id then
+      return true
+    end
+  end
+  return false
+end
+
+local post_id = nil
+
 request = function()
-  local user_index = math.random(1, 962)
+  -- local user_index = math.random(2, 961)
+  local user_index = 960
   local username = "username_" .. tostring(user_index)
   local user_id = tostring(user_index)
   local text = stringRandom(256)
@@ -91,14 +105,31 @@ request = function()
   local http = require("socket.http")
   local body, code, headers, status = http.request(path, body)
 
+  post_id = stringx.strip(stringx.split(body, '#')[2])
+
   -- now reads the timeline
-  local start = tostring(math.random(0, 100))
-  local stop = tostring(start + 10)
+  -- local start = tostring(math.random(0, 100))
+  -- local stop = tostring(start + 100)
+  local start = 0;
+  local stop = 10;
 
   local args = "user_id=" .. follower_id .. "&start=" .. start .. "&stop=" .. stop
   local method = "GET"
   local headers = {}
   headers["Content-Type"] = "application/x-www-form-urlencoded"
-  local path = "http://localhost:8080/wrk2-api/user-timeline/read?" .. args
+  local path = "http://localhost:8080/wrk2-api/home-timeline/read?" .. args
+
   return wrk.format(method, path, headers, nil)
+end
+
+response = function(status, headers, body)
+  if status == 200 then
+    decode = JSON:decode(body)
+
+    if findPostId(decode, post_id) then
+      print("FOUND")
+    else
+      print("NOT_FOUND")
+    end
+  end
 end

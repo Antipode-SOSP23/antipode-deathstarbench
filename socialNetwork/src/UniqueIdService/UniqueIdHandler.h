@@ -57,7 +57,7 @@ class UniqueIdHandler : public UniqueIdServiceIf {
       const std::string &,
       ClientPool<ThriftClient<ComposePostServiceClient>> *);
 
-  void UploadUniqueId(UserIdRpcResponse &, int64_t, PostType::type,
+  void UploadUniqueId(LoginRpcResponse &, int64_t, PostType::type,
       const std::map<std::string, std::string> &) override;
 
  private:
@@ -76,7 +76,7 @@ UniqueIdHandler::UniqueIdHandler(
 }
 
 void UniqueIdHandler::UploadUniqueId(
-    UserIdRpcResponse &response,
+    LoginRpcResponse &response,
     int64_t req_id,
     PostType::type post_type,
     const std::map<std::string, std::string> & carrier) {
@@ -132,7 +132,7 @@ void UniqueIdHandler::UploadUniqueId(
   std::string post_id_str = _machine_id + timestamp_hex + counter_hex;
   int64_t post_id = stoul(post_id_str, nullptr, 16) & 0x7FFFFFFFFFFFFFFF;
   LOG(debug) << "The post_id of the request " << req_id << " is " << post_id;
-  response.result = post_id;
+  response.result = std::to_string(post_id);
 
   // Upload to compose post service
   XTRACE("Uploading unique ID to compose post service");

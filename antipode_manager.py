@@ -17,7 +17,7 @@ import urllib.parse
 # Pre-requisites
 #
 # > sudo apt-get install libssl-dev libz-dev luarocks python3
-# > sudo luarocks install luasocket
+# > sudo luarocks install luasocket json-lua
 # > pip install plumbum
 #
 
@@ -46,10 +46,10 @@ AVAILABLE_WKLD_ENDPOINTS = {
       'uri': 'wrk2-api/user-timeline/read',
       'script_path': './wrk2/scripts/social-network/read-user-timeline.lua',
     },
-    'sequence-compose-post-read-user-timeline': {
+    'sequence-compose-post-read-home-timeline': {
       'type': 'wrk2',
-      'uri': 'wrk2-api/user-timeline/read',
-      'script_path': './wrk2/scripts/social-network/sequence-compose-post-read-user-timeline.lua',
+      'uri': 'wrk2-api/home-timeline/read',
+      'script_path': './wrk2/scripts/social-network/sequence-compose-post-read-home-timeline.lua',
     },
     'antipode-wht-error': {
       'type': 'python',
