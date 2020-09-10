@@ -11,6 +11,9 @@ from plumbum.cmd import make
 from plumbum.cmd import python
 import itertools
 import urllib.parse
+import requests
+from datetime import datetime
+import pandas as pd
 
 
 #############################
@@ -121,9 +124,11 @@ def clean(args):
     docker_compose['stop'] & FG
 
     if args['strong']:
-        docker_compose['down', '--rmi', 'all', '--remove-orphans'] & FG
+      docker_compose['down', '--rmi', 'all', '--remove-orphans'] & FG
+    if args['jaeger']:
+      docker_compose['rm', '-f', 'jaeger'] & FG
     else:
-        docker_compose['down'] & FG
+      docker_compose['down'] & FG
 
   except KeyboardInterrupt:
     # if the compose gets interrupted we just continue with the script
@@ -186,6 +191,61 @@ def wkld(args):
 
 
 #############################
+# GATHER
+#
+def gather(args):
+  if args['visibility_latency']:
+    # visit http://146.193.41.235:16686/dependencies to check number of flowing requests
+    limit = 7000
+    next_round = 0
+    traces = []
+
+    # curl -X GET "jaeger:16686/api/traces?service=write-home-timeline-service&prettyPrint=true
+    params = (
+      ('service', 'write-home-timeline-service'),
+      ('limit', limit),
+      # ('offset', total_num), -- offset is not working
+      ('lookback', '1h'),
+      # ('prettyPrint', 'true'),
+    )
+    response = requests.get('http://localhost:16686/api/traces', params=params)
+
+    # error if we do not get a 200 OK code
+    if response.status_code != 200 :
+      print("[ERROR] Could not fetch traces from Jaeger")
+      exit(-1)
+
+    # error if we do not retreive all traces
+    if len(traces) == limit:
+      print(f"[WARN] Fetched the same amount of traces as the limit ({limit}). Increase the limit to fetch all traces.")
+
+    # read returned traces
+    content = response.json()
+
+    # pick only the traces with the desired info
+    for trace in content['data']:
+      trace_info = {
+        'trace_id': trace['spans'][0]['traceID'],
+        'wht_worker_duration': -1,
+        'wht_worker_endts': -1,
+      }
+
+      for s in trace['spans']:
+        for t in s['tags']:
+          if t['key'] == 'wht_worker_duration':
+            trace_info['wht_worker_duration'] = float(t['value'])
+          if t['key'] == 'wht_worker_endts':
+            # v = datetime.fromtimestamp(v / 1000.0)
+            trace_info['wht_worker_endts'] = t['value']
+
+      traces.append(trace_info)
+
+    df = pd.DataFrame(traces)
+    df = df.set_index('trace_id')
+    print(df.describe())
+
+
+#############################
 # MAIN
 #
 if __name__ == "__main__":
@@ -202,7 +262,8 @@ if __name__ == "__main__":
 
   # clean application
   clean_parser = subparsers.add_parser('clean', help='Clean application')
-  clean_parser.add_argument('--strong', action='store_true', help="delete images")
+  clean_parser.add_argument('-s', '--strong', action='store_true', help="delete images")
+  clean_parser.add_argument('-j', '--jaeger', action='store_true', help="delete jaeger container")
 
   # run application
   run_parser = subparsers.add_parser('run', help='Run application')
@@ -221,6 +282,10 @@ if __name__ == "__main__":
   # -P                     Print each request's latency
   # -p                     Print 99th latency every 0.2s to file
   # -L  --latency          Print latency statistics
+
+  # gather application
+  gather_parser = subparsers.add_parser('gather', help='Gather data from application')
+  gather_parser.add_argument('-vl', '--visibility-latency', action='store_true', help="detached")
 
 
   args = vars(main_parser.parse_args())
