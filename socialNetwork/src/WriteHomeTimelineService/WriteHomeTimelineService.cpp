@@ -23,6 +23,8 @@
 #define NUM_WORKERS 4
 
 using namespace social_network;
+// for clock usage
+using namespace std::chrono;
 
 static std::exception_ptr _teptr;
 static ClientPool<RedisClient> *_redis_client_pool;
@@ -35,6 +37,7 @@ void sigintHandler(int sig) {
 }
 
 void OnReceivedWorker(const AMQP::Message &msg) {
+  high_resolution_clock::time_point start_worker_ts = high_resolution_clock::now();
   try {
     json msg_json = json::parse(std::string(msg.body(), msg.bodySize()));
 
@@ -74,8 +77,6 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     //----------
     // ANTIPODE
     //----------
-    using namespace std::chrono;
-
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
     LOG(debug) << "[ANTIPODE] Start IsVisible for post_id: " << post_id;
     auto antipode_orable_client_wrapper = _antipode_oracle_client_pool->Pop();
@@ -99,9 +100,6 @@ void OnReceivedWorker(const AMQP::Message &msg) {
 
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     duration<double, std::milli> time_span = t2 - t1;
-
-    LOG(debug) << "[ANTIPODE] " << post_id << " TOOK " << time_span.count();
-    LOG(debug) << "[ANTIPODE] Post successfuly checked as visible in Oracle with response: " << antipode_oracle_response;
     //----------
     // ANTIPODE
     //----------
@@ -163,6 +161,15 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     redis_span->Finish();
     XTRACE("RedisUpdate complete");
     _redis_client_pool->Push(redis_client_wrapper);
+
+    // add metrics to span to read later
+    high_resolution_clock::time_point end_worker_ts = high_resolution_clock::now();
+    duration<double, std::milli> worker_timespent = end_worker_ts - start_worker_ts;
+
+    uint64_t ts = duration_cast<milliseconds>(end_worker_ts.time_since_epoch()).count();
+
+    span->SetTag("wht_worker_duration", std::to_string(worker_timespent.count()));
+    span->SetTag("wht_worker_endts", std::to_string(ts));
   } catch (...) {
     LOG(error) << "OnReveived worker error";
     throw;
