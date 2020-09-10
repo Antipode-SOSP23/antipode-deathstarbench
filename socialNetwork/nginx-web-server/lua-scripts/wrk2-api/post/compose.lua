@@ -53,6 +53,7 @@ local function _UploadText(req_id, post, carrier, baggage)
   xtracer.DeleteBaggage()
 end
 
+local post_id = ''
 local function _UploadUniqueId(req_id, post, carrier, baggage)
   xtracer.SetBaggage(baggage)
   local GenericObjectPool = require "GenericObjectPool"
@@ -72,6 +73,7 @@ local function _UploadUniqueId(req_id, post, carrier, baggage)
     xtracer.DeleteBaggage()
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
   end
+  post_id = err.result;
   xtracer.JoinBaggage(err.baggage)
   GenericObjectPool:returnConnection(unique_id_client)
   xtracer.DeleteBaggage()
@@ -167,14 +169,11 @@ function _M.ComposePost()
       ngx.exit(status)
     end
   end
-  ngx.say("Successfully uploaded post #"..original_req_id)
+  ngx.say("Successfully uploaded post #"..post_id)
   span:finish()
   xtracer.LogXTrace("Successfully uploaded post")
   ngx.exit(status)
   xtracer.DeleteBaggage()
 end
-
-
-
 
 return _M

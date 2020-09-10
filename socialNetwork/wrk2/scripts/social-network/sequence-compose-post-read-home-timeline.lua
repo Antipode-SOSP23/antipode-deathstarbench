@@ -3,6 +3,7 @@ math.randomseed(socket.gettime()*1000)
 math.random(); math.random(); math.random()
 JSON = require("JSON")
 stringx = require "pl.stringx"
+tablex = require "pl.tablex"
 
 local charset = {'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', 'a', 's',
   'd', 'f', 'g', 'h', 'j', 'k', 'l', 'z', 'x', 'c', 'v', 'b', 'n', 'm', 'Q',
@@ -105,31 +106,35 @@ request = function()
   local http = require("socket.http")
   local body, code, headers, status = http.request(path, body)
 
-  post_id = stringx.strip(stringx.split(body, '#')[2])
+  if code == 200 then
+    post_id = stringx.strip(stringx.split(body, '#')[2])
 
-  -- now reads the timeline
-  -- local start = tostring(math.random(0, 100))
-  -- local stop = tostring(start + 100)
-  local start = 0;
-  local stop = 10;
+    -- now reads the timeline
+    -- local start = tostring(math.random(0, 100))
+    -- local stop = tostring(start + 100)
+    local start = 0;
+    local stop = 10;
 
-  local args = "user_id=" .. follower_id .. "&start=" .. start .. "&stop=" .. stop
-  local method = "GET"
-  local headers = {}
-  headers["Content-Type"] = "application/x-www-form-urlencoded"
-  local path = "http://localhost:8080/wrk2-api/home-timeline/read?" .. args
+    local args = "user_id=" .. follower_id .. "&start=" .. start .. "&stop=" .. stop
+    local method = "GET"
+    local headers = {}
+    headers["Content-Type"] = "application/x-www-form-urlencoded"
+    local path = "http://localhost:8080/wrk2-api/home-timeline/read?" .. args
 
-  return wrk.format(method, path, headers, nil)
-end
-
-response = function(status, headers, body)
-  if status == 200 then
-    decode = JSON:decode(body)
-
-    if findPostId(decode, post_id) then
-      print("FOUND")
-    else
-      print("NOT_FOUND")
-    end
+    return wrk.format(method, path, headers, nil)
   end
 end
+
+-- response = function(status, headers, body)
+--   if status == 200 then
+--     decode = JSON:decode(body)
+
+--     if findPostId(decode, post_id) then
+--       print("FOUND")
+--     else
+--       print("NOT_FOUND")
+--     end
+
+--     print(tablex.size(decode))
+--   end
+-- end

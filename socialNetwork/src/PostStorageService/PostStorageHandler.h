@@ -248,10 +248,17 @@ void PostStorageHandler::StorePost(
     int64_t req_id, const social_network::Post &post,
     const std::map<std::string, std::string> &carrier) {
 
-  // [ANTIPODE]
+  //----------
+  // ANTIPODE
+  //----------
+
   // By using a threadpool we can return an OK to the caller, while on the threadpool we
   // force an error by sleeping the thread
   boost::asio::post(pool, std::bind(&PostStorageHandler::StorePostAsync, this, response, req_id, post, carrier));
+
+  //----------
+  // ANTIPODE
+  //----------
 }
 
 void PostStorageHandler::ReadPost(
