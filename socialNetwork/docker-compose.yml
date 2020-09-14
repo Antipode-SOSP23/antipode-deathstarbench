@@ -273,3 +273,11 @@ services:
 #      - 10001:9090
     restart: always
     entrypoint: AntipodeOracle
+
+  mongodb-admin:
+    image: mrvautin/adminmongo
+    restart: always
+    environment:
+      - HOST=0.0.0.0
+    ports:
+      - 1234:1234
