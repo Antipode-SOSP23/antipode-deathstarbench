@@ -23,7 +23,6 @@ def _register_user(user_id):
     pprint(data)
   else:
     print(f"[Register User] ERROR {r.status_code}, {r.reason}")
-    exit()
 
 
 def _follow_user(followee_id, follower_id):
@@ -103,33 +102,42 @@ def _read_user_timeline(user_id):
 #---------
 # Create main user
 #
-user_id = random.randrange(1, 962)
-# user_id = 10
-_register_user(user_id)
+# user_id = random.randrange(1, 962)
+user_id = 962
+# _register_user(user_id)
 
 
 #---------
 # Create followers
 #
-follower_ids = []
-for i in range(3):
-  fid = None
-  while(True):
-    fid = random.randrange(1, 962)
-    # fid = user_id + i + 1
-    if user_id != fid:
-      break
-  _register_user(fid)
-  _follow_user(user_id, fid)
-  follower_ids.append(fid)
+# follower_ids = []
+# for i in range(3):
+#   fid = None
+#   while(True):
+#     # fid = random.randrange(1, 962)
+#     # fid = user_id + i + 1
+#     fid = 624
+
+#     if user_id != fid:
+#       break
+#   # _register_user(fid)
+#   _follow_user(fid, user_id)
+#   follower_ids.append(fid)
+
+follower_id = 624
+# _register_user(follower_id)
+# _follow_user(follower_id, user_id)
 
 #---------
 # Create post
 #
 _create_post(user_id)
 
+time.sleep(10)
+
 #---------
 # Read user timeline
 #
-input("Waiting for the post to be available...")
-_read_home_timeline(follower_ids[0])
+# input("Waiting for the post to be available...")
+_read_home_timeline(follower_id)
+# _read_user_timeline(user_id)

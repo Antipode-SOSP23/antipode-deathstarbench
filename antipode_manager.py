@@ -96,6 +96,7 @@ def build(args):
     # if the compose gets interrupted we just continue with the script
     pass
 
+
 #############################
 # RUN
 #
@@ -107,12 +108,15 @@ def run(args):
     # run containers in detached mode
     if args['detached']:
       run_args.insert(1, '-d')
+    if args['build']:
+      run_args.insert(1, '--build')
 
     docker_compose[run_args] & FG
 
   except KeyboardInterrupt:
     # if the compose gets interrupted we just continue with the script
     pass
+
 
 #############################
 # CLEAN
@@ -133,6 +137,7 @@ def clean(args):
   except KeyboardInterrupt:
     # if the compose gets interrupted we just continue with the script
     pass
+
 
 #############################
 # WORKLOAD
@@ -268,6 +273,7 @@ if __name__ == "__main__":
   # run application
   run_parser = subparsers.add_parser('run', help='Run application')
   run_parser.add_argument('-d', '--detached', action='store_true', help="detached")
+  run_parser.add_argument('--build', action='store_true', help="build")
 
   # workload application
   wkld_parser = subparsers.add_parser('wkld', help='Run HTTP workload generator')

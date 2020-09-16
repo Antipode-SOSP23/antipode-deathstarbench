@@ -78,10 +78,20 @@ services:
   post-storage-service:
     image: yg397/social-network-microservices
     hostname: post-storage-service
-    ports:
-      - 10002:9090
+    # ports:
+    #   - 10002:9090
     restart: always
     entrypoint: PostStorageService
+
+  post-storage-service-us:
+    image: yg397/social-network-microservices
+    hostname: post-storage-service-us
+    # ports:
+    #   - 10002:9090
+    restart: always
+    entrypoint: PostStorageService
+    environment:
+      - ZONE=us
 
   post-storage-memcached:
     image: memcached
@@ -90,11 +100,28 @@ services:
 #      - 11212:11211
     restart: always
 
+  post-storage-mongodb-setup:
+    build:
+      context: docker/mongodb-setup/post-storage/
+      dockerfile: Dockerfile
+    depends_on:
+      - post-storage-mongodb
+      - post-storage-mongodb-us
+
   post-storage-mongodb:
     image: mongo
     hostname: post-storage-mongodb
-#    ports:
-#      - 27019:27017
+    command: --replSet rs0 --oplogSize 128
+    # ports:
+    #   - 27019:27017
+    restart: always
+
+  post-storage-mongodb-us:
+    image: mongo
+    hostname: post-storage-mongodb-us
+    command: --replSet rs0 --oplogSize 128
+    # ports:
+    #   - 27018:27017
     restart: always
 
   user-timeline-service:

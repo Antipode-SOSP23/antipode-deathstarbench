@@ -52,14 +52,20 @@ int main(int argc, char *argv[]) {
     LOG(fatal) << "Failed to pop mongoc client";
     return EXIT_FAILURE;
   }
-  bool r = false;
-  while (!r) {
-    r = CreateIndex(mongodb_client, "post", "post_id", true);
-    if (!r) {
-      LOG(error) << "Failed to create mongodb index, try again";
-      sleep(1);
+
+  // TODO REPLACE THIS WITH isMaster call
+  // std::string role_env_str(std::getenv("ROLE"));
+  if (role_str == "primary") {
+    bool r = false;
+    while (!r) {
+      r = CreateIndex(mongodb_client, "post", "post_id", true);
+      if (!r) {
+        LOG(error) << "Failed to create mongodb index, try again";
+        sleep(1);
+      }
     }
   }
+
   mongoc_client_pool_push(mongodb_client_pool, mongodb_client);
 
   int antipode_oracle_port = config_json["antipode-oracle"]["port"];

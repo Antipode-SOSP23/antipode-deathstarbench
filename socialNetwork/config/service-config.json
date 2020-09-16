@@ -52,6 +52,10 @@
     "addr": "post-storage-mongodb",
     "port": 27017
   },
+  "post-storage-mongodb-us": {
+    "addr": "post-storage-mongodb-us",
+    "port": 27017
+  },
   "post-storage-memcached": {
     "addr": "post-storage-memcached",
     "port": 11211
