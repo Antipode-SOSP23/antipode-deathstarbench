@@ -53,9 +53,7 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
-  // TODO REPLACE THIS WITH isMaster call
-  // std::string role_env_str(std::getenv("ROLE"));
-  if (role_str == "primary") {
+  if (replica_ismaster(mongodb_client)) {
     bool r = false;
     while (!r) {
       r = CreateIndex(mongodb_client, "post", "post_id", true);

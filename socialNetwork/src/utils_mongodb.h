@@ -3,8 +3,11 @@
 
 #include <mongoc.h>
 #include <bson/bson.h>
+#include <nlohmann/json.hpp>
 
 #define SERVER_SELECTION_TIMEOUT_MS 300
+
+using json = nlohmann::json;
 
 namespace social_network {
 
@@ -78,6 +81,29 @@ bool CreateIndex(
   mongoc_database_destroy(db);
 
   return r;
+}
+
+// ref: http://mongoc.org/libmongoc/1.14.0/mongoc_client_get_server_descriptions.html
+bool replica_ismaster (mongoc_client_t *client) {
+  /* ensure client has connected */
+  bson_error_t error;
+  bson_t *b = BCON_NEW ("ping", BCON_INT32 (1));
+  bool r = false;
+  while (!r) {
+    r = mongoc_client_command_simple(client, "db", b, NULL, NULL, &error);
+    if (!r) {
+      LOG(error) << "Failed to connect to client, try again";
+      sleep(1);
+    }
+  }
+
+  /* get latest description */
+  size_t i, n;
+  mongoc_server_description_t *sds = mongoc_client_get_server_descriptions(client, &n)[0];
+  auto post_json_char = bson_as_json(mongoc_server_description_ismaster(sds), nullptr);
+  json post_json = json::parse(post_json_char);
+
+  return post_json["ismaster"];
 }
 
 } // namespace social_network
