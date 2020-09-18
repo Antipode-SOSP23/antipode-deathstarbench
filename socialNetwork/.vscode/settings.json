@@ -1,0 +1,8 @@
+{
+  "files.associations": {
+    "*.j2": "html",
+    "*.js.erb": "javascript",
+    "sstream": "cpp",
+    "regex": "cpp"
+  }
+}
