@@ -357,6 +357,7 @@ void PostStorageHandler::ReadPost(
   } else {
     // If not cached in memcached
     XTRACE("Post " + std::to_string(post_id) + " not cached in Memcached");
+    LOG(debug) << "Post " << post_id << " not cached in Memcached";
     mongoc_client_t *mongodb_client = mongoc_client_pool_pop(
         _mongodb_client_pool);
     if (!mongodb_client) {
@@ -635,6 +636,7 @@ void PostStorageHandler::ReadPosts(
   get_span->Finish();
 
   XTRACE("MemcachedMget complete");
+  LOG(debug) << "MemcachedMget complete";
   memcached_quit(memcached_client);
   memcached_pool_push(_memcached_client_pool, memcached_client);
   for (int i = 0; i < post_ids.size(); ++i) {
@@ -649,6 +651,7 @@ void PostStorageHandler::ReadPosts(
 
   // Find the rest in MongoDB
   XTRACE("Finding posts in MongoDB");
+  LOG(debug) << "Finding posts in MongoDB";
   if (!post_ids_not_cached.empty()) {
     mongoc_client_t *mongodb_client = mongoc_client_pool_pop(
         _mongodb_client_pool);
@@ -690,6 +693,7 @@ void PostStorageHandler::ReadPosts(
     const bson_t *doc;
 
     XTRACE("MongoFindPosts start");
+    LOG(debug) << "MongoFindPosts start";
     auto find_span = opentracing::Tracer::Global()->StartSpan(
         "MongoFindPosts", {opentracing::ChildOf(&span->context())});
     while (true) {
@@ -731,6 +735,7 @@ void PostStorageHandler::ReadPosts(
     }
     find_span->Finish();
     XTRACE("MongoFindPosts complete");
+    LOG(debug) << "MongoFindPosts complete";
     bson_error_t error;
     if (mongoc_cursor_error(cursor, &error)) {
       LOG(warning) << error.message;
@@ -750,6 +755,8 @@ void PostStorageHandler::ReadPosts(
 
     // upload posts to memcached
     XTRACE("Uploading posts to memcached");
+    LOG(debug) << "Uploading posts to memcached";
+
     Baggage set_future_baggage = BRANCH_CURRENT_BAGGAGE();
     set_baggages.emplace_back(set_future_baggage);
     set_futures.emplace_back(std::async(std::launch::async, [&]() {
@@ -769,6 +776,7 @@ void PostStorageHandler::ReadPosts(
         throw se;
       }
       XTRACE("MemcachedSetPost start");
+      LOG(debug) << "MemcachedSetPost start";
       // auto set_span = opentracing::Tracer::Global()->StartSpan("MmcSetPost", {opentracing::ChildOf(&span->context())});
       for (auto & it : post_json_map) {
         std::string id_str = std::to_string(it.first);
@@ -783,7 +791,8 @@ void PostStorageHandler::ReadPosts(
       }
       memcached_pool_push(_memcached_client_pool, _memcached_client);
       // set_span->Finish();
-      // XTRACE("MemcachedSetPost complete");
+      XTRACE("MemcachedSetPost complete");
+      LOG(debug) << "MemcachedSetPost complete";
     }));
   }
 
@@ -802,6 +811,7 @@ void PostStorageHandler::ReadPosts(
     se.errorCode = ErrorCode::SE_THRIFT_HANDLER_ERROR;
     se.message = "Return set incomplete";
     XTRACE("Return set incomplete");
+    LOG(debug) << "Return set incomplete";
     throw se;
   }
 
@@ -817,9 +827,11 @@ void PostStorageHandler::ReadPosts(
   } catch (...) {
     LOG(warning) << "Failed to set posts to memcached";
     XTRACE("Failed to set posts to memcached");
+    LOG(debug) << "Failed to set posts to memcached";
   }
 
   XTRACE("PostStorageHandler::ReadPosts complete");
+  LOG(debug) << "PostStorageHandler::ReadPosts complete";
   response.baggage = GET_CURRENT_BAGGAGE().str();
   response.result = _return;
   DELETE_CURRENT_BAGGAGE();

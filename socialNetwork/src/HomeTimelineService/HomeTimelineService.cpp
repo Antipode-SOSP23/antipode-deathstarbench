@@ -37,8 +37,8 @@ int main(int argc, char *argv[]) {
       config_json["home-timeline-redis"]["addr"];
   int redis_port = config_json["home-timeline-redis"]["port"];
 
-  int post_storage_port = config_json["post-storage-service"]["port"];
-  std::string post_storage_addr = config_json["post-storage-service"]["addr"];
+  int post_storage_port = config_json["post-storage-service-us"]["port"];
+  std::string post_storage_addr = config_json["post-storage-service-us"]["addr"];
 
   ClientPool<RedisClient> redis_client_pool("home-timeline-redis",
       redis_addr, redis_port, 0, 128, 1000);

@@ -100,6 +100,13 @@ services:
 #      - 11212:11211
     restart: always
 
+  post-storage-memcached-us:
+    image: memcached
+    hostname: post-storage-memcached-us
+#    ports:
+#      - 11212:11211
+    restart: always
+
   post-storage-mongodb-setup:
     build:
       context: docker/mongodb-setup/post-storage/

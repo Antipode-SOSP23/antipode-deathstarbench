@@ -48,6 +48,10 @@
     "addr": "post-storage-service",
     "port": 9090
   },
+  "post-storage-service-us": {
+    "addr": "post-storage-service-us",
+    "port": 9090
+  },
   "post-storage-mongodb": {
     "addr": "post-storage-mongodb",
     "port": 27017
@@ -58,6 +62,10 @@
   },
   "post-storage-memcached": {
     "addr": "post-storage-memcached",
+    "port": 11211
+  },
+  "post-storage-memcached-us": {
+    "addr": "post-storage-memcached-us",
     "port": 11211
   },
   "unique-id-service": {

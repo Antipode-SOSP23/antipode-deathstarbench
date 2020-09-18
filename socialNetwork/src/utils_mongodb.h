@@ -22,7 +22,7 @@ mongoc_client_pool_t* init_mongodb_client_pool(
     zone = "-" + zone_env_str;
   }
   std::string addr = config_json[service_name + "-mongodb" + zone]["addr"];
-  int port = config_json[service_name + "-mongodb"]["port"];
+  int port = config_json[service_name + "-mongodb" + zone]["port"];
   std::string uri_str = "mongodb://" + addr + ":" +
       std::to_string(port) + "/?appname=" + service_name + "-service";
   uri_str += "&" MONGOC_URI_SERVERSELECTIONTIMEOUTMS "="
