@@ -93,8 +93,8 @@ void ReadHomeTimelineHandler::ReadHomeTimeline(
   try {
     post_ids_reply = post_ids_future.get();
   } catch (...) {
-    LOG(error) << "Failed to read post_ids from home-timeline-redis";
-    XTRACE("Failed to read post_ids from home-timeline-redis");
+    LOG(error) << "Failed to read post_ids from home-timeline-redis-us";
+    XTRACE("Failed to read post_ids from home-timeline-redis-us");
     throw;
   }
 

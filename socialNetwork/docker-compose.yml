@@ -54,9 +54,20 @@ services:
   home-timeline-redis:
     image: redis
     hostname: home-timeline-redis
-#    ports:
-#      - 6381:6379
+    command: redis-server --port 6379
+    # ports:
+      # 6381:6379
     restart: always
+
+  home-timeline-redis-us:
+    image: redis
+    hostname: home-timeline-redis-us
+    # ports:
+      # - 6381:6379
+    command: redis-server --slaveof home-timeline-redis 6379 --replica-read-only no
+    restart: always
+    links:
+      - home-timeline-redis
 
   compose-post-service:
     image: yg397/social-network-microservices

@@ -33,14 +33,16 @@ int main(int argc, char *argv[]) {
   }
 
   int port = config_json["home-timeline-service"]["port"];
+  // this is a REDIS slave replica which allows WRITES
+  // but writes in REPLICAS are EPHEMERAL. For our scenario this is enough.
   std::string redis_addr =
-      config_json["home-timeline-redis"]["addr"];
-  int redis_port = config_json["home-timeline-redis"]["port"];
+      config_json["home-timeline-redis-us"]["addr"];
+  int redis_port = config_json["home-timeline-redis-us"]["port"];
 
   int post_storage_port = config_json["post-storage-service-us"]["port"];
   std::string post_storage_addr = config_json["post-storage-service-us"]["addr"];
 
-  ClientPool<RedisClient> redis_client_pool("home-timeline-redis",
+  ClientPool<RedisClient> redis_client_pool("home-timeline-redis-us",
       redis_addr, redis_port, 0, 128, 1000);
 
   ClientPool<ThriftClient<PostStorageServiceClient>>

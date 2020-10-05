@@ -3,6 +3,7 @@
     "*.j2": "html",
     "*.js.erb": "javascript",
     "sstream": "cpp",
-    "regex": "cpp"
+    "regex": "cpp",
+    "*.tcc": "cpp"
   }
 }
