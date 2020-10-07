@@ -341,8 +341,8 @@ services:
       - 8081:8080
     restart: always
     volumes:
-      - /home/dporto/nas/devel/antipode-deathstarbench/socialNetwork/media-frontend/lua-scripts:/usr/local/openresty/nginx/lua-scripts
-      - /home/dporto/nas/devel/antipode-deathstarbench/socialNetwork/media-frontend/conf/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
+      - ./media-frontend/lua-scripts:/usr/local/openresty/nginx/lua-scripts
+      - ./media-frontend/conf/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
     deploy:
       placement:
         constraints: [node.hostname == node11]
@@ -411,11 +411,11 @@ services:
       - 8080:8080
     restart: always
     volumes:
-      - /home/dporto/nas/devel/antipode-deathstarbench/socialNetwork/nginx-web-server/lua-scripts:/usr/local/openresty/nginx/lua-scripts
-      - /home/dporto/nas/devel/antipode-deathstarbench/socialNetwork/nginx-web-server/pages:/usr/local/openresty/nginx/pages
-      - /home/dporto/nas/devel/antipode-deathstarbench/socialNetwork/nginx-web-server/conf/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
-      - /home/dporto/nas/devel/antipode-deathstarbench/socialNetwork/nginx-web-server/jaeger-config.json:/usr/local/openresty/nginx/jaeger-config.json
-      - /home/dporto/nas/devel/antipode-deathstarbench/socialNetwork/gen-lua:/gen-lua
+      - ./nginx-web-server/lua-scripts:/usr/local/openresty/nginx/lua-scripts
+      - ./nginx-web-server/pages:/usr/local/openresty/nginx/pages
+      - ./nginx-web-server/conf/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
+      - ./nginx-web-server/jaeger-config.json:/usr/local/openresty/nginx/jaeger-config.json
+      - ./gen-lua:/gen-lua
     deploy:
       placement:
         constraints: [node.hostname == node23]
@@ -469,7 +469,7 @@ services:
   post-storage-mongodb-setup:
     image: mongodb-setup
     # build:
-    #   context: /home/dporto/nas/devel/antipode-deathstarbench/socialNetwork/docker/mongodb-setup/post-storage/
+    #   context: ./docker/mongodb-setup/post-storage/
     #   dockerfile: Dockerfile
     depends_on:
       - post-storage-mongodb
