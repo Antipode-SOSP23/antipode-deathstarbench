@@ -6,7 +6,7 @@ from pprint import pprint
 from pathlib import Path
 from plumbum import local
 from plumbum import FG, BG
-from plumbum.cmd import docker_compose, docker
+from plumbum.cmd import docker_compose, docker, ansible_playbook
 from plumbum.cmd import make
 from plumbum.cmd import python
 import itertools
@@ -14,8 +14,7 @@ import urllib.parse
 import requests
 from datetime import datetime
 import pandas as pd
-
-
+import hosts
 #############################
 # Pre-requisites
 #
@@ -254,6 +253,8 @@ def gather(args):
 # MAIN
 #
 if __name__ == "__main__":
+  pprint(inventory)
+  exit();
   import argparse
 
   # parse arguments
