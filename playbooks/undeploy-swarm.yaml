@@ -1,0 +1,43 @@
+- hosts: swarm_manager 
+  any_errors_fatal: true
+  become: no
+  gather_facts: no
+  # vars_files:
+  #     - vars.yaml
+  
+  tasks:
+
+    - name: Undeploy deathstarbench service
+      shell: >
+        docker service ls | grep {{swarm_overlay_network}} | cut -d " " -f 1 | xargs docker service rm
+      ignore_errors: yes
+
+
+- hosts: nodes 
+  any_errors_fatal: true
+  become: no
+  gather_facts: no
+  # vars_files:
+  #     - vars.yaml
+  
+  tasks:
+
+    - name: Make worker nodes leave the Swarm
+      shell: docker swarm leave -f
+      register: out
+      failed_when: "not(out.rc == 0 or 'This node is not part of a swarm' in out.stderr)"
+
+
+- hosts: swarm_manager 
+  any_errors_fatal: true
+  become: no
+  gather_facts: no
+  vars_files:
+      - vars.yaml
+  
+  tasks:
+
+    - name: Make manager nodes leave the Swarm
+      shell: docker swarm leave -f
+      register: out
+      failed_when: "not(out.rc == 0 or 'This node is not part of a swarm' in out.stderr)"
