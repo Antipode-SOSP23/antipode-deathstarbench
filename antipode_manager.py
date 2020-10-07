@@ -71,7 +71,7 @@ def build(args):
     # We need to override these with our modified X-Trace containers.
     # To do this, we will manually build the docker images for the modified components.
 
-    thrift_microservice_args = ['build', '-t', 'yg397/thrift-microservice-deps', '.']
+    thrift_microservice_args = ['build', '-t', 'yg397/thrift-microservice-deps:antipode', '.']
     openresty_thrift_args = ['build', '-t', 'yg397/openresty-thrift', '-f', 'xenial/Dockerfile', '.']
 
     # adds --no-cache option to build so it rebuilds everything
@@ -90,7 +90,7 @@ def build(args):
     os.chdir(app_dir)
 
     # 3. Build the social network docker image
-    docker['build', '-t', 'yg397/social-network-microservices', '.'] & FG
+    docker['build', '-t', 'yg397/social-network-microservices:antipode', '.'] & FG
 
   except KeyboardInterrupt:
     # if the compose gets interrupted we just continue with the script

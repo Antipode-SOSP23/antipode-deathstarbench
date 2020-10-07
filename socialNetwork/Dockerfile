@@ -1,4 +1,4 @@
-FROM yg397/thrift-microservice-deps:latest
+FROM yg397/thrift-microservice-deps:antipode
 
 ARG NUM_CPUS=12
 
