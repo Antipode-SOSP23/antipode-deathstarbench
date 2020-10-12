@@ -111,7 +111,7 @@ services:
 
 
 #----------------------------------------------------------
-# write post at replica EU 
+# write post at replica EU
 #----------------------------------------------------------
   post-storage-service:
     image: yg397/social-network-microservices:antipode
@@ -146,7 +146,7 @@ services:
         constraints: [node.hostname == node04]
 
 #----------------------------------------------------------
-# read post at US replica  
+# read post at US replica
 #----------------------------------------------------------
   post-storage-service-us:
     image: yg397/social-network-microservices:antipode
@@ -333,7 +333,7 @@ services:
     deploy:
       placement:
         constraints: [node.hostname == node11]
-  
+
   media-frontend:
     image: yg397/media-frontend:xenial
     hostname: media-frontend
@@ -399,11 +399,6 @@ services:
 #----------------------------------------------------------
 # Frontend EU
 #----------------------------------------------------------
-
-
-#----------------------------------------------------------
-# Frontend US
-#----------------------------------------------------------
   nginx-thrift:
     image: yg397/openresty-thrift:latest
     hostname: nginx-thrift
@@ -419,6 +414,11 @@ services:
     deploy:
       placement:
         constraints: [node.hostname == node23]
+
+#----------------------------------------------------------
+# Frontend US
+#----------------------------------------------------------
+
 
 #----------------------------------------------------------
 # Admin tasks

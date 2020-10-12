@@ -2,3 +2,5 @@ socialNetwork/wrk2/deps/luajit/src/*.o
 socialNetwork/wrk2/obj
 socialNetwork/wrk2/deps/luajit/src/luajit
 socialNetwork/wrk2/deps/luajit/src/host/*.o
+
+*.pyc

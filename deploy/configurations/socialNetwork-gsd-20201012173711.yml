@@ -1,0 +1,73 @@
+#----------------------------------------------------------
+# Write notifications at EU replica
+#----------------------------------------------------------
+social-graph-service: node02
+social-graph-mongodb: node02
+social-graph-redis: node02
+write-home-timeline-service: node02
+write-home-timeline-rabbitmq: node02
+home-timeline-redis: node02
+
+#----------------------------------------------------------
+# read notifications at US replica
+#----------------------------------------------------------
+home-timeline-redis-us: node03
+home-timeline-service: node03
+
+#----------------------------------------------------------
+# write post at replica EU
+#----------------------------------------------------------
+post-storage-service: node04
+post-storage-memcached: node04
+post-storage-mongodb: node04
+
+#----------------------------------------------------------
+# read post at US replica
+#----------------------------------------------------------
+post-storage-service-us: node06
+post-storage-memcached-us: node06
+post-storage-mongodb-us: node06
+
+#----------------------------------------------------------
+# write posts EU
+#----------------------------------------------------------
+user-timeline-service: node11
+user-timeline-redis: node11
+user-timeline-mongodb: node11
+compose-post-redis: node11
+compose-post-service: node11
+url-shorten-service: node11
+url-shorten-memcached: node11
+url-shorten-mongodb: node11
+user-service: node11
+user-memcached: node11
+user-mongodb: node11
+media-service: node11
+media-memcached: node11
+media-mongodb: node11
+media-frontend: node11
+text-service: node11
+unique-id-service: node11
+user-mention-service: node11
+
+#----------------------------------------------------------
+# Coordinator
+#----------------------------------------------------------
+antipode-oracle: node22
+
+#----------------------------------------------------------
+# Frontend EU
+#----------------------------------------------------------
+  nginx-thrift: node23
+
+#----------------------------------------------------------
+# Frontend US
+#----------------------------------------------------------
+
+#----------------------------------------------------------
+# Admin tasks
+#----------------------------------------------------------
+jaeger: node25
+xtrace-server: node25
+mongodb-admin: node25
+post-storage-mongodb-setup: node25
