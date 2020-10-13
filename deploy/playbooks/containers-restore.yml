@@ -1,0 +1,26 @@
+---
+- hosts: swarm_manager
+  gather_facts: no
+  become: no
+  any_errors_fatal: true
+  vars_files:
+      - vars.yml
+  vars:
+    # - source: "/home/jfloff/nas_inesc/antipode/antipode-deathstarbench/deploy/container-images"
+    - source: "../container-images"
+    - app: socialNetwork
+
+  tasks:
+        
+    - name: Backup container images
+      shell: >
+            gzip -d -c  {{dest}}/{{ item.replace(':','_').replace('/','_').replace('-','_') }}.tgz | docker load
+      with_items:
+        - "{{ apps[app]['containers'] }}"
+
+
+    - name: validate that the images exists
+      shell:  docker image inspect {{item}}
+      with_items:
+        - "{{ apps[app]['containers'] }}"
+  
