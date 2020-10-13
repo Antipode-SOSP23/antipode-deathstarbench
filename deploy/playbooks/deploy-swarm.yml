@@ -1,11 +1,14 @@
 ---
-- hosts: swarm_manager 
+- hosts: swarm_manager
   any_errors_fatal: true
   gather_facts: no
   become: no
+  vars:
+    - swarm_advertise_port: 2377
+    - swarm_overlay_network: "deathstarbench_network"
   # vars_files:
   #     - vars.yaml
-  
+
   tasks:
     - name: Check if Swarm has already been Initialized
       shell: docker node ls
@@ -30,29 +33,31 @@
     - name: Save workers token
       set_fact:
         worker_token: "{{ worker_token['stdout'] }}"
-      when: result_dir is not defined
 
     - name: Initialize Docker Swarm Network
       shell: >
-            docker network create 
+            docker network create
             --attachable -d overlay {{ swarm_overlay_network }}
       when: swarm_status.rc != 0
       run_once: true
 
     # - name: print vars
-    #   debug: 
-    #     msg: "{{ worker_token }}"
+    #   debug:
+    #     msg: "{{ hostvars }}"
 
-- hosts: nodes
+- hosts: cluster
   any_errors_fatal: true
   become: no
   gather_facts: no
+  vars:
+    - swarm_advertise_port: 2377
+    - swarm_overlay_network: "deathstarbench_network"
   # vars_files:
   #     - vars.yaml
-  
+
   tasks:
     - name: Add Workers to the Swarm
-      shell: "docker swarm join --token {{ hostvars[hostvars[inventory_hostname]['groups']['swarm_manager'][0]]['worker_token']['stdout'] }} {{ hostvars[hostvars[inventory_hostname]['groups']['swarm_manager'][0]]['ansible_host']  }}:{{ swarm_advertise_port }}"
+      shell: "docker swarm join --token {{ hostvars[hostvars[inventory_hostname]['groups']['swarm_manager'][0]]['worker_token'] }} {{ hostvars[hostvars[inventory_hostname]['groups']['swarm_manager'][0]]['ansible_host']  }}:{{ swarm_advertise_port }}"
       register: out
       failed_when: "not(out.rc == 0 or 'This node is already part of a swarm' in out.stderr)"
 
@@ -64,20 +69,20 @@
     #     remote_addrs: [ "{{ hostvars[hostvars[inventory_hostname]['groups']['swarm_manager'][0]]['ansible_host'] }}:{{ swarm_advertise_port }}" ]
 
 
-- hosts: swarm_manager 
+- hosts: swarm_manager
   any_errors_fatal: true
   gather_facts: no
   become: no
   # vars_files:
   #     - vars.yaml
-  
+
   tasks:
     - name: compute the swarm size
       set_fact:
-        swarm_size: "{{ hostvars[inventory_hostname]['groups']['swarm_manager'] | union(hostvars[inventory_hostname]['groups']['cas']) | union(hostvars[inventory_hostname]['groups']['orderers']) | union(hostvars[inventory_hostname]['groups']['peers']) | union(hostvars[inventory_hostname]['groups']['clients']) | unique | length  }}"
+        swarm_size: "{{ hostvars[inventory_hostname]['groups']['swarm_manager'] | union(hostvars[inventory_hostname]['groups']['cluster']) | unique | length  }}"
 
     - name: print swarm size
-      debug: 
+      debug:
         var: swarm_size
 
     - name: Debug - check if all nodes are joined to the swarm

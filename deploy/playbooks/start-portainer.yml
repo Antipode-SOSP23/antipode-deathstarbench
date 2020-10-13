@@ -1,0 +1,15 @@
+---
+- hosts: swarm_manager
+  gather_facts: no
+  become: no
+  any_errors_fatal: true
+  vars:
+    - stack: management
+
+  tasks:
+    - name: Initialize DeathStartBench Stack Deploy
+      shell: >
+            cd /home/jfloff/nas_inesc/antipode/antipode-deathstarbench/deploy/playbooks ;
+            docker stack deploy --compose-file ./docker-compose-portainer.yml {{ stack }};
+      register: out
+      failed_when: "not(out.rc == 0) or 'fail' in out.stderr"

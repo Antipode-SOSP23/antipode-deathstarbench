@@ -133,6 +133,22 @@ services:
     - ./nginx-web-server/conf/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
     - ./nginx-web-server/jaeger-config.json:/usr/local/openresty/nginx/jaeger-config.json
     - ./gen-lua:/gen-lua
+  nginx-thrift-us:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node24
+    hostname: nginx-thrift
+    image: yg397/openresty-thrift:latest
+    ports:
+    - 8082:8080
+    restart: always
+    volumes:
+    - ./nginx-web-server/lua-scripts:/usr/local/openresty/nginx/lua-scripts
+    - ./nginx-web-server/pages:/usr/local/openresty/nginx/pages
+    - ./nginx-web-server/conf/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
+    - ./nginx-web-server/jaeger-config.json:/usr/local/openresty/nginx/jaeger-config.json
+    - ./gen-lua:/gen-lua
   post-storage-memcached:
     deploy:
       placement:

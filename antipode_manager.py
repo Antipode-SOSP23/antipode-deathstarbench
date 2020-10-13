@@ -14,7 +14,7 @@ import urllib.parse
 import requests
 from datetime import datetime
 import pandas as pd
-import click
+# import click
 import time
 import yaml
 import glob
@@ -26,7 +26,7 @@ import textwrap
 #
 # > sudo apt-get install libssl-dev libz-dev luarocks python3
 # > sudo luarocks install luasocket json-lua
-# > pip install plumbum
+# > pip install plumbum ansible
 #
 
 #############################
@@ -263,14 +263,15 @@ def deploy(args):
         deploy_constraints[node_constraint_index] = f'node.hostname == {hostname}'
 
     # create new docker compose
-    new_compose_filepath = Path(app_dir, '../deploy/docker-compose.yml')
+    new_compose_filepath = Path(app_dir, 'docker-compose-swarm.yml')
     with open(new_compose_filepath, 'w') as f_compose:
       yaml.dump(compose, f_compose)
     print(f"\t [SAVED] '{new_compose_filepath}'")
 
     template = """
       [swarm_manager]
-      {{swarm_manager['name']}} ansible_host={{swarm_manager['hostname']}} ansible_user=jfloff ansible_ssh_private_key_file=~/.ssh/id_rsa_inesc_cluster_jfloff
+      {% for k,v in swarm_manager.items() %}{{k}} ansible_host={{v}} ansible_user=jfloff ansible_ssh_private_key_file=~/.ssh/id_rsa_inesc_cluster_jfloff
+      {% endfor %}
 
       [cluster]
       {% for k,v in deploy_nodes.items() %}{{k}} ansible_host={{v}} ansible_user=jfloff ansible_ssh_private_key_file=~/.ssh/id_rsa_inesc_cluster_jfloff
@@ -289,6 +290,12 @@ def deploy(args):
     print(f"\t [SAVED] '{inventory_filepath}'")
     print("[INFO] Deploy Complete!")
 
+    #
+    # ansible-playbook undeploy-swarm.yml
+    # ansible-playbook deploy-swarm.yml
+    # ansible-playbook start-portainer.yml
+    # ansible-playbook start-dsb.yml
+    #
 
 
   except KeyboardInterrupt:
