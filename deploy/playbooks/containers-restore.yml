@@ -16,11 +16,11 @@
       shell: >
             gzip -d -c  {{dest}}/{{ item.replace(':','_').replace('/','_').replace('-','_') }}.tgz | docker load
       with_items:
-        - "{{ apps[app]['containers'] }}"
+        - "{{ apps[app]['containers']['to_pull'] | union(apps[app]['containers']['to_build']) }}"
 
 
     - name: validate that the images exists
       shell:  docker image inspect {{item}}
       with_items:
-        - "{{ apps[app]['containers'] }}"
+        - "{{ apps[app]['containers']['to_pull'] | union(apps[app]['containers']['to_build']) }}"
   

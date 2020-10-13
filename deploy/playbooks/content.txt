@@ -1,0 +1,13 @@
+jaegertracing_all_in_one_latest
+jonathanmace_xtrace_server_latest
+memcached
+mongo
+mongodb_setup
+mrvautin_adminmongo
+rabbitmq
+redis
+yg397_media_frontend_xenial
+yg397_openresty_thrift_latest
+yg397_social_network_microservices_antipode
+portainer_agent
+portainer_portainer_ce

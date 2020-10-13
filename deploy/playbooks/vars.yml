@@ -2,16 +2,18 @@ app: socialNetwork #
 apps: 
   socialNetwork:
     containers:
-      - jaegertracing/all-in-one:latest
-      - jonathanmace/xtrace-server:latest
-      - memcached
-      - mongo
-      - mongodb-setup
-      - mrvautin/adminmongo
-      - rabbitmq
-      - redis
-      - yg397/media-frontend:xenial
-      - yg397/openresty-thrift:latest
-      - yg397/social-network-microservices:antipode
-      - portainer/agent
-      - portainer/portainer-ce
+      to_pull:
+        - jaegertracing/all-in-one:latest
+        - jonathanmace/xtrace-server:latest
+        - memcached
+        - mongo
+        - mrvautin/adminmongo
+        - rabbitmq
+        - redis
+        - portainer/agent
+        - portainer/portainer-ce
+      to_build:
+        - mongodb-setup
+        - yg397/media-frontend:xenial
+        - yg397/openresty-thrift:latest
+        - yg397/social-network-microservices:antipode

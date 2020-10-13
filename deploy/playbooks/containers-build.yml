@@ -7,6 +7,13 @@
     - app: socialNetwork
 
   tasks:
+    - name: Pull  the images of containers used for deathstar benchmark
+      shell: >
+            docker pull {{item}}
+      with_items:
+        - "{{ apps[app]['containers']['to_pull'] }}"
+
+
     - name: Build the images of containers used for deathstar benchmark
       shell: >
             cd /home/jfloff/nas_inesc/antipode/antipode-deathstarbench ;
