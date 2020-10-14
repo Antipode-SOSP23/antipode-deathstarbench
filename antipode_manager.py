@@ -130,17 +130,22 @@ def build(args):
       thrift_microservice_args.insert(1, '--no-cache')
       openresty_thrift_args.insert(1, '--no-cache')
 
-    # 1. Build the base docker image that contains all the dependent libraries.  We modified this to add X-Trace and protocol buffers.
+    # Build the base docker image that contains all the dependent libraries.  We modified this to add X-Trace and protocol buffers.
     os.chdir(app_dir.joinpath('docker', 'thrift-microservice-deps', 'cpp'))
     docker[thrift_microservice_args] & FG
     os.chdir(app_dir)
 
-    # 2. Build the nginx server image. We modified this to add X-Trace and protocol buffers
+    # Build the nginx server image. We modified this to add X-Trace and protocol buffers
     os.chdir(app_dir.joinpath('docker', 'openresty-thrift'))
     docker[openresty_thrift_args] & FG
     os.chdir(app_dir)
 
-    # 3. Build the social network docker image
+    # Build the mongodb setup image
+    os.chdir(app_dir.joinpath('docker', 'mongodb-setup', 'post-storage'))
+    docker['build', '-t', 'mongodb-setup', '.'] & FG
+    os.chdir(app_dir)
+
+    # Build the social network docker image
     docker['build', '-t', 'yg397/social-network-microservices:antipode', '.'] & FG
 
   except KeyboardInterrupt:
