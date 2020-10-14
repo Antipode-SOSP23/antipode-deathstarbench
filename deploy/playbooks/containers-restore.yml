@@ -1,20 +1,20 @@
 ---
-- hosts: swarm_manager
+- hosts: all
   gather_facts: no
   become: no
   any_errors_fatal: true
   vars_files:
-      - vars.yml
+    - vars.yml
   vars:
-    # - source: "/home/jfloff/nas_inesc/antipode/antipode-deathstarbench/deploy/container-images"
-    - source: "../container-images"
     - app: socialNetwork
+    - source: "/home/jfloff/nas_inesc/antipode/antipode-deathstarbench/deploy/container-images"
+    # - source: "../container-images"
 
   tasks:
-        
-    - name: Backup container images
+
+    - name: Restore the container images
       shell: >
-            gzip -d -c  {{dest}}/{{ item.replace(':','_').replace('/','_').replace('-','_') }}.tgz | docker load
+            gzip -d -c  {{source}}/{{ item.replace(':','_').replace('/','_').replace('-','_') }}.tgz | docker load
       with_items:
         - "{{ apps[app]['containers']['to_pull'] | union(apps[app]['containers']['to_build']) }}"
 
@@ -23,4 +23,3 @@
       shell:  docker image inspect {{item}}
       with_items:
         - "{{ apps[app]['containers']['to_pull'] | union(apps[app]['containers']['to_build']) }}"
-  

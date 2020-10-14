@@ -3,6 +3,8 @@
   gather_facts: no
   become: no
   any_errors_fatal: true
+  vars_files:
+    - vars.yml
   vars:
     - app: socialNetwork
 
@@ -17,6 +19,6 @@
     - name: Build the images of containers used for deathstar benchmark
       shell: >
             cd /home/jfloff/nas_inesc/antipode/antipode-deathstarbench ;
-            ./antipode-manager.py {{ app }} build
+            ./antipode_manager.py {{ app }} build
       register: out
       failed_when: "not(out.rc == 0) or 'fail' in out.stderr"

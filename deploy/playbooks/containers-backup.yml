@@ -6,8 +6,8 @@
   vars_files:
       - vars.yml
   vars:
-    # - dest: "/home/jfloff/nas_inesc/antipode/antipode-deathstarbench/deploy/container-images"
-    - dest: "../container-images"
+    - dest: "/home/jfloff/nas_inesc/antipode/antipode-deathstarbench/deploy/container-images"
+      #- dest: "../container-images"
     - app: socialNetwork
 
   tasks:

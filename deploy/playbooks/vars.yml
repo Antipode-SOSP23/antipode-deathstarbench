@@ -1,5 +1,5 @@
-app: socialNetwork # 
-apps: 
+app: socialNetwork #
+apps:
   socialNetwork:
     containers:
       to_pull:
@@ -12,8 +12,9 @@ apps:
         - redis
         - portainer/agent
         - portainer/portainer-ce
+        # this container can be built but we are not modifying this version
+        - yg397/media-frontend:xenial
       to_build:
         - mongodb-setup
-        - yg397/media-frontend:xenial
         - yg397/openresty-thrift:latest
         - yg397/social-network-microservices:antipode
