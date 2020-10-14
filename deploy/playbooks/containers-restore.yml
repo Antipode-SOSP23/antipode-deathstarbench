@@ -6,9 +6,7 @@
   vars_files:
     - vars.yml
   vars:
-    - app: socialNetwork
     - source: "/home/jfloff/nas_inesc/antipode/antipode-deathstarbench/deploy/container-images"
-    # - source: "../container-images"
 
   tasks:
 

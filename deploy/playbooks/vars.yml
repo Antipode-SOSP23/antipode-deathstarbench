@@ -1,4 +1,3 @@
-app: socialNetwork #
 apps:
   socialNetwork:
     containers:

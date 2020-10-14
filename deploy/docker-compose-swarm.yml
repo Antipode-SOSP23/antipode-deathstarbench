@@ -1,0 +1,377 @@
+services:
+  antipode-oracle:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node22
+    entrypoint: /usr/local/bin/AntipodeOracle
+    hostname: antipode-oracle
+    image: yg397/social-network-microservices:antipode
+    restart: always
+  compose-post-redis:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    hostname: compose-post-redis
+    image: redis
+    restart: always
+  compose-post-service:
+    depends_on:
+    - write-home-timeline-rabbitmq
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    entrypoint: ComposePostService
+    hostname: compose-post-service
+    image: yg397/social-network-microservices:antipode
+    restart: always
+  home-timeline-redis:
+    command: redis-server --port 6379
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node02
+    hostname: home-timeline-redis
+    image: redis
+    restart: always
+  home-timeline-redis-us:
+    command: redis-server --slaveof home-timeline-redis 6379 --replica-read-only no
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node03
+    hostname: home-timeline-redis-us
+    image: redis
+    links:
+    - home-timeline-redis
+    restart: always
+  home-timeline-service:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node03
+    entrypoint: HomeTimelineService
+    hostname: home-timeline-service
+    image: yg397/social-network-microservices:antipode
+    restart: always
+  jaeger:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node25
+    environment:
+    - COLLECTOR_ZIPKIN_HTTP_PORT=9411
+    hostname: jaeger
+    image: jaegertracing/all-in-one:latest
+    ports:
+    - 16686:16686
+    restart: always
+  media-frontend:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    hostname: media-frontend
+    image: yg397/media-frontend:xenial
+    ports:
+    - 8081:8080
+    restart: always
+    volumes:
+    - ./media-frontend/lua-scripts:/usr/local/openresty/nginx/lua-scripts
+    - ./media-frontend/conf/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
+  media-memcached:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    hostname: media-memcached
+    image: memcached
+    restart: always
+  media-mongodb:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    hostname: media-mongodb
+    image: mongo
+    restart: always
+  media-service:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    entrypoint: MediaService
+    hostname: media-service
+    image: yg397/social-network-microservices:antipode
+    restart: always
+  mongodb-admin:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node25
+    environment:
+    - HOST=0.0.0.0
+    image: mrvautin/adminmongo
+    ports:
+    - 1234:1234
+    restart: always
+  nginx-thrift:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node23
+    hostname: nginx-thrift
+    image: yg397/openresty-thrift:latest
+    ports:
+    - 8080:8080
+    restart: always
+    volumes:
+    - ./nginx-web-server/lua-scripts:/usr/local/openresty/nginx/lua-scripts
+    - ./nginx-web-server/pages:/usr/local/openresty/nginx/pages
+    - ./nginx-web-server/conf/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
+    - ./nginx-web-server/jaeger-config.json:/usr/local/openresty/nginx/jaeger-config.json
+    - ./gen-lua:/gen-lua
+  nginx-thrift-us:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node24
+    hostname: nginx-thrift
+    image: yg397/openresty-thrift:latest
+    ports:
+    - 8082:8080
+    restart: always
+    volumes:
+    - ./nginx-web-server/lua-scripts:/usr/local/openresty/nginx/lua-scripts
+    - ./nginx-web-server/pages:/usr/local/openresty/nginx/pages
+    - ./nginx-web-server/conf/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
+    - ./nginx-web-server/jaeger-config.json:/usr/local/openresty/nginx/jaeger-config.json
+    - ./gen-lua:/gen-lua
+  post-storage-memcached:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node04
+    hostname: post-storage-memcached
+    image: memcached
+    restart: always
+  post-storage-memcached-us:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node06
+    hostname: post-storage-memcached-us
+    image: memcached
+    restart: always
+  post-storage-mongodb:
+    command: --replSet rs0 --oplogSize 128
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node04
+    hostname: post-storage-mongodb
+    image: mongo
+    restart: always
+  post-storage-mongodb-setup:
+    depends_on:
+    - post-storage-mongodb
+    - post-storage-mongodb-us
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node25
+    image: mongodb-setup
+  post-storage-mongodb-us:
+    command: --replSet rs0 --oplogSize 128
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node06
+    hostname: post-storage-mongodb-us
+    image: mongo
+    restart: always
+  post-storage-service:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node04
+    entrypoint: PostStorageService
+    hostname: post-storage-service
+    image: yg397/social-network-microservices:antipode
+    restart: always
+  post-storage-service-us:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node06
+    entrypoint: PostStorageService
+    environment:
+    - ZONE=us
+    hostname: post-storage-service-us
+    image: yg397/social-network-microservices:antipode
+    restart: always
+  social-graph-mongodb:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node02
+    hostname: social-graph-mongodb
+    image: mongo
+    restart: always
+  social-graph-redis:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node02
+    hostname: social-graph-redis
+    image: redis
+    restart: always
+  social-graph-service:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node02
+    entrypoint: SocialGraphService
+    hostname: social-graph-service
+    image: yg397/social-network-microservices:antipode
+    restart: always
+  text-service:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    entrypoint: TextService
+    hostname: text-service
+    image: yg397/social-network-microservices:antipode
+    restart: always
+  unique-id-service:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    entrypoint: UniqueIdService
+    hostname: unique-id-service
+    image: yg397/social-network-microservices:antipode
+    restart: always
+  url-shorten-memcached:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    hostname: url-shorten-memcached
+    image: memcached
+    restart: always
+  url-shorten-mongodb:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    hostname: url-shorten-mongodb
+    image: mongo
+    restart: always
+  url-shorten-service:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    entrypoint: UrlShortenService
+    hostname: url-shorten-service
+    image: yg397/social-network-microservices:antipode
+    restart: always
+  user-memcached:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    hostname: user-memcached
+    image: memcached
+    restart: always
+  user-mention-service:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    entrypoint: UserMentionService
+    hostname: user-mention-service
+    image: yg397/social-network-microservices:antipode
+    restart: always
+  user-mongodb:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    hostname: user-mongodb
+    image: mongo
+    restart: always
+  user-service:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    entrypoint: UserService
+    hostname: user-service
+    image: yg397/social-network-microservices:antipode
+    restart: always
+  user-timeline-mongodb:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    hostname: user-timeline-mongodb
+    image: mongo
+    restart: always
+  user-timeline-redis:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    hostname: user-timeline-redis
+    image: redis
+    restart: always
+  user-timeline-service:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    entrypoint: UserTimelineService
+    hostname: user-timeline-service
+    image: yg397/social-network-microservices:antipode
+    restart: always
+  write-home-timeline-rabbitmq:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node02
+    environment:
+      RABBITMQ_DEFAULT_VHOST: /
+      RABBITMQ_ERLANG_COOKIE: WRITE-HOME-TIMELINE-RABBITMQ
+    hostname: write-home-timeline-rabbitmq
+    image: rabbitmq
+    restart: always
+  write-home-timeline-service:
+    depends_on:
+    - write-home-timeline-rabbitmq
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node02
+    entrypoint: WriteHomeTimelineService
+    hostname: write-home-timeline-service
+    image: yg397/social-network-microservices:antipode
+    restart: always
+  xtrace-server:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node25
+    hostname: xtrace-server
+    image: jonathanmace/xtrace-server:latest
+    logging:
+      driver: none
+    ports:
+    - 4080:4080
+    - 5563:5563
+    restart: always
+version: '3'

@@ -6,7 +6,7 @@ from pprint import pprint
 from pathlib import Path
 from plumbum import local
 from plumbum import FG, BG
-from plumbum.cmd import docker_compose, docker #, ansible_playbook
+from plumbum.cmd import docker_compose, docker, ansible_playbook
 from plumbum.cmd import make
 from plumbum.cmd import python
 import itertools
@@ -14,7 +14,7 @@ import urllib.parse
 import requests
 from datetime import datetime
 import pandas as pd
-# import click
+import click
 import time
 import yaml
 import glob
@@ -38,10 +38,19 @@ def _index_containing_substring(the_list, substring):
       return i
   return -1
 
+def _deploy_type(args):
+  for k in AVAILABLE_DEPLOY_TYPES.keys():
+    if args[k]: return k
+  return None
+
 #############################
 # CONSTANTS
 #
-
+# available deploys
+AVAILABLE_DEPLOY_TYPES = {
+  'local': { 'name': 'Localhost' },
+  'gsd': { 'name': 'GSD Cluster' },
+}
 # name of the folder where the app root is
 AVAILABLE_APPLICATIONS = [
   'socialNetwork',
@@ -112,221 +121,278 @@ AVAILABLE_NODES = {
 }
 SWARM_MANAGER_NODE = { 'node34': '10.100.0.44' }
 
+# socialNetwork
+SOCIAL_NETWORK_DEFAULT_SERVICES = {
+  'social-graph-service': 'HOSTNAME',
+  'social-graph-mongodb': 'HOSTNAME',
+  'social-graph-redis': 'HOSTNAME',
+  'write-home-timeline-service': 'HOSTNAME',
+  'write-home-timeline-rabbitmq': 'HOSTNAME',
+  'home-timeline-redis': 'HOSTNAME',
+  'home-timeline-redis-us': 'HOSTNAME',
+  'home-timeline-service': 'HOSTNAME',
+  'post-storage-service': 'HOSTNAME',
+  'post-storage-memcached': 'HOSTNAME',
+  'post-storage-mongodb': 'HOSTNAME',
+  'post-storage-service-us': 'HOSTNAME',
+  'post-storage-memcached-us': 'HOSTNAME',
+  'post-storage-mongodb-us': 'HOSTNAME',
+  'user-timeline-service': 'HOSTNAME',
+  'user-timeline-redis': 'HOSTNAME',
+  'user-timeline-mongodb': 'HOSTNAME',
+  'compose-post-redis': 'HOSTNAME',
+  'compose-post-service': 'HOSTNAME',
+  'url-shorten-service': 'HOSTNAME',
+  'url-shorten-memcached': 'HOSTNAME',
+  'url-shorten-mongodb': 'HOSTNAME',
+  'user-service': 'HOSTNAME',
+  'user-memcached': 'HOSTNAME',
+  'user-mongodb': 'HOSTNAME',
+  'media-service': 'HOSTNAME',
+  'media-memcached': 'HOSTNAME',
+  'media-mongodb': 'HOSTNAME',
+  'media-frontend': 'HOSTNAME',
+  'text-service': 'HOSTNAME',
+  'unique-id-service': 'HOSTNAME',
+  'user-mention-service': 'HOSTNAME',
+  'antipode-oracle': 'HOSTNAME',
+  'nginx-thrift': 'HOSTNAME',
+  'nginx-thrift-us': 'HOSTNAME',
+  'jaeger': 'HOSTNAME',
+  'xtrace-server': 'HOSTNAME',
+  'mongodb-admin': 'HOSTNAME',
+  'post-storage-mongodb-setup': 'HOSTNAME',
+}
+
 #############################
 # BUILD
 #
 def build(args):
-  app_dir = Path.cwd()
   try:
-    # By default, the DeathStarBench pulls its containers from docker hub.
-    # We need to override these with our modified X-Trace containers.
-    # To do this, we will manually build the docker images for the modified components.
-
-    thrift_microservice_args = ['build', '-t', 'yg397/thrift-microservice-deps:antipode', '.']
-    openresty_thrift_args = ['build', '-t', 'yg397/openresty-thrift', '-f', 'xenial/Dockerfile', '.']
-
-    # adds --no-cache option to build so it rebuilds everything
-    if args['strong']:
-      thrift_microservice_args.insert(1, '--no-cache')
-      openresty_thrift_args.insert(1, '--no-cache')
-
-    # Build the base docker image that contains all the dependent libraries.  We modified this to add X-Trace and protocol buffers.
-    os.chdir(app_dir.joinpath('docker', 'thrift-microservice-deps', 'cpp'))
-    docker[thrift_microservice_args] & FG
+    app_dir = Path.cwd()
+    getattr(sys.modules[__name__], f"build__{args['app']}__{_deploy_type(args)}")(args)
     os.chdir(app_dir)
-
-    # Build the nginx server image. We modified this to add X-Trace and protocol buffers
-    os.chdir(app_dir.joinpath('docker', 'openresty-thrift'))
-    docker[openresty_thrift_args] & FG
-    os.chdir(app_dir)
-
-    # Build the mongodb setup image
-    os.chdir(app_dir.joinpath('docker', 'mongodb-setup', 'post-storage'))
-    docker['build', '-t', 'mongodb-setup', '.'] & FG
-    os.chdir(app_dir)
-
-    # Build the social network docker image
-    docker['build', '-t', 'yg397/social-network-microservices:antipode', '.'] & FG
-
   except KeyboardInterrupt:
     # if the compose gets interrupted we just continue with the script
     pass
 
 
-#############################
-# RUN
-#
-def run(args):
+def build__socialNetwork__local(args):
   app_dir = Path.cwd()
-  try:
-    run_args = ['up']
 
-    # run containers in detached mode
-    if args['detached']:
-      run_args.insert(1, '-d')
-    if args['build']:
-      run_args.insert(1, '--build')
+  # By default, the DeathStarBench pulls its containers from docker hub.
+  # We need to override these with our modified X-Trace containers.
+  # To do this, we will manually build the docker images for the modified components.
 
-    docker_compose[run_args] & FG
+  thrift_microservice_args = ['build', '-t', 'yg397/thrift-microservice-deps:antipode', '.']
+  openresty_thrift_args = ['build', '-t', 'yg397/openresty-thrift', '-f', 'xenial/Dockerfile', '.']
 
-  except KeyboardInterrupt:
-    # if the compose gets interrupted we just continue with the script
-    pass
+  # adds --no-cache option to build so it rebuilds everything
+  if args['strong']:
+    thrift_microservice_args.insert(1, '--no-cache')
+    openresty_thrift_args.insert(1, '--no-cache')
+
+  # Build the base docker image that contains all the dependent libraries.  We modified this to add X-Trace and protocol buffers.
+  os.chdir(app_dir.joinpath('docker', 'thrift-microservice-deps', 'cpp'))
+  docker[thrift_microservice_args] & FG
+  os.chdir(app_dir)
+
+  # Build the nginx server image. We modified this to add X-Trace and protocol buffers
+  os.chdir(app_dir.joinpath('docker', 'openresty-thrift'))
+  docker[openresty_thrift_args] & FG
+  os.chdir(app_dir)
+
+  # Build the mongodb setup image
+  os.chdir(app_dir.joinpath('docker', 'mongodb-setup', 'post-storage'))
+  docker['build', '-t', 'mongodb-setup', '.'] & FG
+  os.chdir(app_dir)
+
+  # Build the social network docker image
+  docker['build', '-t', 'yg397/social-network-microservices:antipode', '.'] & FG
+
+def build__socialNetwork__gsd(args):
+  # change path to playbooks folder
+  app_dir = Path.cwd()
+  os.chdir(app_dir.joinpath('..', 'deploy', 'playbooks'))
+
+  ansible_playbook['containers-build.yml', '-e', 'app=socialNetwork'] & FG
+  ansible_playbook['containers-backup.yml', '-e', 'app=socialNetwork'] & FG
 
 
 #############################
 # DEPLOY
 #
 def deploy(args):
-  app_dir = Path.cwd()
   try:
-    # figure out deploy type
-    if args['gsd']:
-      deploy_type = 'gsd'
-    if args['gcp']:
-      deploy_type = 'gcp'
-    # base path of configuration file
-    conf_base_path = Path(app_dir, '../deploy/configurations')
-    if args['new']:
-      filename = f"{args['app']}-{deploy_type}-{time.strftime('%Y%m%d%H%M%S')}.yml"
-      filepath = conf_base_path / filename
-
-      # services per app
-      default_services = {}
-      if args['app'] == 'socialNetwork':
-        default_services = {
-          'social-graph-service': 'HOSTNAME',
-          'social-graph-mongodb': 'HOSTNAME',
-          'social-graph-redis': 'HOSTNAME',
-          'write-home-timeline-service': 'HOSTNAME',
-          'write-home-timeline-rabbitmq': 'HOSTNAME',
-          'home-timeline-redis': 'HOSTNAME',
-          'home-timeline-redis-us': 'HOSTNAME',
-          'home-timeline-service': 'HOSTNAME',
-          'post-storage-service': 'HOSTNAME',
-          'post-storage-memcached': 'HOSTNAME',
-          'post-storage-mongodb': 'HOSTNAME',
-          'post-storage-service-us': 'HOSTNAME',
-          'post-storage-memcached-us': 'HOSTNAME',
-          'post-storage-mongodb-us': 'HOSTNAME',
-          'user-timeline-service': 'HOSTNAME',
-          'user-timeline-redis': 'HOSTNAME',
-          'user-timeline-mongodb': 'HOSTNAME',
-          'compose-post-redis': 'HOSTNAME',
-          'compose-post-service': 'HOSTNAME',
-          'url-shorten-service': 'HOSTNAME',
-          'url-shorten-memcached': 'HOSTNAME',
-          'url-shorten-mongodb': 'HOSTNAME',
-          'user-service': 'HOSTNAME',
-          'user-memcached': 'HOSTNAME',
-          'user-mongodb': 'HOSTNAME',
-          'media-service': 'HOSTNAME',
-          'media-memcached': 'HOSTNAME',
-          'media-mongodb': 'HOSTNAME',
-          'media-frontend': 'HOSTNAME',
-          'text-service': 'HOSTNAME',
-          'unique-id-service': 'HOSTNAME',
-          'user-mention-service': 'HOSTNAME',
-          'antipode-oracle': 'HOSTNAME',
-          'nginx-thrift': 'HOSTNAME',
-          'jaeger': 'HOSTNAME',
-          'xtrace-server': 'HOSTNAME',
-          'mongodb-admin': 'HOSTNAME',
-          'post-storage-mongodb-setup': 'HOSTNAME',
-        }
-      else:
-        print(f"[ERROR] App '{args['app']}' has no default services to deploy!")
-        exit(-1)
-    if args['lastest']:
-      pattern = conf_base_path / f"{args['app']}-{deploy_type}-*.yml"
-      files = glob.glob(str(pattern))
-
-      # not files found
-      if not files:
-        print("[ERROR] No file found!")
-        exit(-1)
-
-      # find most recent one
-      files.sort(key=os.path.getctime)
-      filepath = files[-1]
-
-    # Update docker-compose.yml
-    deploy_nodes = {}
-    with open(filepath, 'r') as f_conf, open('docker-compose.yml', 'r') as f_compose:
-      conf = yaml.load(f_conf, Loader=yaml.FullLoader)
-      compose = yaml.load(f_compose, Loader=yaml.FullLoader)
-
-      # get all the nodes that will be used in deploy
-      deploy_nodes = { n:AVAILABLE_NODES[n] for n in set(conf.values()) }
-
-      for sid,hostname in conf.items():
-        # get all the constraints
-        deploy_constraints = compose['services'][sid]['deploy']['placement']['constraints']
-        # get he id of constraint of the node hostname
-        node_constraint_index = _index_containing_substring(deploy_constraints, 'node.hostname')
-        # replace docker-compose with that constraint
-        deploy_constraints[node_constraint_index] = f'node.hostname == {hostname}'
-
-    # create new docker compose
-    new_compose_filepath = Path(app_dir, 'docker-compose-swarm.yml')
-    with open(new_compose_filepath, 'w') as f_compose:
-      yaml.dump(compose, f_compose)
-    print(f"\t [SAVED] '{new_compose_filepath}'")
-
-    template = """
-      [swarm_manager]
-      {% for k,v in swarm_manager.items() %}{{k}} ansible_host={{v}} ansible_user=jfloff ansible_ssh_private_key_file=~/.ssh/id_rsa_inesc_cluster_jfloff
-      {% endfor %}
-
-      [cluster]
-      {% for k,v in deploy_nodes.items() %}{{k}} ansible_host={{v}} ansible_user=jfloff ansible_ssh_private_key_file=~/.ssh/id_rsa_inesc_cluster_jfloff
-      {% endfor %}
-    """
-    inventory = Environment().from_string(template).render({
-      'swarm_manager': SWARM_MANAGER_NODE,
-      'deploy_nodes': deploy_nodes,
-    })
-
-    inventory_filepath = Path(app_dir, '../deploy/playbooks/inventory.cfg')
-    with open(inventory_filepath, 'w') as f:
-      # remove empty lines and dedent for easier read
-      f.write(textwrap.dedent(inventory))
-
-    print(f"\t [SAVED] '{inventory_filepath}'")
-    print("[INFO] Deploy Complete!")
-
-    #
-    # ansible-playbook undeploy-swarm.yml
-    # ansible-playbook deploy-swarm.yml
-    # ansible-playbook start-portainer.yml
-    # ansible-playbook start-dsb.yml
-    #
-
-
+    app_dir = Path.cwd()
+    getattr(sys.modules[__name__], f"deploy__{args['app']}__{_deploy_type(args)}")(args)
+    os.chdir(app_dir)
   except KeyboardInterrupt:
     # if the compose gets interrupted we just continue with the script
     pass
+
+def deploy__socialNetwork__local(args):
+  return None
+
+def deploy__socialNetwork__gsd(args):
+  app_dir = Path.cwd()
+  os.chdir(app_dir.joinpath('..', 'deploy'))
+
+  # base path of configuration file
+  conf_base_path = Path(Path.cwd(), 'configurations')
+  if args['new']:
+    new_filename = f"socialNetwork-gsd-{time.strftime('%Y%m%d%H%M%S')}.yml"
+    filepath = conf_base_path / new_filename
+
+    # write default configuration to file
+    with open(filepath, 'w') as f_conf:
+      yaml.dump(SOCIAL_NETWORK_DEFAULT_SERVICES, f_conf)
+      print(f"\t [SAVED] '{filepath.abspath()}'")
+
+    # wait for editor to close
+    print("[INFO] Waiting for editor to close new configuration file ...")
+    click.edit(filename=filepath)
+
+    # check if all nodes are known
+    with open(filepath, 'r') as f_conf:
+      conf = yaml.load(f_conf, Loader=yaml.FullLoader)
+      unknonwn_nodes = [ n for n in set(conf.values()) if n not in AVAILABLE_NODES.keys() ]
+      if unknonwn_nodes:
+        print("[ERROR] Found unknown nodes in GSD cluster: " + ', '.join(unknonwn_nodes))
+        exit()
+
+  if args['lastest']:
+    pattern = conf_base_path / f"socialNetwork-gsd-*.yml"
+    files = glob.glob(str(pattern))
+
+    # not files found
+    if not files:
+      print("[ERROR] No file found!")
+      exit(-1)
+
+    # find most recent one
+    files.sort(key=os.path.getctime)
+    filepath = files[-1]
+
+  # Update docker-compose.yml
+  deploy_nodes = {}
+  with open(filepath, 'r') as f_conf, open(Path(app_dir, 'docker-compose.yml'), 'r') as f_compose:
+    conf = yaml.load(f_conf, Loader=yaml.FullLoader)
+    compose = yaml.load(f_compose, Loader=yaml.FullLoader)
+
+    # get all the nodes that will be used in deploy
+    deploy_nodes = { n:AVAILABLE_NODES[n] for n in set(conf.values()) }
+
+    for sid,hostname in conf.items():
+      # get all the constraints
+      deploy_constraints = compose['services'][sid]['deploy']['placement']['constraints']
+      # get he id of constraint of the node hostname
+      node_constraint_index = _index_containing_substring(deploy_constraints, 'node.hostname')
+      # replace docker-compose with that constraint
+      deploy_constraints[node_constraint_index] = f'node.hostname == {hostname}'
+
+  # create new docker compose
+  new_compose_filepath = Path('docker-compose-swarm.yml')
+  with open(new_compose_filepath, 'w') as f_compose:
+    yaml.dump(compose, f_compose)
+  print(f"\t [SAVED] '{new_compose_filepath.resolve()}'")
+
+  template = """
+    [swarm_manager]
+    {% for k,v in swarm_manager.items() %}{{k}} ansible_host={{v}} ansible_user=jfloff ansible_ssh_private_key_file=~/.ssh/id_rsa_inesc_cluster_jfloff
+    {% endfor %}
+
+    [cluster]
+    {% for k,v in deploy_nodes.items() %}{{k}} ansible_host={{v}} ansible_user=jfloff ansible_ssh_private_key_file=~/.ssh/id_rsa_inesc_cluster_jfloff
+    {% endfor %}
+  """
+  inventory = Environment().from_string(template).render({
+    'swarm_manager': SWARM_MANAGER_NODE,
+    'deploy_nodes': dict(sorted(deploy_nodes.items())),
+  })
+
+  inventory_filepath = Path('playbooks/inventory.cfg')
+  with open(inventory_filepath, 'w') as f:
+    # remove empty lines and dedent for easier read
+    f.write(textwrap.dedent(inventory))
+
+  print(f"\t [SAVED] '{inventory_filepath.resolve()}'")
+
+  # run playbooks
+  os.chdir(app_dir.joinpath('..', 'deploy', 'playbooks'))
+  # first restore all images to everyone
+  ansible_playbook['containers-restore.yml', '-e', 'app=socialNetwork'] & FG
+  # then deploy everywhere
+  ansible_playbook['deploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
+
+  print("[INFO] Deploy Complete!")
+
+
+#############################
+# RUN
+#
+def run(args):
+  try:
+    app_dir = Path.cwd()
+    getattr(sys.modules[__name__], f"run__{args['app']}__{_deploy_type(args)}")(args)
+    os.chdir(app_dir)
+  except KeyboardInterrupt:
+    # if the compose gets interrupted we just continue with the script
+    pass
+
+def run__socialNetwork__local(args):
+  run_args = ['up']
+  # run containers in detached mode
+  if args['detached']:
+    run_args.insert(1, '-d')
+  if args['build']:
+    run_args.insert(1, '--build')
+
+  docker_compose[run_args] & FG
+
+def run__socialNetwork__gsd(args):
+  # change path to playbooks folder
+  app_dir = Path.cwd()
+  os.chdir(app_dir.joinpath('..', 'deploy', 'playbooks'))
+
+  ansible_playbook['start-portainer.yml'] & FG
+  print(f"[INFO] Portainer link (u/pwd: admin/antipode): http://{next(iter(SWARM_MANAGER_NODE))}:9000 ")
+
+  ansible_playbook['start-dsb.yml', '-e', 'app=socialNetwork'] & FG
+  print("[INFO] Run Complete!")
 
 
 #############################
 # CLEAN
 #
 def clean(args):
-  app_dir = Path.cwd()
   try:
-    # first stops the containers
-    docker_compose['stop'] & FG
-
-    if args['strong']:
-      docker_compose['down', '--rmi', 'all', '--remove-orphans'] & FG
-    if args['jaeger']:
-      docker_compose['rm', '-f', 'jaeger'] & FG
-    else:
-      docker_compose['down'] & FG
-
+    app_dir = Path.cwd()
+    getattr(sys.modules[__name__], f"clean__{args['app']}__{_deploy_type(args)}")(args)
+    os.chdir(app_dir)
   except KeyboardInterrupt:
     # if the compose gets interrupted we just continue with the script
     pass
+
+def clean__socialNetwork__local(args):
+  app_dir = Path.cwd()
+  # first stops the containers
+  docker_compose['stop'] & FG
+
+  if args['strong']:
+    docker_compose['down', '--rmi', 'all', '--remove-orphans'] & FG
+  elif args['jaeger']:
+    docker_compose['rm', '-f', 'jaeger'] & FG
+  else:
+    docker_compose['down'] & FG
+
+def clean__socialNetwork__gsd(args):
+  # change path to playbooks folder
+  app_dir = Path.cwd()
+  os.chdir(app_dir.joinpath('..', 'deploy', 'playbooks'))
+
+  ansible_playbook['undeploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
+  print("[INFO] Clean Complete!")
 
 
 #############################
@@ -449,6 +515,11 @@ if __name__ == "__main__":
   # parse arguments
   main_parser = argparse.ArgumentParser()
   main_parser.add_argument("app", choices=AVAILABLE_APPLICATIONS, help="Application to deploy")
+  # deploy type group
+  deploy_type_group = main_parser.add_mutually_exclusive_group(required=True)
+  for dt,info in AVAILABLE_DEPLOY_TYPES.items():
+    deploy_type_group.add_argument(f'--{dt}', action='store_true', help=f"Deploy app to {info['name']}")
+  # different commands
   subparsers = main_parser.add_subparsers(help='commands', dest='which')
 
   # build application
@@ -467,10 +538,6 @@ if __name__ == "__main__":
 
   # deploy application
   deploy_parser = subparsers.add_parser('deploy', help='Deploy application')
-  # deploy type group
-  deploy_type_group = deploy_parser.add_mutually_exclusive_group(required=True)
-  deploy_type_group.add_argument('--gcp',action='store_true', help='Deploy app to GCP')
-  deploy_type_group.add_argument('--gsd',action='store_true', help='Deploy app to GSD cluster')
   # deploy file group
   deploy_file_group = deploy_parser.add_mutually_exclusive_group(required=True)
   deploy_file_group.add_argument('-n', '--new', action='store_true', help="Build a new deploy file")
