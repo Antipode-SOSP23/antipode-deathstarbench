@@ -1,24 +1,22 @@
 version: "3"
 services:
-
   # Resolving container hostnames from host machine
   # CAUTION: could affect host machine networking
-#  dns-social-network:
-#    image: defreitas/dns-proxy-server
-#    volumes:
-#      - /opt/dns-proxy-server/conf:/app/conf
-#      - /var/run/docker.sock:/var/run/docker.sock
-#      - /etc/resolv.conf:/etc/resolv.conf
+  #  dns-social-network:
+  #    image: defreitas/dns-proxy-server
+  #    volumes:
+  #      - /opt/dns-proxy-server/conf:/app/conf
+  #      - /var/run/docker.sock:/var/run/docker.sock
+  #      - /etc/resolv.conf:/etc/resolv.conf
 
-
-#----------------------------------------------------------
-# Write notifications at EU replica
-#----------------------------------------------------------
+  #----------------------------------------------------------
+  # Write notifications at EU replica
+  #----------------------------------------------------------
   social-graph-service:
     image: yg397/social-network-microservices:antipode
     hostname: social-graph-service
-#    ports:
-#      - 10000:9090
+    # ports:
+      # - 10000:9090
     restart: always
     entrypoint: SocialGraphService
     deploy:
@@ -28,8 +26,8 @@ services:
   social-graph-mongodb:
     image: mongo
     hostname: social-graph-mongodb
-#    ports:
-#      - 27018:27017
+    # ports:
+      # - 27018:27017
     restart: always
     deploy:
       placement:
@@ -38,8 +36,8 @@ services:
   social-graph-redis:
     image: redis
     hostname: social-graph-redis
-#    ports:
-#      - 6380:6379
+    # ports:
+      # - 6380:6379
     restart: always
     deploy:
       placement:
@@ -62,9 +60,9 @@ services:
     environment:
       RABBITMQ_ERLANG_COOKIE: "WRITE-HOME-TIMELINE-RABBITMQ"
       RABBITMQ_DEFAULT_VHOST: "/"
-#    ports:
-#      - 15672:15672
-#      - 5672:5672
+    # ports:
+      # - 15672:15672
+      # - 5672:5672
     restart: always
     deploy:
       placement:
@@ -81,9 +79,9 @@ services:
       placement:
         constraints: [node.hostname == node02]
 
-#----------------------------------------------------------
-# read notifications at US replica
-#----------------------------------------------------------
+  #----------------------------------------------------------
+  # read notifications at US replica
+  #----------------------------------------------------------
   home-timeline-redis-us:
     image: redis
     hostname: home-timeline-redis-us
@@ -97,22 +95,20 @@ services:
       placement:
         constraints: [node.hostname == node03]
 
-
   home-timeline-service:
     image: yg397/social-network-microservices:antipode
     hostname: home-timeline-service
-#    ports:
-#      - 10010:9090
+    # ports:
+      # - 10010:9090
     restart: always
     entrypoint: HomeTimelineService
     deploy:
       placement:
         constraints: [node.hostname == node03]
 
-
-#----------------------------------------------------------
-# write post at replica EU
-#----------------------------------------------------------
+  #----------------------------------------------------------
+  # write post at replica EU
+  #----------------------------------------------------------
   post-storage-service:
     image: yg397/social-network-microservices:antipode
     hostname: post-storage-service
@@ -127,8 +123,8 @@ services:
   post-storage-memcached:
     image: memcached
     hostname: post-storage-memcached
-#    ports:
-#      - 11212:11211
+    # ports:
+      # - 11212:11211
     restart: always
     deploy:
       placement:
@@ -145,14 +141,14 @@ services:
       placement:
         constraints: [node.hostname == node04]
 
-#----------------------------------------------------------
-# read post at US replica
-#----------------------------------------------------------
+  #----------------------------------------------------------
+  # read post at US replica
+  #----------------------------------------------------------
   post-storage-service-us:
     image: yg397/social-network-microservices:antipode
     hostname: post-storage-service-us
     # ports:
-    #   - 10002:9090
+      # - 10002:9090
     restart: always
     entrypoint: PostStorageService
     environment:
@@ -164,8 +160,8 @@ services:
   post-storage-memcached-us:
     image: memcached
     hostname: post-storage-memcached-us
-#    ports:
-#      - 11212:11211
+    # ports:
+      # - 11212:11211
     restart: always
     deploy:
       placement:
@@ -176,21 +172,20 @@ services:
     hostname: post-storage-mongodb-us
     command: --replSet rs0 --oplogSize 128
     # ports:
-    #   - 27018:27017
+      # - 27018:27017
     restart: always
     deploy:
       placement:
         constraints: [node.hostname == node06]
 
-
-#----------------------------------------------------------
-# write posts EU
-#----------------------------------------------------------
+  #----------------------------------------------------------
+  # write posts EU
+  #----------------------------------------------------------
   user-timeline-service:
     image: yg397/social-network-microservices:antipode
     hostname: user-timeline-service
-#    ports:
-#      - 10003:9090
+    # ports:
+      # - 10003:9090
     restart: always
     entrypoint: UserTimelineService
     deploy:
@@ -200,8 +195,8 @@ services:
   user-timeline-redis:
     image: redis
     hostname: user-timeline-redis
-#    ports:
-#      - 6383:6379
+    # ports:
+      # - 6383:6379
     restart: always
     deploy:
       placement:
@@ -210,8 +205,8 @@ services:
   user-timeline-mongodb:
     image: mongo
     hostname: user-timeline-mongodb
-#    ports:
-#      - 27020:27017
+    # ports:
+      # - 27020:27017
     restart: always
     deploy:
       placement:
@@ -220,8 +215,8 @@ services:
   compose-post-redis:
     image: redis
     hostname: compose-post-redis
-#    ports:
-#      - 6382:6379
+    # ports:
+      # - 6382:6379
     restart: always
     deploy:
       placement:
@@ -230,8 +225,8 @@ services:
   compose-post-service:
     image: yg397/social-network-microservices:antipode
     hostname: compose-post-service
-#    ports:
-#      - 10001:9090
+    # ports:
+      # - 10001:9090
     restart: always
     entrypoint: ComposePostService
     depends_on:
@@ -240,12 +235,11 @@ services:
       placement:
         constraints: [node.hostname == node11]
 
-
   url-shorten-service:
     image: yg397/social-network-microservices:antipode
     hostname: url-shorten-service
-#    ports:
-#      - 10004:9090
+    # ports:
+      # - 10004:9090
     restart: always
     entrypoint: UrlShortenService
     deploy:
@@ -255,8 +249,8 @@ services:
   url-shorten-memcached:
     image: memcached
     hostname: url-shorten-memcached
-#    ports:
-#      - 11213:11211
+    # ports:
+      # - 11213:11211
     restart: always
     deploy:
       placement:
@@ -265,8 +259,8 @@ services:
   url-shorten-mongodb:
     image: mongo
     hostname: url-shorten-mongodb
-#    ports:
-#      - 27021:27017
+    # ports:
+      # - 27021:27017
     restart: always
     deploy:
       placement:
@@ -275,8 +269,8 @@ services:
   user-service:
     image: yg397/social-network-microservices:antipode
     hostname: user-service
-#    ports:
-#      - 10005:9090
+    # ports:
+      # - 10005:9090
     restart: always
     entrypoint: UserService
     deploy:
@@ -286,8 +280,8 @@ services:
   user-memcached:
     image: memcached
     hostname: user-memcached
-#    ports:
-#      - 11214:11211
+    # ports:
+      # - 11214:11211
     restart: always
     deploy:
       placement:
@@ -296,8 +290,8 @@ services:
   user-mongodb:
     image: mongo
     hostname: user-mongodb
-#    ports:
-#      - 27023:27017
+    # ports:
+      # - 27023:27017
     restart: always
     deploy:
       placement:
@@ -306,8 +300,8 @@ services:
   media-service:
     image: yg397/social-network-microservices:antipode
     hostname: media-service
-#    ports:
-#      - 10006:9090
+    # ports:
+      # - 10006:9090
     restart: always
     entrypoint: MediaService
     deploy:
@@ -317,8 +311,8 @@ services:
   media-memcached:
     image: memcached
     hostname: media-memcached
-#    ports:
-#      - 11215:11211
+    # ports:
+      # - 11215:11211
     restart: always
     deploy:
       placement:
@@ -327,8 +321,8 @@ services:
   media-mongodb:
     image: mongo
     hostname: media-mongodb
-#    ports:
-#      - 27024:27017
+    # ports:
+      # - 27024:27017
     restart: always
     deploy:
       placement:
@@ -350,8 +344,8 @@ services:
   text-service:
     image: yg397/social-network-microservices:antipode
     hostname: text-service
-#    ports:
-#      - 10007:9090
+    # ports:
+      # - 10007:9090
     restart: always
     entrypoint: TextService
     deploy:
@@ -361,8 +355,8 @@ services:
   unique-id-service:
     image: yg397/social-network-microservices:antipode
     hostname: unique-id-service
-#    ports:
-#      - 10008:9090
+    # ports:
+      # - 10008:9090
     restart: always
     entrypoint: UniqueIdService
     deploy:
@@ -372,33 +366,31 @@ services:
   user-mention-service:
     image: yg397/social-network-microservices:antipode
     hostname: user-mention-service
-#    ports:
-#      - 10009:9090
+    # ports:
+      # - 10009:9090
     restart: always
     entrypoint: UserMentionService
     deploy:
       placement:
         constraints: [node.hostname == node11]
 
-
-
-#----------------------------------------------------------
-# Coordinator
-#----------------------------------------------------------
+  #----------------------------------------------------------
+  # Antipode Coordinator
+  #----------------------------------------------------------
   antipode-oracle:
     image: yg397/social-network-microservices:antipode
     hostname: antipode-oracle
-#    ports:
-#      - 10001:9090
+    # ports:
+      # - 10001:9090
     restart: always
     entrypoint: /usr/local/bin/AntipodeOracle
     deploy:
       placement:
         constraints: [node.hostname == node22]
 
-#----------------------------------------------------------
-# Frontend EU
-#----------------------------------------------------------
+  #----------------------------------------------------------
+  # Frontend EU
+  #----------------------------------------------------------
   nginx-thrift:
     image: yg397/openresty-thrift:latest
     hostname: nginx-thrift
@@ -415,9 +407,9 @@ services:
       placement:
         constraints: [node.hostname == node23]
 
-#----------------------------------------------------------
-# Frontend US
-#----------------------------------------------------------
+  #----------------------------------------------------------
+  # Frontend US
+  #----------------------------------------------------------
   nginx-thrift-us:
     image: yg397/openresty-thrift:latest
     hostname: nginx-thrift
@@ -434,20 +426,20 @@ services:
       placement:
         constraints: [node.hostname == node23]
 
-#----------------------------------------------------------
-# Admin tasks
-#----------------------------------------------------------
+  #----------------------------------------------------------
+  # Admin tasks
+  #----------------------------------------------------------
   jaeger:
     image: jaegertracing/all-in-one:latest
     hostname: jaeger
     ports:
-#      - 5775:5775/udp
-#      - 6831:6831/udp
-#      - 6832:6832/udp
-#      - 5778:5778
+      # - 5775:5775/udp
+      # - 6831:6831/udp
+      # - 6832:6832/udp
+      # - 5778:5778
       - 16686:16686
-#      - 14268:14268
-#      - 9411:9411
+      # - 14268:14268
+      # - 9411:9411
     restart: always
     environment:
       - COLLECTOR_ZIPKIN_HTTP_PORT=9411
@@ -491,48 +483,3 @@ services:
     deploy:
       placement:
         constraints: [node.hostname == node25]
-
-
-#----------------------------------------------------------
-# Admin tasks
-#----------------------------------------------------------
-#   agent:
-#     image: portainer/agent
-#     environment:
-#       # REQUIRED: Should be equal to the service name prefixed by "tasks." when
-#       # deployed inside an overlay network
-#       AGENT_CLUSTER_ADDR: tasks.agent
-#       AGENT_PORT: 9001
-#       # LOG_LEVEL: debug
-#     volumes:
-#       - /var/run/docker.sock:/var/run/docker.sock
-#       - /var/lib/docker/volumes:/var/lib/docker/volumes
-#     networks:
-#       - agent_network
-#     deploy:
-#       mode: global
-#       placement:
-#         constraints: [node.platform.os == linux]
-
-#   portainer:
-#     image: portainer/portainer-ce
-#     command: -H tcp://tasks.agent:9001 --tlsskipverify
-#     ports:
-#       - "9000:9000"
-#       - "8000:8000"
-#     volumes:
-#       - portainer_data:/data
-#     networks:
-#       - agent_network
-#     deploy:
-#       mode: replicated
-#       replicas: 1
-#       placement:
-#         constraints: [node.role == manager]
-
-# networks:
-#   agent_network:
-#     driver: overlay
-
-# volumes:
-#   portainer_data:

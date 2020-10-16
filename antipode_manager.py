@@ -25,7 +25,9 @@ import textwrap
 # Pre-requisites
 #
 # > sudo apt-get install libssl-dev libz-dev luarocks python3
-# > sudo luarocks install luasocket json-lua
+# > sudo luarocks install luasocket
+# > sudo luarocks install json-lua
+# > sudo luarocks install penlight
 # > pip install plumbum ansible
 #
 
@@ -401,6 +403,10 @@ def clean__socialNetwork__gsd(args):
 def wkld(args):
   app_dir = Path.cwd()
   try:
+    # set hosts for different zones
+    host_eu = 'http://localhost:8080'
+    host_us = 'http://localhost:8082'
+
     wrk2_endpoints = [ endpoint for endpoint in args['endpoints'] if AVAILABLE_WKLD_ENDPOINTS[args['app']][endpoint]['type'] == 'wrk2' ]
     py_endpoints = [ endpoint for endpoint in args['endpoints'] if AVAILABLE_WKLD_ENDPOINTS[args['app']][endpoint]['type'] == 'python' ]
 
@@ -425,11 +431,12 @@ def wkld(args):
         # get details for the script and uri path
         details = AVAILABLE_WKLD_ENDPOINTS[args['app']][endpoint]
         script_path = app_dir.joinpath(details['script_path'])
-        uri = urllib.parse.urljoin('http://localhost:8080', details['uri'])
+        uri = urllib.parse.urljoin(host_eu, details['uri'])
         # add arguments to previous list
         wrk_args.extend(['--latency', '--script', str(script_path), uri, '--rate', args['requests'] ])
         # run workload for each endpoint
-        wrk[wrk_args] & FG
+        with local.env(HOST_EU=host_eu), local.env(HOST_US=host_us):
+          wrk[wrk_args] & FG
 
       # go back to the app directory
       os.chdir(app_dir)
@@ -442,7 +449,8 @@ def wkld(args):
         script_path = app_dir.joinpath(details['script_path'])
 
         # run workload for each endpoint
-        python[script_path] & FG
+        with local.env(HOST_EU=host_eu), local.env(HOST_US=host_us):
+          python[script_path] & FG
 
     exit()
 
