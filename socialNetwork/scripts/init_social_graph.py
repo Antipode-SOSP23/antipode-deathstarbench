@@ -1,6 +1,7 @@
 import aiohttp
 import asyncio
 import sys
+import os
 
 async def upload_follow(session, addr, user_0, user_1):
   payload = {'user_name': 'username_' + user_0, 'followee_name': 'username_' + user_1}
@@ -60,6 +61,10 @@ async def follow(addr, edges):
     print(idx, "edges finished")
 
 if __name__ == '__main__':
+  if not('HOST_EU' in os.environ and 'HOST_US' in os.environ):
+    print("[ERROR] Set HOST_EU and HOST_US env vars with host uri for the nginx endpoints")
+    exit(-1)
+
   if len(sys.argv) < 2:
     filename = "datasets/social-graph/socfb-Reed98/socfb-Reed98.mtx"
   else:
@@ -68,7 +73,7 @@ if __name__ == '__main__':
     nodes = getNodes(file)
     edges = getEdges(file)
 
-  addr = "http://127.0.0.1:8080"
+  addr = os.environ['HOST_EU']
   loop = asyncio.get_event_loop()
   future = asyncio.ensure_future(register(addr, nodes))
   loop.run_until_complete(future)

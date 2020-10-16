@@ -99,6 +99,10 @@ AVAILABLE_WKLD_ENDPOINTS = {
       'type': 'python',
       'script_path': './scripts/antipode-wht-error.py',
     },
+    'init-social-graph': {
+      'type': 'python',
+      'script_path': './scripts/init_social_graph.py',
+    },
   }
 }
 AVAILABLE_NODES = {
