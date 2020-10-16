@@ -15,9 +15,9 @@
       register: out
       failed_when: "not(out.rc == 0) or 'fail' in out.stderr"
 
-    - name: Make sure DSB stack is all deployed
-      shell: >
-            {% raw %} docker stack services deathstarbench --format '{{.Name}};{{.Replicas}}' | grep -v '1/1' | wc -l {%endraw%}
-      register: stack_status
-      # ignores maximum of mongodb-setup
-      failed_when: "(stack_status.stdout | int) > 1"
+    # - name: Make sure DSB stack is all deployed
+    #   shell: >
+    #         {% raw %} docker stack services deathstarbench --format '{{.Name}};{{.Replicas}}' | grep -v '1/1' | wc -l {%endraw%}
+    #   register: stack_status
+    #   # ignores maximum of mongodb-setup
+    #   failed_when: "(stack_status.stdout | int) > 1"

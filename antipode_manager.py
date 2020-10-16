@@ -495,56 +495,77 @@ def wkld__socialNetwork__gsd(args):
 # GATHER
 #
 def gather(args):
-  if args['visibility_latency']:
-    # visit http://146.193.41.235:16686/dependencies to check number of flowing requests
-    limit = 7000
-    next_round = 0
-    traces = []
+  try:
+    app_dir = Path.cwd()
+    # get host for each zone
+    jaeger_host = getattr(sys.modules[__name__], f"gather__{args['app']}__{_deploy_type(args)}")(args)
 
-    # curl -X GET "jaeger:16686/api/traces?service=write-home-timeline-service&prettyPrint=true
-    params = (
-      ('service', 'write-home-timeline-service'),
-      ('limit', limit),
-      # ('offset', total_num), -- offset is not working
-      ('lookback', '1h'),
-      # ('prettyPrint', 'true'),
-    )
-    response = requests.get('http://localhost:16686/api/traces', params=params)
+    if args['visibility_latency']:
+      # visit http://146.193.41.235:16686/dependencies to check number of flowing requests
+      limit = 7000
+      next_round = 0
+      traces = []
 
-    # error if we do not get a 200 OK code
-    if response.status_code != 200 :
-      print("[ERROR] Could not fetch traces from Jaeger")
-      exit(-1)
+      # curl -X GET "jaeger:16686/api/traces?service=write-home-timeline-service&prettyPrint=true
+      params = (
+        ('service', 'write-home-timeline-service'),
+        ('limit', limit),
+        # ('offset', total_num), -- offset is not working
+        ('lookback', '1h'),
+        # ('prettyPrint', 'true'),
+      )
+      response = requests.get(f'{jaeger_host}/api/traces', params=params)
 
-    # error if we do not retreive all traces
-    if len(traces) == limit:
-      print(f"[WARN] Fetched the same amount of traces as the limit ({limit}). Increase the limit to fetch all traces.")
+      # error if we do not get a 200 OK code
+      if response.status_code != 200 :
+        print("[ERROR] Could not fetch traces from Jaeger")
+        exit(-1)
 
-    # read returned traces
-    content = response.json()
+      # error if we do not retreive all traces
+      if len(traces) == limit:
+        print(f"[WARN] Fetched the same amount of traces as the limit ({limit}). Increase the limit to fetch all traces.")
 
-    # pick only the traces with the desired info
-    for trace in content['data']:
-      trace_info = {
-        'trace_id': trace['spans'][0]['traceID'],
-        'wht_worker_duration': -1,
-        'wht_worker_endts': -1,
-      }
+      # read returned traces
+      content = response.json()
 
-      for s in trace['spans']:
-        for t in s['tags']:
-          if t['key'] == 'wht_worker_duration':
-            trace_info['wht_worker_duration'] = float(t['value'])
-          if t['key'] == 'wht_worker_endts':
-            # v = datetime.fromtimestamp(v / 1000.0)
-            trace_info['wht_worker_endts'] = t['value']
+      # pick only the traces with the desired info
+      for trace in content['data']:
+        trace_info = {
+          'trace_id': trace['spans'][0]['traceID'],
+          'wht_worker_duration': -1,
+          'wht_worker_endts': -1,
+        }
 
-      traces.append(trace_info)
+        for s in trace['spans']:
+          for t in s['tags']:
+            if t['key'] == 'wht_worker_duration':
+              trace_info['wht_worker_duration'] = float(t['value'])
+            if t['key'] == 'wht_worker_endts':
+              # v = datetime.fromtimestamp(v / 1000.0)
+              trace_info['wht_worker_endts'] = t['value']
 
-    df = pd.DataFrame(traces)
-    df = df.set_index('trace_id')
-    print(df.describe())
+        traces.append(trace_info)
 
+      df = pd.DataFrame(traces)
+      df = df.set_index('trace_id')
+      print(df.describe())
+
+  except KeyboardInterrupt:
+    # if the compose gets interrupted we just continue with the script
+    pass
+
+def gather__socialNetwork__local(args):
+  return 'http://localhost:16686'
+
+def gather__socialNetwork__gsd(args):
+  filepath = None
+
+  if args['lastest']:
+    filepath = _last_configuration('socialNetwork', 'gsd')
+
+  with open(filepath, 'r') as f_conf:
+    conf = yaml.load(f_conf, Loader=yaml.FullLoader)
+    return f"http://{conf['jaeger']}:16686"
 
 #############################
 # MAIN
@@ -604,6 +625,11 @@ if __name__ == "__main__":
 
   # gather application
   gather_parser = subparsers.add_parser('gather', help='Gather data from application')
+  # deploy file group
+  deploy_file_group = gather_parser.add_mutually_exclusive_group(required=False)
+  deploy_file_group.add_argument('-l', '--lastest', action='store_true', help="Use last used deploy file")
+  deploy_file_group.add_argument('-f', '--file', type=argparse.FileType('r', encoding='UTF-8'), help="Use specific file")
+  # different metics to gather
   gather_parser.add_argument('-vl', '--visibility-latency', action='store_true', help="detached")
 
 
