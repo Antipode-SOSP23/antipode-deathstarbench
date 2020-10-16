@@ -31,6 +31,8 @@ import textwrap
 # > pip install plumbum ansible
 #
 
+ROOT_PATH = Path(os.path.abspath(os.path.dirname(sys.argv[0])))
+
 #############################
 # HELPER
 #
@@ -44,6 +46,20 @@ def _deploy_type(args):
   for k in AVAILABLE_DEPLOY_TYPES.keys():
     if args[k]: return k
   return None
+
+def _last_configuration(app, deploy_type):
+  conf_base_path = ROOT_PATH / 'deploy' / 'configurations'
+  pattern = conf_base_path / f"{app}-{deploy_type}-*.yml"
+  files = glob.glob(str(pattern))
+
+  # not files found
+  if not files:
+    print("[ERROR] No file found!")
+    exit(-1)
+
+  # find most recent one
+  files.sort(key=os.path.getctime)
+  return files[-1]
 
 #############################
 # CONSTANTS
@@ -264,17 +280,7 @@ def deploy__socialNetwork__gsd(args):
         exit()
 
   if args['lastest']:
-    pattern = conf_base_path / f"socialNetwork-gsd-*.yml"
-    files = glob.glob(str(pattern))
-
-    # not files found
-    if not files:
-      print("[ERROR] No file found!")
-      exit(-1)
-
-    # find most recent one
-    files.sort(key=os.path.getctime)
-    filepath = files[-1]
+    filepath = _last_configuration('socialNetwork', 'gsd')
 
   # Update docker-compose.yml
   deploy_nodes = {}
@@ -401,62 +407,84 @@ def clean__socialNetwork__gsd(args):
 # WORKLOAD
 #
 def wkld(args):
-  app_dir = Path.cwd()
   try:
-    # set hosts for different zones
-    host_eu = 'http://localhost:8080'
-    host_us = 'http://localhost:8082'
+    app_dir = Path.cwd()
 
-    wrk2_endpoints = [ endpoint for endpoint in args['endpoints'] if AVAILABLE_WKLD_ENDPOINTS[args['app']][endpoint]['type'] == 'wrk2' ]
-    py_endpoints = [ endpoint for endpoint in args['endpoints'] if AVAILABLE_WKLD_ENDPOINTS[args['app']][endpoint]['type'] == 'python' ]
+    # scripts just need you to set the env variables
+    if args['app'] == 'socialNetwork':
+      # get host for each zone
+      hosts = getattr(sys.modules[__name__], f"wkld__{args['app']}__{_deploy_type(args)}")(args)
+      # pass env variables to child processes
+      with local.env(HOST_EU=hosts['host_eu']), local.env(HOST_US=hosts['host_us']):
+        wrk2_endpoints = [ endpoint for endpoint in args['endpoints'] if AVAILABLE_WKLD_ENDPOINTS[args['app']][endpoint]['type'] == 'wrk2' ]
+        py_endpoints = [ endpoint for endpoint in args['endpoints'] if AVAILABLE_WKLD_ENDPOINTS[args['app']][endpoint]['type'] == 'python' ]
 
-    if wrk2_endpoints:
-      os.chdir(app_dir.joinpath('wrk2'))
-      # make workload
-      make & FG
-      # load bin
-      wrk = local["./wrk"]
+        if wrk2_endpoints:
+          os.chdir(app_dir.joinpath('wrk2'))
+          # make workload
+          make & FG
+          # load bin
+          wrk = local["./wrk"]
 
-      # load existing options
-      wrk_args = []
-      if 'connections' in args:
-        wrk_args.extend(['--connections', args['connections']])
-      if 'duration' in args:
-        wrk_args.extend(['--duration', args['duration']])
-      if 'threads' in args:
-        wrk_args.extend(['--threads', args['threads']])
+          # load existing options
+          wrk_args = []
+          if 'connections' in args:
+            wrk_args.extend(['--connections', args['connections']])
+          if 'duration' in args:
+            wrk_args.extend(['--duration', args['duration']])
+          if 'threads' in args:
+            wrk_args.extend(['--threads', args['threads']])
 
-      # we run the workload for each endpoint
-      for endpoint in wrk2_endpoints:
-        # get details for the script and uri path
-        details = AVAILABLE_WKLD_ENDPOINTS[args['app']][endpoint]
-        script_path = app_dir.joinpath(details['script_path'])
-        uri = urllib.parse.urljoin(host_eu, details['uri'])
-        # add arguments to previous list
-        wrk_args.extend(['--latency', '--script', str(script_path), uri, '--rate', args['requests'] ])
-        # run workload for each endpoint
-        with local.env(HOST_EU=host_eu), local.env(HOST_US=host_us):
-          wrk[wrk_args] & FG
+          # we run the workload for each endpoint
+          for endpoint in wrk2_endpoints:
+            # get details for the script and uri path
+            details = AVAILABLE_WKLD_ENDPOINTS[args['app']][endpoint]
+            script_path = app_dir.joinpath(details['script_path'])
+            uri = urllib.parse.urljoin(hosts['host_eu'], details['uri'])
+            # add arguments to previous list
+            wrk_args.extend(['--latency', '--script', str(script_path), uri, '--rate', args['requests'] ])
+            # run workload for each endpoint
+            wrk[wrk_args] & FG
 
-      # go back to the app directory
-      os.chdir(app_dir)
+          # go back to the app directory
+          os.chdir(app_dir)
 
-    if py_endpoints:
-      # we run the workload for each endpoint
-      for endpoint in py_endpoints:
-        # get details for the script and uri path
-        details = AVAILABLE_WKLD_ENDPOINTS[args['app']][endpoint]
-        script_path = app_dir.joinpath(details['script_path'])
+        if py_endpoints:
+          # we run the workload for each endpoint
+          for endpoint in py_endpoints:
+            # get details for the script and uri path
+            details = AVAILABLE_WKLD_ENDPOINTS[args['app']][endpoint]
+            script_path = app_dir.joinpath(details['script_path'])
 
-        # run workload for each endpoint
-        with local.env(HOST_EU=host_eu), local.env(HOST_US=host_us):
-          python[script_path] & FG
+            # run workload for each endpoint
+            python[script_path] & FG
 
-    exit()
+        exit()
 
+    os.chdir(app_dir)
   except KeyboardInterrupt:
     # if the compose gets interrupted we just continue with the script
     pass
+
+def wkld__socialNetwork__local(args):
+  return {
+    'host_eu': 'http://localhost:8080',
+    'host_us': 'http://localhost:8082',
+  }
+
+def wkld__socialNetwork__gsd(args):
+  # eu - nginx-thrift: node23
+  # us - nginx-thrift-us: node24
+
+  if args['lastest']:
+    filepath = _last_configuration('socialNetwork', 'gsd')
+
+  with open(filepath, 'r') as f_conf:
+    conf = yaml.load(f_conf, Loader=yaml.FullLoader)
+    return {
+      'host_eu': f"http://{conf['nginx-thrift']}:8080",
+      'host_us': f"http://{conf['nginx-thrift-us']}:8082",
+    }
 
 
 #############################
@@ -554,6 +582,10 @@ if __name__ == "__main__":
 
   # workload application
   wkld_parser = subparsers.add_parser('wkld', help='Run HTTP workload generator')
+  # deploy file group
+  deploy_file_group = wkld_parser.add_mutually_exclusive_group(required=False)
+  deploy_file_group.add_argument('-l', '--lastest', action='store_true', help="Use last used deploy file")
+  deploy_file_group.add_argument('-f', '--file', type=argparse.FileType('r', encoding='UTF-8'), help="Use specific file")
   # comparable with wrk2 > ./wrk options
   wkld_parser.add_argument('-E', '--endpoints', nargs='+', choices=[ e for app_list in AVAILABLE_WKLD_ENDPOINTS.values() for e in app_list ], help="Endpoints to generate workload for")
   wkld_parser.add_argument('-c', '--connections', type=int, default=1, help="Connections to keep open")
