@@ -96,7 +96,7 @@ request = function()
   media_types = media_types:sub(1, #media_types - 1) .. "]"
 
   local method = "POST"
-  local path = "http://localhost:8080/wrk2-api/post/compose"
+  local path = os.getenv('HOST_EU') .. "/wrk2-api/post/compose"
   local headers = {}
   local body
   headers["Content-Type"] = "application/x-www-form-urlencoded"
@@ -119,7 +119,7 @@ request = function()
     local method = "GET"
     local headers = {}
     headers["Content-Type"] = "application/x-www-form-urlencoded"
-    local path = "http://localhost:8080/wrk2-api/home-timeline/read?" .. args
+    local path = os.getenv('HOST_US') .. "/wrk2-api/home-timeline/read?" .. args
 
     return wrk.format(method, path, headers, nil)
   end

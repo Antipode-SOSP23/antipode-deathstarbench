@@ -5,8 +5,11 @@ import requests
 from pprint import pprint
 import time
 import json
+import os
 
-host = "node23:8080"
+if not('HOST_EU' in os.environ and 'HOST_US' in os.environ):
+  print("[ERROR] Set HOST_EU and HOST_US env vars with host uri for the nginx endpoints")
+  exit(-1)
 
 def _register_user(user_id):
   data = {
@@ -18,7 +21,7 @@ def _register_user(user_id):
   }
   # make first request to compose the post
   headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-  r = requests.post(f"http://{host}/wrk2-api/user/register", data=data, headers=headers)
+  r = requests.post(f"{os.environ['HOST_EU']}/wrk2-api/user/register", data=data, headers=headers)
   print(f"[Register User] {r.status_code}, {r.reason}")
   if r.status_code == 200:
     pprint(data)
@@ -33,7 +36,7 @@ def _follow_user(followee_id, follower_id):
   }
   # make first request to compose the post
   headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-  r = requests.post(f'http://{host}/wrk2-api/user/follow', data=data, headers=headers)
+  r = requests.post(f"{os.environ['HOST_EU']}/wrk2-api/user/follow", data=data, headers=headers)
   print(f"[Follow User] {r.status_code}, {r.reason}")
   if r.status_code == 200:
     pprint(data)
@@ -54,7 +57,7 @@ def _create_post(user_id):
   }
   # make first request to compose the post
   headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-  r = requests.post(f'http://{host}/wrk2-api/post/compose', data=data, headers=headers)
+  r = requests.post(f"{os.environ['HOST_EU']}/wrk2-api/post/compose", data=data, headers=headers)
   print(f"[Compose Post] {r.status_code}, {r.reason}")
   if r.status_code == 200:
     pprint(data)
@@ -71,7 +74,7 @@ def _read_home_timeline(user_id):
     'stop' : 10000,
   }
   headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-  r = requests.get(f'http://{host}/wrk2-api/home-timeline/read', params=wht_params)
+  r = requests.get(f"{os.environ['HOST_US']}/wrk2-api/home-timeline/read", params=wht_params)
   print(f"[Read Home Timeline] {r.status_code}, {r.reason}")
   if r.status_code == 200:
     json_content = json.loads(r.content)
@@ -90,7 +93,7 @@ def _read_user_timeline(user_id):
     'stop' : 100,
   }
   headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-  r = requests.get(f'http://{host}/wrk2-api/user-timeline/read', params=wht_params)
+  r = requests.get(f"{os.environ['HOST_US']}/wrk2-api/user-timeline/read", params=wht_params)
   print(f"[Read User Timeline] {r.status_code}, {r.reason}")
   if r.status_code == 200:
     json_content = json.loads(r.content)
