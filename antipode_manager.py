@@ -420,10 +420,9 @@ def wkld(args):
       hosts = getattr(sys.modules[__name__], f"wkld__{args['app']}__{_deploy_type(args)}")(args)
       # pass env variables to child processes
       with local.env(HOST_EU=hosts['host_eu']), local.env(HOST_US=hosts['host_us']):
-        wrk2_endpoints = [ endpoint for endpoint in args['endpoints'] if AVAILABLE_WKLD_ENDPOINTS[args['app']][endpoint]['type'] == 'wrk2' ]
-        py_endpoints = [ endpoint for endpoint in args['endpoints'] if AVAILABLE_WKLD_ENDPOINTS[args['app']][endpoint]['type'] == 'python' ]
+        endpoint = AVAILABLE_WKLD_ENDPOINTS[args['app']][args['Endpoint']]
 
-        if wrk2_endpoints:
+        if endpoint['type'] == 'wrk2':
           os.chdir(app_dir.joinpath('wrk2'))
           # make workload
           make & FG
@@ -439,31 +438,21 @@ def wkld(args):
           if 'threads' in args:
             wrk_args.extend(['--threads', args['threads']])
 
-          # we run the workload for each endpoint
-          for endpoint in wrk2_endpoints:
-            # get details for the script and uri path
-            details = AVAILABLE_WKLD_ENDPOINTS[args['app']][endpoint]
-            script_path = app_dir.joinpath(details['script_path'])
-            uri = urllib.parse.urljoin(hosts['host_eu'], details['uri'])
-            # add arguments to previous list
-            wrk_args.extend(['--latency', '--script', str(script_path), uri, '--rate', args['requests'] ])
-            # run workload for each endpoint
-            wrk[wrk_args] & FG
+          # get details for the script and uri path
+          script_path = app_dir.joinpath(endpoint['script_path'])
+          uri = urllib.parse.urljoin(hosts['host_eu'], endpoint['uri'])
+          # add arguments to previous list
+          wrk_args.extend(['--latency', '--script', str(script_path), uri, '--rate', args['requests'] ])
+          # run workload for endpoint
+          wrk[wrk_args] & FG
 
           # go back to the app directory
           os.chdir(app_dir)
 
-        if py_endpoints:
-          # we run the workload for each endpoint
-          for endpoint in py_endpoints:
-            # get details for the script and uri path
-            details = AVAILABLE_WKLD_ENDPOINTS[args['app']][endpoint]
-            script_path = app_dir.joinpath(details['script_path'])
-
-            # run workload for each endpoint
-            python[script_path] & FG
-
-        exit()
+        elif endpoint['type'] == 'python':
+          script_path = app_dir.joinpath(endpoint['script_path'])
+          # run workload for endpoint
+          python[script_path] & FG
 
     os.chdir(app_dir)
   except KeyboardInterrupt:
@@ -501,7 +490,7 @@ def gather(args):
     jaeger_host = getattr(sys.modules[__name__], f"gather__{args['app']}__{_deploy_type(args)}")(args)
 
     if args['visibility_latency']:
-      # visit http://146.193.41.235:16686/dependencies to check number of flowing requests
+      input(f"Visit {jaeger_host}/dependencies to check number of flowing requests: ")
       limit = 7000
       next_round = 0
       traces = []
@@ -612,7 +601,7 @@ if __name__ == "__main__":
   deploy_file_group.add_argument('-l', '--lastest', action='store_true', help="Use last used deploy file")
   deploy_file_group.add_argument('-f', '--file', type=argparse.FileType('r', encoding='UTF-8'), help="Use specific file")
   # comparable with wrk2 > ./wrk options
-  wkld_parser.add_argument('-E', '--endpoints', nargs='+', choices=[ e for app_list in AVAILABLE_WKLD_ENDPOINTS.values() for e in app_list ], help="Endpoints to generate workload for")
+  wkld_parser.add_argument('-E', '--Endpoint', choices=[ e for app_list in AVAILABLE_WKLD_ENDPOINTS.values() for e in app_list ], help="Endpoints to generate workload for")
   wkld_parser.add_argument('-c', '--connections', type=int, default=1, help="Connections to keep open")
   wkld_parser.add_argument('-d', '--duration', type=str, default='1m', help="Duration in s / m / h")
   wkld_parser.add_argument('-t', '--threads', type=int, default=1, help="Number of threads")
