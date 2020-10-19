@@ -490,8 +490,7 @@ def gather(args):
     jaeger_host = getattr(sys.modules[__name__], f"gather__{args['app']}__{_deploy_type(args)}")(args)
 
     if args['visibility_latency']:
-      input(f"Visit {jaeger_host}/dependencies to check number of flowing requests: ")
-      limit = 7000
+      limit = int(input(f"Visit {jaeger_host}/dependencies to check number of flowing requests: "))
       next_round = 0
       traces = []
 
