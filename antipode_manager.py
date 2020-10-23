@@ -8,7 +8,7 @@ from plumbum import local
 from plumbum import FG, BG
 from plumbum.cmd import docker_compose, docker, ansible_playbook
 from plumbum.cmd import make
-from plumbum.cmd import python
+from plumbum.cmd import python3
 import itertools
 import urllib.parse
 import requests
@@ -452,7 +452,7 @@ def wkld(args):
         elif endpoint['type'] == 'python':
           script_path = app_dir.joinpath(endpoint['script_path'])
           # run workload for endpoint
-          python[script_path] & FG
+          python3[script_path] & FG
 
     os.chdir(app_dir)
   except KeyboardInterrupt:
