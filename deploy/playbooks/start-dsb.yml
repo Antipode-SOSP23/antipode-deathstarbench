@@ -16,12 +16,14 @@
       failed_when: "not(out.rc == 0) or 'fail' in out.stderr"
 
     - name: Ensure DSB stack is deployed
+      # we ignore the post-storage-mongodb-setup service since that service will shutdown after running
       shell: >
-           {% raw %} docker stack services deathstarbench --format '{{.Name}};{{.Replicas}}' | grep -v '1/1' | wc -l {%endraw%}
+            docker stack services {{ stack }} --format {% raw %}'{{.Name}};{{.Replicas}}'{%endraw%} | grep -v 'post-storage-mongodb-setup' | grep '0/1' | wc -l
       register: cmd_res
+      # 1 minute
       retries: 6
       delay: 10
-      until: (cmd_res.stdout | int) > 1
+      until: (cmd_res.stdout | int) == 0
 
     - name: Init social graph
       shell: >
