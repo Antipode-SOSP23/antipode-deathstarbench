@@ -29,13 +29,13 @@ post-storage-memcached-us: node06
 post-storage-mongodb-us: node06
 
 #----------------------------------------------------------
-# write posts EU
+# compose posts EU
 #----------------------------------------------------------
+compose-post-redis: node11
+compose-post-service: node11
 user-timeline-service: node11
 user-timeline-redis: node11
 user-timeline-mongodb: node11
-compose-post-redis: node11
-compose-post-service: node11
 url-shorten-service: node11
 url-shorten-memcached: node11
 url-shorten-mongodb: node11

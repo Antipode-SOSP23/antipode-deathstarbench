@@ -126,15 +126,15 @@ request = function()
 end
 
 -- response = function(status, headers, body)
+--   print(status)
 --   if status == 200 then
 --     decode = JSON:decode(body)
+--     print(tablex.size(decode))
 
 --     if findPostId(decode, post_id) then
 --       print("FOUND")
 --     else
 --       print("NOT_FOUND")
 --     end
-
---     print(tablex.size(decode))
 --   end
 -- end
