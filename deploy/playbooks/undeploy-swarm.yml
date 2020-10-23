@@ -10,7 +10,7 @@
   tasks:
     - name: Undeploy deathstarbench service
       shell: >
-        docker service ls | grep {{swarm_overlay_network}} | cut -d " " -f 1 | xargs docker service rm
+        docker stack rm deathstarbench
       ignore_errors: yes
 
 
