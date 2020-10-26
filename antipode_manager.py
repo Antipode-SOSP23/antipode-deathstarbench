@@ -2,6 +2,7 @@
 
 import os
 import sys
+import stat
 from pprint import pprint
 from pathlib import Path
 from plumbum import local
@@ -131,6 +132,7 @@ AVAILABLE_NODES = {
   'node31': '10.100.0.41',
   'node32': '10.100.0.42',
   'node33': '10.100.0.43',
+  'node34': '10.100.0.44',
   'node35': '10.100.0.45',
   'angainor': '146.193.41.56',
   'cosmos': '146.193.41.55',
@@ -413,59 +415,57 @@ def clean__socialNetwork__gsd(args):
 def wkld(args):
   try:
     app_dir = Path.cwd()
+    # get host for each zone
+    hosts = getattr(sys.modules[__name__], f"wkld__{args['app']}__{_deploy_type(args)}__hosts")(args)
 
     # scripts just need you to set the env variables
     if args['app'] == 'socialNetwork':
-      # get host for each zone
-      hosts = getattr(sys.modules[__name__], f"wkld__{args['app']}__{_deploy_type(args)}")(args)
-      # pass env variables to child processes
-      with local.env(HOST_EU=hosts['host_eu']), local.env(HOST_US=hosts['host_us']):
-        endpoint = AVAILABLE_WKLD_ENDPOINTS[args['app']][args['Endpoint']]
+      endpoint = AVAILABLE_WKLD_ENDPOINTS[args['app']][args['Endpoint']]
 
-        if endpoint['type'] == 'wrk2':
-          os.chdir(app_dir.joinpath('wrk2'))
-          # make workload
-          make & FG
-          # load bin
-          wrk = local["./wrk"]
+      if endpoint['type'] == 'wrk2':
+        # build arguments
+        wrk_args = []
+        if 'connections' in args:
+          wrk_args.extend(['--connections', args['connections']])
+        if 'duration' in args:
+          wrk_args.extend(['--duration', args['duration']])
+        if 'threads' in args:
+          wrk_args.extend(['--threads', args['threads']])
 
-          # load existing options
-          wrk_args = []
-          if 'connections' in args:
-            wrk_args.extend(['--connections', args['connections']])
-          if 'duration' in args:
-            wrk_args.extend(['--duration', args['duration']])
-          if 'threads' in args:
-            wrk_args.extend(['--threads', args['threads']])
+        # get details for the script and uri path
+        script_path = app_dir.joinpath(endpoint['script_path'])
+        uri = urllib.parse.urljoin(hosts['host_eu'], endpoint['uri'])
+        # add arguments to previous list
+        wrk_args.extend(['--latency', '--script', str(script_path), uri, '--rate', args['requests'] ])
 
-          # get details for the script and uri path
-          script_path = app_dir.joinpath(endpoint['script_path'])
-          uri = urllib.parse.urljoin(hosts['host_eu'], endpoint['uri'])
-          # add arguments to previous list
-          wrk_args.extend(['--latency', '--script', str(script_path), uri, '--rate', args['requests'] ])
-          # run workload for endpoint
-          wrk[wrk_args] & FG
+        # build wrk2 bin
+        os.chdir(app_dir.joinpath('wrk2'))
+        make & FG
 
-          # go back to the app directory
-          os.chdir(app_dir)
+        exe_path = str(app_dir.joinpath('wrk2', 'wrk'))
+        exe_args = wrk_args
 
-        elif endpoint['type'] == 'python':
-          script_path = app_dir.joinpath(endpoint['script_path'])
-          # run workload for endpoint
-          python3[script_path] & FG
+      elif endpoint['type'] == 'python':
+        script_path = app_dir.joinpath(endpoint['script_path'])
+        exe_path = 'python3'
+        exe_args = [script_path]
+
+      os.chdir(app_dir)
+      # run workload for endpoint
+      getattr(sys.modules[__name__], f"wkld__{args['app']}__{_deploy_type(args)}__run")(args, hosts, exe_path, exe_args)
 
     os.chdir(app_dir)
   except KeyboardInterrupt:
     # if the compose gets interrupted we just continue with the script
     pass
 
-def wkld__socialNetwork__local(args):
+def wkld__socialNetwork__local__hosts(args):
   return {
     'host_eu': 'http://localhost:8080',
     'host_us': 'http://localhost:8082',
   }
 
-def wkld__socialNetwork__gsd(args):
+def wkld__socialNetwork__gsd__hosts(args):
   # eu - nginx-thrift: node23
   # us - nginx-thrift-us: node24
 
@@ -478,6 +478,60 @@ def wkld__socialNetwork__gsd(args):
       'host_eu': f"http://{conf['nginx-thrift']}:8080",
       'host_us': f"http://{conf['nginx-thrift-us']}:8082",
     }
+
+def wkld__socialNetwork__local__run(args, hosts, exe_path, exe_args):
+  exe = local[exe_path]
+  # pass env variables to child processes
+  with local.env(HOST_EU=hosts['host_eu']), local.env(HOST_US=hosts['host_us']):
+    exe[exe_args] & FG
+
+def wkld__socialNetwork__gsd__run(args, hosts, exe_path, exe_args):
+  app_dir = Path.cwd()
+  os.chdir(app_dir.joinpath('..', 'deploy'))
+
+  if args['lastest']:
+    conf_filepath = Path(_last_configuration('socialNetwork', 'gsd'))
+
+  # Create inventory for clients
+  template = """
+    [clients]
+    {% for k,v in client_nodes.items() %}{{k}} ansible_host={{v}} ansible_user=jfloff ansible_ssh_private_key_file=~/.ssh/id_rsa_inesc_cluster_jfloff
+    {% endfor %}
+  """
+  inventory = Environment().from_string(template).render({
+    'client_nodes': { n:AVAILABLE_NODES[n] for n in set(args['node']) },
+  })
+  inventory_filepath = Path('playbooks/clients_inventory.cfg')
+  with open(inventory_filepath, 'w') as f:
+    # remove empty lines and dedent for easier read
+    f.write(textwrap.dedent(inventory))
+
+  print(f"\t [SAVED] '{inventory_filepath.resolve()}'")
+
+  # Create script to run
+  template = """
+    #! /bin/bash
+
+    {{exe_path}} {{exe_args}} > {{conf}}__{{ts}}.out
+  """
+  script = Environment().from_string(template).render({
+    'exe_path': exe_path,
+    'exe_args': ' '.join([str(e) for e in exe_args]),
+    'conf': conf_filepath.stem,
+    'ts': datetime.now().strftime('%Y%m%d%H%M%S'),
+  })
+  script_filepath = Path('playbooks/wkld-start.sh')
+  with open(script_filepath, 'w') as f:
+    # remove empty lines and dedent for easier read
+    f.write(textwrap.dedent(script))
+  # add executable permissions
+  script_filepath.chmod(script_filepath.stat().st_mode | stat.S_IEXEC)
+
+  print(f"\t [SAVED] '{script_filepath.resolve()}'")
+
+  # change path to playbooks folder
+  os.chdir(app_dir.joinpath('..', 'deploy', 'playbooks'))
+  ansible_playbook['wkld-start.yml', '-i', 'clients_inventory.cfg', '-e', 'app=socialNetwork'] & FG
 
 
 #############################
@@ -600,9 +654,10 @@ if __name__ == "__main__":
   deploy_file_group.add_argument('-l', '--lastest', action='store_true', help="Use last used deploy file")
   deploy_file_group.add_argument('-f', '--file', type=argparse.FileType('r', encoding='UTF-8'), help="Use specific file")
   # comparable with wrk2 > ./wrk options
+  wkld_parser.add_argument('-N', '--node', action='append', default=[], help="Run wkld on the following nodes")
   wkld_parser.add_argument('-E', '--Endpoint', choices=[ e for app_list in AVAILABLE_WKLD_ENDPOINTS.values() for e in app_list ], help="Endpoints to generate workload for")
   wkld_parser.add_argument('-c', '--connections', type=int, default=1, help="Connections to keep open")
-  wkld_parser.add_argument('-d', '--duration', type=str, default='1m', help="Duration in s / m / h")
+  wkld_parser.add_argument('-d', '--duration', type=str, default='1s', help="Duration in s / m / h")
   wkld_parser.add_argument('-t', '--threads', type=int, default=1, help="Number of threads")
   wkld_parser.add_argument('-r', '--requests', type=int, default=1, required=True, help="Work rate (throughput) in request per second total")
   # Existing options:
