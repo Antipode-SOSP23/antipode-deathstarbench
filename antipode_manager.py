@@ -3,6 +3,7 @@
 import os
 import sys
 import stat
+import re
 from pprint import pprint
 from pathlib import Path
 from plumbum import local
@@ -428,7 +429,7 @@ def wkld(args):
         if 'connections' in args:
           wrk_args.extend(['--connections', args['connections']])
         if 'duration' in args:
-          wrk_args.extend(['--duration', args['duration']])
+          wrk_args.extend(['--duration', f"{args['duration']}s"])
         if 'threads' in args:
           wrk_args.extend(['--threads', args['threads']])
 
@@ -532,6 +533,14 @@ def wkld__socialNetwork__gsd__run(args, hosts, exe_path, exe_args):
   # change path to playbooks folder
   os.chdir(app_dir.joinpath('..', 'deploy', 'playbooks'))
   ansible_playbook['wkld-start.yml', '-i', 'clients_inventory.cfg', '-e', 'app=socialNetwork'] & FG
+
+  # sleep before gather
+  if args['duration'] is not None:
+    sleep_for = args['duration'] + 60
+    print(f"[INFO] Sleeping for {sleep_for} seconds ...")
+    time.sleep(sleep_for)
+  else:
+    input("Press any key when done ...")
 
 
 #############################
@@ -657,7 +666,7 @@ if __name__ == "__main__":
   wkld_parser.add_argument('-N', '--node', action='append', default=[], help="Run wkld on the following nodes")
   wkld_parser.add_argument('-E', '--Endpoint', choices=[ e for app_list in AVAILABLE_WKLD_ENDPOINTS.values() for e in app_list ], help="Endpoints to generate workload for")
   wkld_parser.add_argument('-c', '--connections', type=int, default=1, help="Connections to keep open")
-  wkld_parser.add_argument('-d', '--duration', type=str, default='1s', help="Duration in s / m / h")
+  wkld_parser.add_argument('-d', '--duration', type=int, default='1', help="Duration in s")
   wkld_parser.add_argument('-t', '--threads', type=int, default=1, help="Number of threads")
   wkld_parser.add_argument('-r', '--requests', type=int, default=1, required=True, help="Work rate (throughput) in request per second total")
   # Existing options:
