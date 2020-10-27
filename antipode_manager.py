@@ -510,16 +510,19 @@ def wkld__socialNetwork__gsd__run(args, hosts, exe_path, exe_args):
   print(f"\t [SAVED] '{inventory_filepath.resolve()}'")
 
   # Create script to run
+  out_folder = f"/tmp/dsb-wkld-data/{conf_filepath.stem}__{datetime.now().strftime('%Y%m%d%H%M%S')}"
+  out_filepath = f"{out_folder}/{conf_filepath.stem}__{datetime.now().strftime('%Y%m%d%H%M%S')}__$(hostname).out"
   template = """
     #! /bin/bash
 
-    {{exe_path}} {{exe_args}} > {{conf}}__{{ts}}.out
+    mkdir -p {{out_folder}}
+    {{exe_path}} {{exe_args}} > {{out_filepath}}
   """
   script = Environment().from_string(template).render({
     'exe_path': exe_path,
     'exe_args': ' '.join([str(e) for e in exe_args]),
-    'conf': conf_filepath.stem,
-    'ts': datetime.now().strftime('%Y%m%d%H%M%S'),
+    'out_folder': out_folder,
+    'out_filepath': out_filepath,
   })
   script_filepath = Path('playbooks/wkld-start.sh')
   with open(script_filepath, 'w') as f:
