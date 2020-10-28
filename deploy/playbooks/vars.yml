@@ -17,3 +17,4 @@ apps:
         - mongodb-setup
         - yg397/openresty-thrift:latest
         - yg397/social-network-microservices:antipode
+        - wrk2:antipode

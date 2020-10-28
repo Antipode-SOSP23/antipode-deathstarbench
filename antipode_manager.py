@@ -26,7 +26,7 @@ import textwrap
 #############################
 # Pre-requisites
 #
-# > sudo apt-get install libssl-dev libz-dev luarocks python3
+# > sudo apt-get install libssl-dev libz-dev lua5.1 lua5.1-dev luarocks python3
 # > sudo luarocks install luasocket
 # > sudo luarocks install json-lua
 # > sudo luarocks install penlight
@@ -230,6 +230,11 @@ def build__socialNetwork__local(args):
   # Build the mongodb setup image
   os.chdir(app_dir.joinpath('docker', 'mongodb-setup', 'post-storage'))
   docker['build', '-t', 'mongodb-setup', '.'] & FG
+  os.chdir(app_dir)
+
+  # Build the wrk2 image
+  os.chdir(app_dir.joinpath('docker', 'wrk2'))
+  docker['build', '-t', 'wrk2:antipode', '.'] & FG
   os.chdir(app_dir)
 
   # Build the social network docker image
