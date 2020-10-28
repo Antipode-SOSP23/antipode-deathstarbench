@@ -7,14 +7,6 @@
       - app: socialNetwork
 
     tasks:
-      - name: Install needed packages
-        shell: >
-            luarocks install --local luasocket ;
-            luarocks install --local json-lua ;
-            luarocks install --local penlight ;
-        args:
-          executable: /bin/bash
-
       - name: Start client
         shell: >
             cd /home/jfloff/nas_inesc/antipode/antipode-deathstarbench/deploy/playbooks ;
