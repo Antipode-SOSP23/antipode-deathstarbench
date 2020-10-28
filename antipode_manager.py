@@ -440,15 +440,23 @@ def wkld(args):
 
         # get details for the script and uri path
         script_path = app_dir.joinpath(endpoint['script_path'])
+        script_path = '/scripts/' + str(script_path).split('wrk2/scripts/')[1]
         uri = urllib.parse.urljoin(hosts['host_eu'], endpoint['uri'])
         # add arguments to previous list
         wrk_args.extend(['--latency', '--script', str(script_path), uri, '--rate', args['requests'] ])
 
-        # build wrk2 bin
-        os.chdir(app_dir.joinpath('wrk2'))
-        make & FG
+        # add docker arguments
+        wrk_args = ['run',
+          '--rm', '-it',
+          '--network=host',
+          '-e', f"HOST_EU={hosts['host_eu']}",
+          '-e', f"HOST_US={hosts['host_us']}",
+          '-v', f"{app_dir.joinpath('wrk2','scripts')}:/scripts",
+          'wrk2:antipode',
+          './wrk'
+        ] + wrk_args
 
-        exe_path = str(app_dir.joinpath('wrk2', 'wrk'))
+        exe_path = 'docker'
         exe_args = wrk_args
 
       elif endpoint['type'] == 'python':
@@ -467,13 +475,13 @@ def wkld(args):
 
 def wkld__socialNetwork__local__hosts(args):
   return {
-    'host_eu': 'http://localhost:8080',
-    'host_us': 'http://localhost:8082',
+    'host_eu': 'http://127.0.0.1:8080',
+    'host_us': 'http://127.0.0.1:8082',
   }
 
 def wkld__socialNetwork__gsd__hosts(args):
   # eu - nginx-thrift: node23
-  # us - nginx-thrift-us: node24
+  # us - nginx-thrift-us: node24§
 
   if args['lastest']:
     filepath = _last_configuration('socialNetwork', 'gsd')
@@ -487,11 +495,14 @@ def wkld__socialNetwork__gsd__hosts(args):
 
 def wkld__socialNetwork__local__run(args, hosts, exe_path, exe_args):
   exe = local[exe_path]
-  # pass env variables to child processes
-  with local.env(HOST_EU=hosts['host_eu']), local.env(HOST_US=hosts['host_us']):
-    exe[exe_args] & FG
+  exe[exe_args] & FG
 
 def wkld__socialNetwork__gsd__run(args, hosts, exe_path, exe_args):
+  if not args['node']:
+    print("[INFO] No nodes passed onto gsd deployment workload. Using current node with remote hosts.")
+    wkld__socialNetwork__local__run(args, hosts, exe_path, exe_args)
+    return
+
   app_dir = Path.cwd()
   os.chdir(app_dir.joinpath('..', 'deploy'))
 
@@ -550,6 +561,7 @@ def wkld__socialNetwork__gsd__run(args, hosts, exe_path, exe_args):
   else:
     input("Press any key when done ...")
 
+  ansible_playbook['wkld-gather.yml', '-i', 'clients_inventory.cfg', '-e', 'app=socialNetwork'] & FG
 
 #############################
 # GATHER
