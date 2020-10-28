@@ -55,7 +55,7 @@ request = function()
   -- find follower
   local dataset_path = debug.getinfo(1,'S').source:match("(.*/)")
   dataset_path = string.sub(dataset_path, 2)
-  dataset_path = dataset_path .. "../../../datasets/social-graph/socfb-Reed98/socfb-Reed98.mtx"
+  dataset_path = dataset_path .. "./datasets/social-graph/socfb-Reed98/socfb-Reed98.mtx"
 
   local followers = {}
   for line in io.lines(dataset_path) do
