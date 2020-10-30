@@ -38,11 +38,28 @@ local function findPostId(entries, post_id)
   return false
 end
 
+local function loadFollowers()
+  local dataset_path = debug.getinfo(1,'S').source:match("(.*/)")
+  dataset_path = string.sub(dataset_path, 2)
+  dataset_path = dataset_path .. "./datasets/social-graph/socfb-Reed98/socfb-Reed98.mtx"
+
+  local followers = {}
+  for line in io.lines(dataset_path) do
+    local user, follower = string.match(line, "(%d+)%s+(%d+)")
+    if followers[user] == nil then
+      followers[user] = {}
+    end
+    table.insert(followers[user], follower)
+  end
+  return followers
+end
+
+local followers = loadFollowers()
 local post_id = nil
 
 request = function()
-  -- local user_index = math.random(2, 961)
-  local user_index = 960
+  local user_index = math.random(2, 961)
+  -- local user_index = 962
   local username = "username_" .. tostring(user_index)
   local user_id = tostring(user_index)
   local text = stringRandom(256)
@@ -53,22 +70,8 @@ request = function()
   local media_types = '['
 
   -- find follower
-  local dataset_path = debug.getinfo(1,'S').source:match("(.*/)")
-  dataset_path = string.sub(dataset_path, 2)
-  dataset_path = dataset_path .. "./datasets/social-graph/socfb-Reed98/socfb-Reed98.mtx"
-
-  local followers = {}
-  for line in io.lines(dataset_path) do
-    local id1, id2 = string.match(line, "(%d+)%s+(%d+)")
-
-    if id1 == user_id then
-      table.insert(followers, id2)
-    end
-    if id2 == user_id then
-      table.insert(followers, id1)
-    end
-  end
-  follower_id = followers[math.random(#followers)]
+  follower_id = followers[user_id][math.random(#followers[user_id])]
+  -- follower_id = 624
 
   -- compose post
   for i = 0, num_user_mentions, 1 do
@@ -126,15 +129,17 @@ request = function()
 end
 
 -- response = function(status, headers, body)
---   print(status)
 --   if status == 200 then
 --     decode = JSON:decode(body)
---     print(tablex.size(decode))
-
---     if findPostId(decode, post_id) then
---       print("FOUND")
---     else
---       print("NOT_FOUND")
+--     -- print(tablex.size(decode))
+--     for _,entry in ipairs(decode) do
+--       print(entry['post_id'])
 --     end
+
+--     -- if findPostId(decode, post_id) then
+--     --   print("FOUND")
+--     -- else
+--     --   print("NOT_FOUND")
+--     -- end
 --   end
 -- end
