@@ -466,7 +466,8 @@ def wkld(args):
 
       os.chdir(app_dir)
       # run workload for endpoint
-      getattr(sys.modules[__name__], f"wkld__{args['app']}__{_deploy_type(args)}__run")(args, hosts, exe_path, exe_args)
+      with local.env(HOST_EU=hosts['host_eu']), local.env(HOST_US=hosts['host_us']):
+        getattr(sys.modules[__name__], f"wkld__{args['app']}__{_deploy_type(args)}__run")(args, hosts, exe_path, exe_args)
 
     os.chdir(app_dir)
   except KeyboardInterrupt:
@@ -532,7 +533,7 @@ def wkld__socialNetwork__gsd__run(args, hosts, exe_path, exe_args):
     #! /bin/bash
 
     mkdir -p {{out_folder}}
-    {{exe_path}} {{exe_args}} > {{out_filepath}}
+    {{exe_path}} {{exe_args}} | tee {{out_filepath}}
   """
   script = Environment().from_string(template).render({
     'exe_path': exe_path,
