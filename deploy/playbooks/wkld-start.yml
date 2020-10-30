@@ -5,8 +5,22 @@
     any_errors_fatal: true
     vars:
       - app: socialNetwork
+      - source: "/home/jfloff/nas_inesc/antipode/antipode-deathstarbench/deploy/container-images"
+    vars_files:
+      - vars.yml
 
     tasks:
+      - name: Restore the container images
+        shell: >
+              gzip -d -c  {{source}}/{{ item.replace(':','_').replace('/','_').replace('-','_') }}.tgz | docker load
+        with_items:
+          - "{{ apps[app]['containers']['for_wkld'] }}"
+
+      - name: validate that the images exists
+        shell:  docker image inspect {{item}}
+        with_items:
+          - "{{ apps[app]['containers']['for_wkld'] }}"
+
       - name: Start client
         shell: >
             cd /home/jfloff/nas_inesc/antipode/antipode-deathstarbench/deploy/playbooks ;
