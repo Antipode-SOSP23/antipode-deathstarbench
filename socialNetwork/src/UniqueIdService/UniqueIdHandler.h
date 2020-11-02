@@ -101,8 +101,14 @@ void UniqueIdHandler::UploadUniqueId(
       { opentracing::ChildOf(parent_span->get()) });
   opentracing::Tracer::Global()->Inject(span->context(), writer);
 
+  // Taken from: https://github.com/delimitrou/DeathStarBench/pull/72
+  _thread_lock->lock();
   int64_t timestamp = duration_cast<milliseconds>(
       system_clock::now().time_since_epoch()).count() - CUSTOM_EPOCH;
+  _thread_lock->lock();
+  int idx = GetCounter(timestamp);
+  _thread_lock->unlock();
+
   std::stringstream sstream;
   sstream << std::hex << timestamp;
   std::string timestamp_hex(sstream.str());
@@ -112,10 +118,6 @@ void UniqueIdHandler::UploadUniqueId(
   } else if (timestamp_hex.size() < 10) {
     timestamp_hex = std::string(10 - timestamp_hex.size(), '0') + timestamp_hex;
   }
-
-  _thread_lock->lock();
-  int idx = GetCounter(timestamp);
-  _thread_lock->unlock();
 
   // Empty the sstream buffer.
   sstream.clear();
