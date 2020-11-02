@@ -105,7 +105,6 @@ void UniqueIdHandler::UploadUniqueId(
   _thread_lock->lock();
   int64_t timestamp = duration_cast<milliseconds>(
       system_clock::now().time_since_epoch()).count() - CUSTOM_EPOCH;
-  _thread_lock->lock();
   int idx = GetCounter(timestamp);
   _thread_lock->unlock();
 
