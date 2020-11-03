@@ -58,10 +58,16 @@ local followers = loadFollowers()
 local post_id = nil
 
 request = function()
-  local user_index = math.random(2, 961)
+   -- find the first ID with followers
+  local user_index = nil
   -- local user_index = 962
-  local username = "username_" .. tostring(user_index)
-  local user_id = tostring(user_index)
+  local user_id = nil
+  repeat
+    user_index = math.random(2, 961)
+    user_id = tostring(user_index)
+  until followers[user_id] ~= nil
+
+  local username = "username_" .. user_id
   local text = stringRandom(256)
   local num_user_mentions = -1 -- math.random(0, 5)
   local num_urls = -1 -- math.random(0, 5)
