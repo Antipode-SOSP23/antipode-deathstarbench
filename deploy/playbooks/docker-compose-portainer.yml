@@ -5,6 +5,7 @@ services:
 #----------------------------------------------------------
   agent:
     image: portainer/agent
+    # container_name: tasks.agent
     environment:
       # REQUIRED: Should be equal to the service name prefixed by "tasks." when
       # deployed inside an overlay network
@@ -31,6 +32,7 @@ services:
       - portainer_data:/data
     networks:
       - agent_network
+      # - default
     deploy:
       mode: replicated
       replicas: 1
@@ -40,6 +42,8 @@ services:
 networks:
   agent_network:
     driver: overlay
+  # default:
+  #   driver: bridge
 
 volumes:
   portainer_data:
