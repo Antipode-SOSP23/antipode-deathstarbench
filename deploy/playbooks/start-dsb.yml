@@ -22,7 +22,7 @@
       register: cmd_res
       # 1 minute
       retries: 6
-      delay: 10
+      delay: 20
       until: (cmd_res.stdout | int) == 0
 
     - name: Init social graph

@@ -183,6 +183,7 @@ services:
         constraints:
         - node.hostname == node25
     image: mongodb-setup
+    restart: no
   post-storage-mongodb-us:
     command: --replSet rs0 --oplogSize 128
     deploy:

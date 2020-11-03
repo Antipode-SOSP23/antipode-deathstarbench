@@ -646,13 +646,9 @@ void ComposePostHandler::_ComposeAndUpload(
   post.timestamp = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
   post.post_type = static_cast<PostType::type>(stoi(post_type_reply.as_string()));
 
-  LOG(debug) << creator_reply.as_string();
-
   json creator_json = json::parse(creator_reply.as_string());
   post.creator.user_id = creator_json["user_id"];
   post.creator.username = creator_json["username"];
-
-  LOG(debug) << user_mentions_reply.as_string();
 
   std::vector<int64_t> user_mentions_id;
 

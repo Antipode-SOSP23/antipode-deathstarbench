@@ -480,6 +480,7 @@ services:
     depends_on:
       - post-storage-mongodb
       - post-storage-mongodb-us
+    restart: no
     deploy:
       placement:
         constraints: [node.hostname == node25]
