@@ -26,6 +26,8 @@ services:
   social-graph-mongodb:
     image: mongo
     hostname: social-graph-mongodb
+    privileged: true
+    command: bash -c "mkdir -p /ramdata && mount -t tmpfs -o size=3000M tmpfs /ramdata/ && mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata"
     # ports:
       # - 27018:27017
     restart: always
@@ -133,7 +135,9 @@ services:
   post-storage-mongodb:
     image: mongo
     hostname: post-storage-mongodb
-    command: --replSet rs0 --oplogSize 128
+    # command: --replSet rs0 --oplogSize 128
+    privileged: true
+    command: bash -c "mkdir -p /ramdata && mount -t tmpfs -o size=3000M tmpfs /ramdata/ && mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata --replSet rs0 --oplogSize 128"
     # ports:
     #   - 27019:27017
     restart: always
@@ -170,7 +174,9 @@ services:
   post-storage-mongodb-us:
     image: mongo
     hostname: post-storage-mongodb-us
-    command: --replSet rs0 --oplogSize 128
+    # command: --replSet rs0 --oplogSize 128
+    privileged: true
+    command: bash -c "mkdir -p /ramdata && mount -t tmpfs -o size=3000M tmpfs /ramdata/ && mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata --replSet rs0 --oplogSize 128"
     # ports:
       # - 27018:27017
     restart: always
@@ -188,6 +194,8 @@ services:
       # - 10003:9090
     restart: always
     entrypoint: UserTimelineService
+    depends_on:
+      - user-timeline-mongodb
     deploy:
       placement:
         constraints: [node.hostname == node11]
@@ -204,6 +212,11 @@ services:
 
   user-timeline-mongodb:
     image: mongo
+    # `--slowms 999999`: to avoid spammy "slow query" messages should be using logLevel config but that would require custom docker image
+    # `--dbpath`: for an in-memory database
+    # `--nojournal`: returning some errors - skipping for now
+    privileged: true
+    command: bash -c "mkdir -p /ramdata && mount -t tmpfs -o size=3000M tmpfs /ramdata/ && mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata"
     hostname: user-timeline-mongodb
     # ports:
       # - 27020:27017
@@ -259,6 +272,8 @@ services:
   url-shorten-mongodb:
     image: mongo
     hostname: url-shorten-mongodb
+    privileged: true
+    command: bash -c "mkdir -p /ramdata && mount -t tmpfs -o size=3000M tmpfs /ramdata/ && mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata"
     # ports:
       # - 27021:27017
     restart: always
@@ -290,6 +305,8 @@ services:
   user-mongodb:
     image: mongo
     hostname: user-mongodb
+    privileged: true
+    command: bash -c "mkdir -p /ramdata && mount -t tmpfs -o size=3000M tmpfs /ramdata/ && mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata"
     # ports:
       # - 27023:27017
     restart: always
@@ -321,6 +338,8 @@ services:
   media-mongodb:
     image: mongo
     hostname: media-mongodb
+    privileged: true
+    command: bash -c "mkdir -p /ramdata && mount -t tmpfs -o size=3000M tmpfs /ramdata/ && mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata"
     # ports:
       # - 27024:27017
     restart: always
@@ -480,7 +499,7 @@ services:
     depends_on:
       - post-storage-mongodb
       - post-storage-mongodb-us
-    restart: no
+    restart: 'no'
     deploy:
       placement:
         constraints: [node.hostname == node25]
