@@ -368,7 +368,10 @@ def run__socialNetwork__local(args):
   if args['build']:
     run_args.insert(1, '--build')
 
-  docker_compose[run_args] & FG
+  # Fixes error: "WARNING: Connection pool is full, discarding connection: localhost"
+  # ref: https://github.com/docker/compose/issues/6638#issuecomment-576743595
+  with local.env(COMPOSE_PARALLEL_LIMIT=99):
+    docker_compose[run_args] & FG
 
 def run__socialNetwork__gsd(args):
   # change path to playbooks folder
