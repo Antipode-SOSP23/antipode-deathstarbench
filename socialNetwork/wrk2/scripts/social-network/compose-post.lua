@@ -1,4 +1,8 @@
 require "socket"
+JSON = require("JSON")
+stringx = require "pl.stringx"
+tablex = require "pl.tablex"
+
 math.randomseed(socket.gettime()*1000)
 math.random(); math.random(); math.random()
 
@@ -26,14 +30,21 @@ local function decRandom(length)
   end
 end
 
+local host_eu = os.getenv('HOST_EU')
+local host_us = os.getenv('HOST_US')
+
 request = function()
-  local user_index = math.random(1, 962)
+  -- local user_index = math.random(1, 962)
+  local user_index = 1
   local username = "username_" .. tostring(user_index)
   local user_id = tostring(user_index)
   local text = stringRandom(256)
-  local num_user_mentions = math.random(0, 5)
-  local num_urls = math.random(0, 5)
-  local num_media = math.random(0, 4)
+  -- local num_user_mentions = math.random(0, 5)
+  local num_user_mentions = -1
+  -- local num_urls = math.random(0, 5)
+  local num_urls = -1
+  -- local num_media = math.random(0, 4)
+  local num_media = 0
   local media_ids = '['
   local media_types = '['
 
@@ -62,9 +73,10 @@ request = function()
   media_types = media_types:sub(1, #media_types - 1) .. "]"
 
   local method = "POST"
-  local path = os.getenv('HOST_EU') .. "/wrk2-api/post/compose"
+  local path = host_eu .. "/wrk2-api/post/compose"
   local headers = {}
   local body
+
   headers["Content-Type"] = "application/x-www-form-urlencoded"
   if num_media then
     body   = "username=" .. username .. "&user_id=" .. user_id ..

@@ -297,4 +297,3 @@ UploadUniqueId_result.thrift_spec = (
 )
 fix_spec(all_structs)
 del all_structs
-

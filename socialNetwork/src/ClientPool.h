@@ -127,7 +127,7 @@ TClient * ClientPool<TClient>::Pop() {
       XTRACE("Failed to connect to client");
       _pool.push_back(client);
       throw;
-    }    
+    }
   }
   return client;
 }

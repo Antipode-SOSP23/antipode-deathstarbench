@@ -4,6 +4,7 @@ math.random(); math.random(); math.random()
 JSON = require("JSON")
 stringx = require "pl.stringx"
 tablex = require "pl.tablex"
+pretty = require 'pl.pretty'
 
 local charset = {'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', 'a', 's',
   'd', 'f', 'g', 'h', 'j', 'k', 'l', 'z', 'x', 'c', 'v', 'b', 'n', 'm', 'Q',
