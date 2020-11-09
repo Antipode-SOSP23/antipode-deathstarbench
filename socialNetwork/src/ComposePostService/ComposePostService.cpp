@@ -42,20 +42,22 @@ int main(int argc, char *argv[]) {
   int user_timeline_port = config_json["user-timeline-service"]["port"];
   std::string user_timeline_addr = config_json["user-timeline-service"]["addr"];
 
+  // client pool parameters:
+  // ClientPool(client_type, addr, port, min_size, max_size, timeout_ms);
 
   ClientPool<RedisClient> redis_client_pool("redis", redis_addr, redis_port,
-                                            0, 128, 1000);
+                                            0, 10000, 1000);
 
   ClientPool<ThriftClient<PostStorageServiceClient>>
       post_storage_client_pool("post-storage-client", post_storage_addr,
-                               post_storage_port, 0, 128, 1000);
+                               post_storage_port, 0, 10000, 1000);
 
   ClientPool<ThriftClient<UserTimelineServiceClient>>
       user_timeline_client_pool("user-timeline-client", user_timeline_addr,
-                                user_timeline_port, 0, 128, 1000);
+                                user_timeline_port, 0, 10000, 1000);
 
   ClientPool<RabbitmqClient> rabbitmq_client_pool("rabbitmq", rabbitmq_addr,
-      rabbitmq_port, 0, 128, 1000);
+      rabbitmq_port, 0, 10000, 1000);
 
   TThreadedServer server(
       std::make_shared<ComposePostServiceProcessor>(

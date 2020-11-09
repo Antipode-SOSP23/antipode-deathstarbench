@@ -44,13 +44,13 @@ int main(int argc, char *argv[]) {
   int compose_post_port = config_json["compose-post-service"]["port"];
 
   memcached_client_pool =
-      init_memcached_client_pool(config_json, "user", 32, 128);
-  mongodb_client_pool = init_mongodb_client_pool(config_json, "user", 128);
+      init_memcached_client_pool(config_json, "user", 32, 1024);
+  mongodb_client_pool = init_mongodb_client_pool(config_json, "user", 1024);
   if (memcached_client_pool == nullptr || mongodb_client_pool == nullptr) {
     return EXIT_FAILURE;
   }
   ClientPool<ThriftClient<ComposePostServiceClient>> compose_post_client_pool(
-      "compose-post", compose_post_addr, compose_post_port, 0, 128, 1000);
+      "compose-post", compose_post_addr, compose_post_port, 0, 10000, 1000);
 
   TThreadedServer server (
       std::make_shared<UserMentionServiceProcessor>(

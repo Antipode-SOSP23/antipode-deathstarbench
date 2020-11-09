@@ -40,9 +40,9 @@ int main(int argc, char *argv[]) {
   int social_graph_port = config_json["social-graph-service"]["port"];
 
   memcached_pool_st *memcached_client_pool =
-      init_memcached_client_pool(config_json, "user", 32, 128);
+      init_memcached_client_pool(config_json, "user", 32, 1024);
   mongoc_client_pool_t *mongodb_client_pool =
-      init_mongodb_client_pool(config_json, "user", 128);
+      init_mongodb_client_pool(config_json, "user", 1024);
 
   if (memcached_client_pool == nullptr || mongodb_client_pool == nullptr) {
     return EXIT_FAILURE;
@@ -56,10 +56,10 @@ int main(int argc, char *argv[]) {
   std::mutex thread_lock;
 
   ClientPool<ThriftClient<ComposePostServiceClient>> compose_post_client_pool(
-      "compose-post", compose_post_addr, compose_post_port, 0, 128, 1000);
+      "compose-post", compose_post_addr, compose_post_port, 0, 10000, 1000);
 
   ClientPool<ThriftClient<SocialGraphServiceClient>> social_graph_client_pool(
-      "social-graph", social_graph_addr, social_graph_port, 0, 128, 1000);
+      "social-graph", social_graph_addr, social_graph_port, 0, 10000, 1000);
 
   mongoc_client_t *mongodb_client = mongoc_client_pool_pop(mongodb_client_pool);
   if (!mongodb_client) {

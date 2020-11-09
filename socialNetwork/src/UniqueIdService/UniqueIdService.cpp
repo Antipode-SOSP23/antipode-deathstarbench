@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
 
   std::mutex thread_lock;
   ClientPool<ThriftClient<ComposePostServiceClient>> compose_post_client_pool(
-      "compose-post", compose_post_addr, compose_post_port, 0, 128, 1000);
+      "compose-post", compose_post_addr, compose_post_port, 0, 10000, 1000);
 
   TThreadedServer server (
       std::make_shared<UniqueIdServiceProcessor>(

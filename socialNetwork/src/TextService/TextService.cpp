@@ -37,14 +37,13 @@ int main(int argc, char *argv[]) {
     int user_mention_port = config_json["user-mention-service"]["port"];
 
     ClientPool<ThriftClient<ComposePostServiceClient>> compose_client_pool(
-        "compose-post", compose_addr, compose_port, 0, 128, 1000);
+        "compose-post", compose_addr, compose_port, 0, 10000, 1000);
 
     ClientPool<ThriftClient<UrlShortenServiceClient>> url_client_pool(
-        "url-shorten-service", url_addr, url_port, 0, 128, 1000);
+        "url-shorten-service", url_addr, url_port, 0, 10000, 1000);
 
     ClientPool<ThriftClient<UserMentionServiceClient>> user_mention_pool(
-        "user-mention-service", user_mention_addr,
-        user_mention_port, 0, 128, 1000);
+        "user-mention-service", user_mention_addr, user_mention_port, 0, 10000, 1000);
 
     TThreadedServer server(
         std::make_shared<TextServiceProcessor>(

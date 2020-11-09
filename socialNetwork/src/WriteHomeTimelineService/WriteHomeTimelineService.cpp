@@ -245,16 +245,16 @@ int main(int argc, char *argv[]) {
   std::string antipode_oracle_addr = config_json["antipode-oracle"]["addr"];
 
   ClientPool<RedisClient> redis_client_pool("redis", redis_addr, redis_port,
-                                            0, 128, 1000);
+                                            0, 10000, 1000);
 
   ClientPool<ThriftClient<SocialGraphServiceClient>>
       social_graph_client_pool(
           "social-graph-service", social_graph_service_addr,
-          social_graph_service_port, 0, 128, 1000);
+          social_graph_service_port, 0, 10000, 1000);
 
   ClientPool<ThriftClient<AntipodeOracleClient>>
       antipode_oracle_client_pool("antipode-oracle", antipode_oracle_addr,
-                                antipode_oracle_port, 0, 128, 1000);
+                                antipode_oracle_port, 0, 10000, 1000);
 
   _redis_client_pool = &redis_client_pool;
   _social_graph_client_pool = &social_graph_client_pool;

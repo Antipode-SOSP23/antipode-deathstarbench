@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
   int compose_post_port = config_json["compose-post-service"]["port"];
 
   ClientPool<ThriftClient<ComposePostServiceClient>> compose_post_client_pool(
-      "compose-post", compose_post_addr, compose_post_port, 0, 128, 1000);
+      "compose-post", compose_post_addr, compose_post_port, 0, 10000, 1000);
 
   TThreadedServer server (
       std::make_shared<MediaServiceProcessor>(

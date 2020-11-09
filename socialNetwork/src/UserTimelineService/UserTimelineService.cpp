@@ -43,10 +43,10 @@ int main(int argc, char *argv[]) {
   std::string post_storage_addr = config_json["post-storage-service"]["addr"];
 
   auto mongodb_client_pool = init_mongodb_client_pool(
-      config_json, "user-timeline", 128);
+      config_json, "user-timeline", 1024);
 
-  ClientPool<RedisClient> redis_client_pool("user-timeline-redis", 
-      redis_addr, redis_port, 0, 128, 1000);
+  ClientPool<RedisClient> redis_client_pool("user-timeline-redis",
+      redis_addr, redis_port, 0, 10000, 1000);
 
   if (mongodb_client_pool == nullptr) {
     return EXIT_FAILURE;
@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
 
   ClientPool<ThriftClient<PostStorageServiceClient>>
       post_storage_client_pool("post-storage-client", post_storage_addr,
-                               post_storage_port, 0, 128, 1000);
+                               post_storage_port, 0, 10000, 1000);
 
   mongoc_client_t *mongodb_client = mongoc_client_pool_pop(mongodb_client_pool);
   if (!mongodb_client) {

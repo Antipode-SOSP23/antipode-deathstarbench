@@ -37,15 +37,15 @@ int main(int argc, char *argv[]) {
   int user_port = config_json["user-service"]["port"];
 
   mongoc_client_pool_t *mongodb_client_pool =
-      init_mongodb_client_pool(config_json, "social-graph", 128);
+      init_mongodb_client_pool(config_json, "social-graph", 1024);
 
   if (mongodb_client_pool == nullptr) {
     return EXIT_FAILURE;
   }
   ClientPool<RedisClient> redis_client_pool("redis", redis_addr, redis_port,
-      0, 128, 1000);
+      0, 10000, 1000);
   ClientPool<ThriftClient<UserServiceClient>> user_client_pool(
-      "social-graph", user_addr, user_port, 0, 128, 1000);
+      "social-graph", user_addr, user_port, 0, 10000, 1000);
 
   mongoc_client_t *mongodb_client = mongoc_client_pool_pop(mongodb_client_pool);
   if (!mongodb_client) {
@@ -76,4 +76,3 @@ int main(int argc, char *argv[]) {
   std::cout << "Starting the social-graph-service server ..." << std::endl;
   server.serve();
 }
-
