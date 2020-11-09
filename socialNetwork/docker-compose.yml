@@ -226,7 +226,7 @@ services:
         constraints: [node.hostname == node11]
 
   compose-post-redis:
-    image: redis
+    image: redis-im:antipode
     hostname: compose-post-redis
     # ports:
       # - 6382:6379

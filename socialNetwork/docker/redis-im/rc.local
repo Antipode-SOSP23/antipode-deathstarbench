@@ -1,0 +1,6 @@
+# ref: https://medium.com/@abhishekbhardwaj510/redis-best-practices-and-performance-tuning-c48611388bbc
+
+sysctl -w net.core.somaxconn=65365
+
+# Add this line before exit 0
+echo never > /sys/kernel/mm/transparent_hugepage/enabled
