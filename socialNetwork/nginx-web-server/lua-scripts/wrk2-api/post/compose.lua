@@ -35,11 +35,9 @@ local function _UploadText(req_id, post, carrier, baggage)
   local TextServiceClient = require "social_network_TextService"
   local ngx = ngx
 
-  local text_client = GenericObjectPool:connection(
-      TextServiceClient, "text-service", 9090)
+  local text_client = GenericObjectPool:connection(TextServiceClient, "text-service", 9090)
   carrier["baggage"] = xtracer.BranchBaggage()
-  local status, err = pcall(text_client.UploadText, text_client, req_id,
-      post.text, carrier)
+  local status, err = pcall(text_client.UploadText, text_client, req_id, post.text, carrier)
   if not status then
     ngx.status = ngx.HTTP_INTERNAL_SERVER_ERROR
     ngx.say("Upload text failed: " .. err.message)
@@ -111,7 +109,6 @@ local function _UploadMedia(req_id, post, carrier, baggage)
 end
 
 function _M.ComposePost()
-  print("I am here")
   local bridge_tracer = require "opentracing_bridge_tracer"
   local ngx = ngx
   local cjson = require "cjson"
