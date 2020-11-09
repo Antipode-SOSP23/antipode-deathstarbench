@@ -64,7 +64,7 @@ void MediaHandler::UploadMedia(
     XTrace::StartTrace("MediaHandler");
   }
 
-  XTRACE("MediaHandler::UploadMedia", {{"RequestID", std::to_string(req_id)}});
+  // XTRACE("MediaHandler::UploadMedia", {{"RequestID", std::to_string(req_id)}});
   // Initialize a span
   TextMapReader reader(carrier);
   std::map<std::string, std::string> writer_text_map;
@@ -79,7 +79,7 @@ void MediaHandler::UploadMedia(
     ServiceException se;
     se.errorCode = ErrorCode::SE_THRIFT_HANDLER_ERROR;
     se.message = "The lengths of media_id list and media_type list are not equal";
-    XTRACE("The lengths of media_id list and media_type list are not equal");
+    // XTRACE("The lengths of media_id list and media_type list are not equal");
     throw se;
   }
 
@@ -92,13 +92,13 @@ void MediaHandler::UploadMedia(
   }
 
   // Upload to compose post service
-  XTRACE("Uploading media to compose post service");
+  // XTRACE("Uploading media to compose post service");
   auto compose_post_client_wrapper = _compose_client_pool->Pop();
   if (!compose_post_client_wrapper) {
     ServiceException se;
     se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
     se.message = "Failed to connect to compose-post-service";
-    XTRACE("Failed to connect to compose-post-service");
+    // XTRACE("Failed to connect to compose-post-service");
     throw se;
   }
   auto compose_post_client = compose_post_client_wrapper->GetClient();
@@ -111,13 +111,13 @@ void MediaHandler::UploadMedia(
   } catch (...) {
     _compose_client_pool->Push(compose_post_client_wrapper);
     LOG(error) << "Failed to upload media to compose-post-service";
-    XTRACE("Failed to upload media to compose-post-service");
+    // XTRACE("Failed to upload media to compose-post-service");
     throw;
   }
   _compose_client_pool->Push(compose_post_client_wrapper);
   span->Finish();
 
-  XTRACE("MediaHandler::UploadMedia complete");
+  // XTRACE("MediaHandler::UploadMedia complete");
   response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }

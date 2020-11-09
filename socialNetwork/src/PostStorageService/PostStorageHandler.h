@@ -92,7 +92,7 @@ void PostStorageHandler::StorePostAsync(
     XTrace::StartTrace("PostStorageHandler");
   }
 
-  XTRACE("PostStorageHandler::StorePost", {{"RequestID", std::to_string(req_id)}});
+  // XTRACE("PostStorageHandler::StorePost", {{"RequestID", std::to_string(req_id)}});
   // Initialize a span
   TextMapReader reader(carrier);
   std::map<std::string, std::string> writer_text_map;
@@ -109,7 +109,7 @@ void PostStorageHandler::StorePostAsync(
     ServiceException se;
     se.errorCode = ErrorCode::SE_MONGODB_ERROR;
     se.message = "Failed to pop a client from MongoDB pool";
-    XTRACE("Failed to pop a client from MongoDB pool");
+    // XTRACE("Failed to pop a client from MongoDB pool");
     throw se;
   }
 
@@ -120,7 +120,7 @@ void PostStorageHandler::StorePostAsync(
     se.errorCode = ErrorCode::SE_MONGODB_ERROR;
     se.message = "Failed to create collection user from DB user";
     mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
-    XTRACE("Failed to create collection user from DB user");
+    // XTRACE("Failed to create collection user from DB user");
     throw se;
   }
 
@@ -185,13 +185,13 @@ void PostStorageHandler::StorePostAsync(
   bson_append_array_end(new_doc, &media_list);
 
   bson_error_t error;
-  XTRACE("MongoInsertPost start");
+  // XTRACE("MongoInsertPost start");
   auto insert_span = opentracing::Tracer::Global()->StartSpan(
       "MongoInsertPost", { opentracing::ChildOf(&span->context()) });
   bool inserted = mongoc_collection_insert_one (
       collection, new_doc, nullptr, nullptr, &error);
   insert_span->Finish();
-  XTRACE("MongoInsertPost complete");
+  // XTRACE("MongoInsertPost complete");
 
   if (!inserted) {
     LOG(error) << "Error: Failed to insert post to MongoDB: "
@@ -202,7 +202,7 @@ void PostStorageHandler::StorePostAsync(
     bson_destroy(new_doc);
     mongoc_collection_destroy(collection);
     mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
-    XTRACE("Failed to insert post to MongoDB");
+    // XTRACE("Failed to insert post to MongoDB");
     throw se;
   }
 
@@ -238,7 +238,7 @@ void PostStorageHandler::StorePostAsync(
   //----------
 
   span->Finish();
-  XTRACE("PostStorageHandler::StorePost complete");
+  // XTRACE("PostStorageHandler::StorePost complete");
   response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
@@ -277,7 +277,7 @@ void PostStorageHandler::ReadPost(
     XTrace::StartTrace("PostStorageHandler");
   }
 
-  XTRACE("PostStorageHandler::ReadPost", {{"RequestID", std::to_string(req_id)}});
+  // XTRACE("PostStorageHandler::ReadPost", {{"RequestID", std::to_string(req_id)}});
   // Initialize a span
   TextMapReader reader(carrier);
   std::map<std::string, std::string> writer_text_map;
@@ -297,13 +297,13 @@ void PostStorageHandler::ReadPost(
     ServiceException se;
     se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
     se.message = "Failed to pop a client from memcached pool";
-    XTRACE("Failed to pop a client from memcached pool");
+    // XTRACE("Failed to pop a client from memcached pool");
     throw se;
   }
 
   size_t post_mmc_size;
   uint32_t memcached_flags;
-  XTRACE("MemcachedGetPost start");
+  // XTRACE("MemcachedGetPost start");
   auto get_span = opentracing::Tracer::Global()->StartSpan(
       "MmcGetPost", { opentracing::ChildOf(&span->context()) });
   char *post_mmc = memcached_get(
@@ -322,10 +322,10 @@ void PostStorageHandler::ReadPost(
   }
   memcached_pool_push(_memcached_client_pool, memcached_client);
   get_span->Finish();
-  XTRACE("MemcachedGetPost complete");
+  // XTRACE("MemcachedGetPost complete");
 
   if (post_mmc) {
-    XTRACE("Post " + std::to_string(post_id) + " cached in Memcached");
+    // XTRACE("Post " + std::to_string(post_id) + " cached in Memcached");
     LOG(debug) << "Get post " << post_id << " cache hit from Memcached";
     json post_json = json::parse(std::string(post_mmc, post_mmc + post_mmc_size));
     _return.req_id = post_json["req_id"];
@@ -356,7 +356,7 @@ void PostStorageHandler::ReadPost(
     free(post_mmc);
   } else {
     // If not cached in memcached
-    XTRACE("Post " + std::to_string(post_id) + " not cached in Memcached");
+    // XTRACE("Post " + std::to_string(post_id) + " not cached in Memcached");
     LOG(debug) << "Post " << post_id << " not cached in Memcached";
     mongoc_client_t *mongodb_client = mongoc_client_pool_pop(
         _mongodb_client_pool);
@@ -364,7 +364,7 @@ void PostStorageHandler::ReadPost(
       ServiceException se;
       se.errorCode = ErrorCode::SE_MONGODB_ERROR;
       se.message = "Failed to pop a client from MongoDB pool";
-      XTRACE("Failed to pop a client from MongoDB pool");
+      // XTRACE("Failed to pop a client from MongoDB pool");
       throw se;
     }
 
@@ -375,13 +375,13 @@ void PostStorageHandler::ReadPost(
       se.errorCode = ErrorCode::SE_MONGODB_ERROR;
       se.message = "Failed to create collection user from DB user";
       mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
-      XTRACE("Failed to create collection user from DB user");
+      // XTRACE("Failed to create collection user from DB user");
       throw se;
     }
 
     bson_t *query = bson_new();
     BSON_APPEND_INT64(query, "post_id", post_id);
-    XTRACE("MongoFindPost start");
+    // XTRACE("MongoFindPost start");
     auto find_span = opentracing::Tracer::Global()->StartSpan(
         "MongoFindPost", { opentracing::ChildOf(&span->context()) });
     mongoc_cursor_t *cursor = mongoc_collection_find_with_opts(
@@ -389,7 +389,7 @@ void PostStorageHandler::ReadPost(
     const bson_t *doc;
     bool found = mongoc_cursor_next(cursor, &doc);
     find_span->Finish();
-    XTRACE("MongoFindPost complete");
+    // XTRACE("MongoFindPost complete");
     if (!found) {
       bson_error_t error;
       if (mongoc_cursor_error (cursor, &error)) {
@@ -412,11 +412,11 @@ void PostStorageHandler::ReadPost(
         se.errorCode = ErrorCode::SE_THRIFT_HANDLER_ERROR;
         se.message = "Post_id: " + std::to_string(post_id) +
             " doesn't exist in MongoDB";
-        XTRACE("Post " + std::to_string(post_id) + " doesn't exist in MongoDB");
+        // XTRACE("Post " + std::to_string(post_id) + " doesn't exist in MongoDB");
         throw se;
       }
     } else {
-      XTRACE("Post " + std::to_string(post_id) + " found in MongoDB");
+      // XTRACE("Post " + std::to_string(post_id) + " found in MongoDB");
       LOG(debug) << "Post_id: " << post_id << " found in MongoDB";
       auto post_json_char = bson_as_json(doc, nullptr);
       json post_json = json::parse(post_json_char);
@@ -452,17 +452,17 @@ void PostStorageHandler::ReadPost(
 
 
       // upload post to memcached
-    XTRACE("Uploading post to memcached");
+    // XTRACE("Uploading post to memcached");
       memcached_client = memcached_pool_pop(
           _memcached_client_pool, true, &memcached_rc);
       if (!memcached_client) {
         ServiceException se;
         se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
         se.message = "Failed to pop a client from memcached pool";
-        XTRACE("Failed to pop a client from memcached pool");
+        // XTRACE("Failed to pop a client from memcached pool");
         throw se;
       }
-      XTRACE("MemcachedSetPost start");
+      // XTRACE("MemcachedSetPost start");
       auto set_span = opentracing::Tracer::Global()->StartSpan(
           "MmcSetPost", { opentracing::ChildOf(&span->context()) });
 
@@ -477,10 +477,10 @@ void PostStorageHandler::ReadPost(
       if (memcached_rc != MEMCACHED_SUCCESS) {
         LOG(warning) << "Failed to set post to Memcached: "
                      << memcached_strerror(memcached_client, memcached_rc);
-        XTRACE("Failed to set post to Memcached");
+        // XTRACE("Failed to set post to Memcached");
       }
       set_span->Finish();
-      XTRACE("MemcachedSetPost complete");
+      // XTRACE("MemcachedSetPost complete");
       bson_free(post_json_char);
       memcached_pool_push(_memcached_client_pool, memcached_client);
     }
@@ -488,7 +488,7 @@ void PostStorageHandler::ReadPost(
 
   span->Finish();
 
-  XTRACE("PostStorageHandler::ReadPost complete");
+  // XTRACE("PostStorageHandler::ReadPost complete");
   response.baggage = GET_CURRENT_BAGGAGE().str();
   response.result = _return;
   DELETE_CURRENT_BAGGAGE();
@@ -510,7 +510,7 @@ void PostStorageHandler::ReadPosts(
     XTrace::StartTrace("PostStorageHandler");
   }
 
-  XTRACE("PostStorageHandler::ReadPosts", {{"RequestID", std::to_string(req_id)}});
+  // XTRACE("PostStorageHandler::ReadPosts", {{"RequestID", std::to_string(req_id)}});
   // Initialize a span
   TextMapReader reader(carrier);
   std::map<std::string, std::string> writer_text_map;
@@ -522,7 +522,7 @@ void PostStorageHandler::ReadPosts(
   opentracing::Tracer::Global()->Inject(span->context(), writer);
 
   if (post_ids.empty()) {
-    XTRACE("List of Post IDs is empty");
+    // XTRACE("List of Post IDs is empty");
     response.baggage = GET_CURRENT_BAGGAGE().str();
     DELETE_CURRENT_BAGGAGE();
     return;
@@ -533,7 +533,7 @@ void PostStorageHandler::ReadPosts(
     ServiceException se;
     se.errorCode = ErrorCode::SE_THRIFT_HANDLER_ERROR;
     se.message = "Post_ids are duplicated";
-    XTRACE("Post_ids are duplicated");
+    // XTRACE("Post_ids are duplicated");
     throw se;
   }
   std::map<int64_t, Post> return_map;
@@ -544,7 +544,7 @@ void PostStorageHandler::ReadPosts(
     ServiceException se;
     se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
     se.message = "Failed to pop a client from memcached pool";
-    XTRACE("Failed to pop a client from memcached pool");
+    // XTRACE("Failed to pop a client from memcached pool");
     throw se;
   }
 
@@ -569,7 +569,7 @@ void PostStorageHandler::ReadPosts(
     se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
     se.message = memcached_strerror(memcached_client, memcached_rc);
     memcached_pool_push(_memcached_client_pool, memcached_client);
-    XTRACE("Cannot get posts");
+    // XTRACE("Cannot get posts");
     throw se;
   }
 
@@ -579,7 +579,7 @@ void PostStorageHandler::ReadPosts(
   char *return_value;
   size_t return_value_length;
   uint32_t flags;
-  XTRACE("MemcachedMget start");
+  // XTRACE("MemcachedMget start");
   auto get_span = opentracing::Tracer::Global()->StartSpan(
       "MemcachedMget", { opentracing::ChildOf(&span->context()) });
 
@@ -598,7 +598,7 @@ void PostStorageHandler::ReadPosts(
       ServiceException se;
       se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
       se.message =  "Cannot get posts of request " + std::to_string(req_id);
-      XTRACE("Cannot get posts");
+      // XTRACE("Cannot get posts");
       throw se;
     }
     Post new_post;
@@ -635,7 +635,7 @@ void PostStorageHandler::ReadPosts(
   }
   get_span->Finish();
 
-  XTRACE("MemcachedMget complete");
+  // XTRACE("MemcachedMget complete");
   LOG(debug) << "MemcachedMget complete";
   memcached_quit(memcached_client);
   memcached_pool_push(_memcached_client_pool, memcached_client);
@@ -650,7 +650,7 @@ void PostStorageHandler::ReadPosts(
   std::map<int64_t, std::string> post_json_map;
 
   // Find the rest in MongoDB
-  XTRACE("Finding posts in MongoDB");
+  // XTRACE("Finding posts in MongoDB");
   LOG(debug) << "Finding posts in MongoDB";
   if (!post_ids_not_cached.empty()) {
     mongoc_client_t *mongodb_client = mongoc_client_pool_pop(
@@ -659,7 +659,7 @@ void PostStorageHandler::ReadPosts(
       ServiceException se;
       se.errorCode = ErrorCode::SE_MONGODB_ERROR;
       se.message = "Failed to pop a client from MongoDB pool";
-      XTRACE("Failed to pop a client from MongoDB pool");
+      // XTRACE("Failed to pop a client from MongoDB pool");
       throw se;
     }
     auto collection = mongoc_client_get_collection(
@@ -668,7 +668,7 @@ void PostStorageHandler::ReadPosts(
       ServiceException se;
       se.errorCode = ErrorCode::SE_MONGODB_ERROR;
       se.message = "Failed to create collection user from DB user";
-      XTRACE("Failed to create collection user from DB user");
+      // XTRACE("Failed to create collection user from DB user");
       mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
       throw se;
     }
@@ -692,7 +692,7 @@ void PostStorageHandler::ReadPosts(
         collection, query, nullptr, nullptr);
     const bson_t *doc;
 
-    XTRACE("MongoFindPosts start");
+    // XTRACE("MongoFindPosts start");
     LOG(debug) << "MongoFindPosts start";
     auto find_span = opentracing::Tracer::Global()->StartSpan(
         "MongoFindPosts", {opentracing::ChildOf(&span->context())});
@@ -734,7 +734,7 @@ void PostStorageHandler::ReadPosts(
       bson_free(post_json_char);
     }
     find_span->Finish();
-    XTRACE("MongoFindPosts complete");
+    // XTRACE("MongoFindPosts complete");
     LOG(debug) << "MongoFindPosts complete";
     bson_error_t error;
     if (mongoc_cursor_error(cursor, &error)) {
@@ -754,7 +754,7 @@ void PostStorageHandler::ReadPosts(
     mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
 
     // upload posts to memcached
-    XTRACE("Uploading posts to memcached");
+    // XTRACE("Uploading posts to memcached");
     LOG(debug) << "Uploading posts to memcached";
 
     Baggage set_future_baggage = BRANCH_CURRENT_BAGGAGE();
@@ -772,10 +772,10 @@ void PostStorageHandler::ReadPosts(
         ServiceException se;
         se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
         se.message = "Failed to pop a client from memcached pool";
-        XTRACE("Failed to pop a client from memcached pool");
+        // XTRACE("Failed to pop a client from memcached pool");
         throw se;
       }
-      XTRACE("MemcachedSetPost start");
+      // XTRACE("MemcachedSetPost start");
       LOG(debug) << "MemcachedSetPost start";
       // auto set_span = opentracing::Tracer::Global()->StartSpan("MmcSetPost", {opentracing::ChildOf(&span->context())});
       for (auto & it : post_json_map) {
@@ -791,7 +791,7 @@ void PostStorageHandler::ReadPosts(
       }
       memcached_pool_push(_memcached_client_pool, _memcached_client);
       // set_span->Finish();
-      XTRACE("MemcachedSetPost complete");
+      // XTRACE("MemcachedSetPost complete");
       LOG(debug) << "MemcachedSetPost complete";
     }));
   }
@@ -810,7 +810,7 @@ void PostStorageHandler::ReadPosts(
     ServiceException se;
     se.errorCode = ErrorCode::SE_THRIFT_HANDLER_ERROR;
     se.message = "Return set incomplete";
-    XTRACE("Return set incomplete");
+    // XTRACE("Return set incomplete");
     LOG(debug) << "Return set incomplete";
     throw se;
   }
@@ -826,11 +826,11 @@ void PostStorageHandler::ReadPosts(
     }
   } catch (...) {
     LOG(warning) << "Failed to set posts to memcached";
-    XTRACE("Failed to set posts to memcached");
+    // XTRACE("Failed to set posts to memcached");
     LOG(debug) << "Failed to set posts to memcached";
   }
 
-  XTRACE("PostStorageHandler::ReadPosts complete");
+  // XTRACE("PostStorageHandler::ReadPosts complete");
   LOG(debug) << "PostStorageHandler::ReadPosts complete";
   response.baggage = GET_CURRENT_BAGGAGE().str();
   response.result = _return;

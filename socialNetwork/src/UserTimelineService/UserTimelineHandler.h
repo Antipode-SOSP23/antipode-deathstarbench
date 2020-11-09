@@ -66,7 +66,7 @@ void UserTimelineHandler::WriteUserTimeline(
     XTrace::StartTrace("UserTimelineHandler");
   }
 
-  XTRACE("UserTimelineHandler::WriteUserTimeline", {{"RequestID", std::to_string(req_id)}});
+  // XTRACE("UserTimelineHandler::WriteUserTimeline", {{"RequestID", std::to_string(req_id)}});
   // Initialize a span
   TextMapReader reader(carrier);
   std::map<std::string, std::string> writer_text_map;
@@ -83,7 +83,7 @@ void UserTimelineHandler::WriteUserTimeline(
     ServiceException se;
     se.errorCode = ErrorCode::SE_MONGODB_ERROR;
     se.message = "Failed to pop a client from MongoDB pool";
-    XTRACE("Failed to pop a client from MongoDB pool");
+    // XTRACE("Failed to pop a client from MongoDB pool");
     throw se;
   }
   auto collection = mongoc_client_get_collection(
@@ -92,7 +92,7 @@ void UserTimelineHandler::WriteUserTimeline(
     ServiceException se;
     se.errorCode = ErrorCode::SE_MONGODB_ERROR;
     se.message = "Failed to create collection user-timeline from MongoDB";
-    XTRACE("Failed to create collection user-timeline from MongoDB");
+    // XTRACE("Failed to create collection user-timeline from MongoDB");
     mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
     throw se;
   }
@@ -138,7 +138,7 @@ void UserTimelineHandler::WriteUserTimeline(
       bson_destroy(&reply);
       mongoc_collection_destroy(collection);
       mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
-      XTRACE("Failed to insert user timeline user " + std::to_string(user_id) + " to MongoDB");
+      // XTRACE("Failed to insert user timeline user " + std::to_string(user_id) + " to MongoDB");
       throw se;
     }
   }
@@ -154,11 +154,11 @@ void UserTimelineHandler::WriteUserTimeline(
     ServiceException se;
     se.errorCode = ErrorCode::SE_REDIS_ERROR;
     se.message = "Cannot connect to Redis server";
-    XTRACE("Cannot connect to Redis server");
+    // XTRACE("Cannot connect to Redis server");
     throw se;
   }
   auto redis_client = redis_client_wrapper->GetClient();
-  XTRACE("RedisUpdate start");
+  // XTRACE("RedisUpdate start");
   auto redis_span = opentracing::Tracer::Global()->StartSpan(
       "RedisUpdate", {opentracing::ChildOf(&span->context())});
   auto num_posts = redis_client->zcard(std::to_string(user_id));
@@ -174,10 +174,10 @@ void UserTimelineHandler::WriteUserTimeline(
   }
   _redis_client_pool->Push(redis_client_wrapper);
   redis_span->Finish();
-  XTRACE("RedisUpdate complete");
+  // XTRACE("RedisUpdate complete");
   span->Finish();
 
-  XTRACE("UserTimelineHandler::WriteUserTimeline complete");
+  // XTRACE("UserTimelineHandler::WriteUserTimeline complete");
   response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
@@ -200,7 +200,7 @@ void UserTimelineHandler::ReadUserTimeline(
     XTrace::StartTrace("UserTimelineHandler");
   }
 
-  XTRACE("UserTimelineHandler::ReadUserTimeline", {{"RequestID", std::to_string(req_id)}});
+  // XTRACE("UserTimelineHandler::ReadUserTimeline", {{"RequestID", std::to_string(req_id)}});
   // Initialize a span
   TextMapReader reader(carrier);
   std::map<std::string, std::string> writer_text_map;
@@ -220,18 +220,18 @@ void UserTimelineHandler::ReadUserTimeline(
     ServiceException se;
     se.errorCode = ErrorCode::SE_REDIS_ERROR;
     se.message = "Cannot connect to Redis server";
-    XTRACE("Cannot connect to Redis server");
+    // XTRACE("Cannot connect to Redis server");
     throw se;
   }
   auto redis_client = redis_client_wrapper->GetClient();
-  XTRACE("RedisFind start");
+  // XTRACE("RedisFind start");
   auto redis_span = opentracing::Tracer::Global()->StartSpan(
       "RedisFind", {opentracing::ChildOf(&span->context())});
   auto post_ids_future = redis_client->zrevrange(
       std::to_string(user_id), start, stop - 1);
   redis_client->commit();
   redis_span->Finish();
-  XTRACE("RedisFind complete");
+  // XTRACE("RedisFind complete");
 
   cpp_redis::reply post_ids_reply;
   try {
@@ -239,7 +239,7 @@ void UserTimelineHandler::ReadUserTimeline(
   } catch (...) {
     LOG(error) << "Failed to read post_ids from user-timeline-redis";
     _redis_client_pool->Push(redis_client_wrapper);
-    XTRACE("Failed to read post_ids from user-timeline-redis");
+    // XTRACE("Failed to read post_ids from user-timeline-redis");
     throw;
   }
   _redis_client_pool->Push(redis_client_wrapper);
@@ -260,7 +260,7 @@ void UserTimelineHandler::ReadUserTimeline(
       ServiceException se;
       se.errorCode = ErrorCode::SE_MONGODB_ERROR;
       se.message = "Failed to pop a client from MongoDB pool";
-      XTRACE("Failed to pop a client from MongoDB pool");
+      // XTRACE("Failed to pop a client from MongoDB pool");
       throw se;
     }
     auto collection = mongoc_client_get_collection(
@@ -269,7 +269,7 @@ void UserTimelineHandler::ReadUserTimeline(
       ServiceException se;
       se.errorCode = ErrorCode::SE_MONGODB_ERROR;
       se.message = "Failed to create collection user-timeline from MongoDB";
-      XTRACE("Failed to create collection user-timeline from MongoDB");
+      // XTRACE("Failed to create collection user-timeline from MongoDB");
       throw se;
     }
 
@@ -283,13 +283,13 @@ void UserTimelineHandler::ReadUserTimeline(
             "}",
         "}");
 
-    XTRACE("MongoFindUserTimeline start");
+    // XTRACE("MongoFindUserTimeline start");
     auto find_span = opentracing::Tracer::Global()->StartSpan(
         "MongoFindUserTimeline", { opentracing::ChildOf(&span->context()) });
     mongoc_cursor_t *cursor = mongoc_collection_find_with_opts(
         collection, query, opts, nullptr);
     find_span->Finish();
-    XTRACE("MongoFindUserTimeline complete");
+    // XTRACE("MongoFindUserTimeline complete");
     const bson_t *doc;
     bool found = mongoc_cursor_next(cursor, &doc);
     if (found) {
@@ -336,7 +336,7 @@ void UserTimelineHandler::ReadUserTimeline(
           ServiceException se;
           se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
           se.message = "Failed to connect to post-storage-service";
-          XTRACE("Failed to connect to post-storage-service");
+          // XTRACE("Failed to connect to post-storage-service");
           throw se;
         }
         std::vector<Post> _return_posts;
@@ -351,7 +351,7 @@ void UserTimelineHandler::ReadUserTimeline(
           } catch (...) {
             _post_client_pool->Push(post_client_wrapper);
             LOG(error) << "Failed to read post from post-storage-service";
-            XTRACE("Failed to read posts from post-storage-service");
+            // XTRACE("Failed to read posts from post-storage-service");
             throw;
           }
           _post_client_pool->Push(post_client_wrapper);
@@ -366,11 +366,11 @@ void UserTimelineHandler::ReadUserTimeline(
       ServiceException se;
       se.errorCode = ErrorCode::SE_REDIS_ERROR;
       se.message = "Cannot connect to Redis server";
-      XTRACE("Cannot connect to Redis server");
+      // XTRACE("Cannot connect to Redis server");
       throw se;
     }
     redis_client = redis_client_wrapper->GetClient();
-    XTRACE("RedisUpdate start");
+    // XTRACE("RedisUpdate start");
     auto redis_update_span = opentracing::Tracer::Global()->StartSpan(
         "RedisUpdate", {opentracing::ChildOf(&span->context())});
     std::string user_id_str = std::to_string(user_id);
@@ -380,7 +380,7 @@ void UserTimelineHandler::ReadUserTimeline(
         user_id_str, options, redis_update_map);
     redis_client->commit();
     redis_update_span->Finish();
-    XTRACE("RedisUpdate complete");
+    // XTRACE("RedisUpdate complete");
   }
 
   try {
@@ -388,13 +388,13 @@ void UserTimelineHandler::ReadUserTimeline(
     JOIN_CURRENT_BAGGAGE(post_baggage);
   } catch (...) {
     LOG(error) << "Failed to get posts from post-storage-service";
-    XTRACE("Failed to get posts from post-storage-service");
+    // XTRACE("Failed to get posts from post-storage-service");
     if (!redis_update_map.empty()) {
       try {
         zadd_reply_future.get();
       } catch (...) {
         LOG(error) << "Failed to Update Redis Server";
-        XTRACE("Failed to update Redis server");
+        // XTRACE("Failed to update Redis server");
       }
       _redis_client_pool->Push(redis_client_wrapper);
     }
@@ -407,7 +407,7 @@ void UserTimelineHandler::ReadUserTimeline(
       zadd_reply_future.get();
     } catch (...) {
       LOG(error) << "Failed to Update Redis Server";
-      XTRACE("Failed to update Redis server");
+      // XTRACE("Failed to update Redis server");
       _redis_client_pool->Push(redis_client_wrapper);
       throw;
     }
@@ -415,7 +415,7 @@ void UserTimelineHandler::ReadUserTimeline(
   }
 
   span->Finish();
-  XTRACE("UserTimelineHandler::ReadUserTimeline complete");
+  // XTRACE("UserTimelineHandler::ReadUserTimeline complete");
   response.result = _return;
   response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();

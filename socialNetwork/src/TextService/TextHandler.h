@@ -59,7 +59,7 @@ void TextHandler::UploadText(
   if (!XTrace::IsTracing()) {
     XTrace::StartTrace("TextHandler");
   }
-  XTRACE("TextHandler::UploadText", {{"RequestID", std::to_string(req_id)}});
+  // XTRACE("TextHandler::UploadText", {{"RequestID", std::to_string(req_id)}});
 
   // Initialize a span
   TextMapReader reader(carrier);
@@ -104,7 +104,7 @@ void TextHandler::UploadText(
             ServiceException se;
             se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
             se.message = "Failed to connect to url-shorten-service";
-            XTRACE("Failed to connect to url-shorten-service");
+            // XTRACE("Failed to connect to url-shorten-service");
             throw se;
           }
 
@@ -119,7 +119,7 @@ void TextHandler::UploadText(
           } catch (...) {
             LOG(error) << "Failed to upload urls to url-shorten-service";
             _url_client_pool->Push(url_client_wrapper);
-            XTRACE("Failed to upload urls to url-shorten-service");
+            // XTRACE("Failed to upload urls to url-shorten-service");
             throw;
           }
 
@@ -140,7 +140,7 @@ void TextHandler::UploadText(
             ServiceException se;
             se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
             se.message = "Failed to connected to user-mention-service";
-            XTRACE("Failed to connect to user-mention-service");
+            // XTRACE("Failed to connect to user-mention-service");
             throw se;
           }
           std::vector<std::string> urls;
@@ -154,7 +154,7 @@ void TextHandler::UploadText(
           } catch (...) {
             LOG(error) << "Failed to upload user_mentions to user-mention-service";
             _user_mention_client_pool->Push(user_mention_client_wrapper);
-            XTRACE("Failed to upload user_mentions to user-mention-service");
+            // XTRACE("Failed to upload user_mentions to user-mention-service");
             throw;
           }
 
@@ -169,13 +169,13 @@ void TextHandler::UploadText(
     JOIN_CURRENT_BAGGAGE(b);
   } catch (...) {
     LOG(error) << "Failed to get shortened urls from url-shorten-service";
-    XTRACE("Failed to get shortened urls form url-shorten-service");
+    // XTRACE("Failed to get shortened urls form url-shorten-service");
     throw;
   }
 
   std::string updated_text;
   if (!urls.empty()) {
-    XTRACE("Using shortened urls");
+    // XTRACE("Using shortened urls");
     s = text;
     int idx = 0;
     while (std::regex_search(s, m, e)){
@@ -186,7 +186,7 @@ void TextHandler::UploadText(
       idx++;
     }
   } else {
-    XTRACE("No shortened urls to use");
+    // XTRACE("No shortened urls to use");
     updated_text = text;
   }
 
@@ -202,7 +202,7 @@ void TextHandler::UploadText(
           ServiceException se;
           se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
           se.message = "Failed to connected to compose-post-service";
-          XTRACE("Failed to connect to compose-post-service");
+          // XTRACE("Failed to connect to compose-post-service");
           throw se;
         }
         auto compose_post_client = compose_post_client_wrapper->GetClient();
@@ -214,7 +214,7 @@ void TextHandler::UploadText(
         } catch (...) {
           LOG(error) << "Failed to upload text to compose-post-service";
           _compose_client_pool->Push(compose_post_client_wrapper);
-          XTRACE("Failed to upload text to compose-post-service");
+          // XTRACE("Failed to upload text to compose-post-service");
           throw;
         }
         _compose_client_pool->Push(compose_post_client_wrapper);
@@ -225,7 +225,7 @@ void TextHandler::UploadText(
     JOIN_CURRENT_BAGGAGE(user_mention_baggage);
   } catch (...) {
     LOG(error) << "Failed to upload user mentions to user-mention-service";
-    XTRACE("Failed to upload user mentions to user-mention-service");
+    // XTRACE("Failed to upload user mentions to user-mention-service");
     throw;
   }
 
@@ -234,13 +234,13 @@ void TextHandler::UploadText(
     JOIN_CURRENT_BAGGAGE(upload_text_baggage);
   } catch (...) {
     LOG(error) << "Failed to upload text to compose-post-service";
-    XTRACE("Failed to upload text to compose-post-service");
+    // XTRACE("Failed to upload text to compose-post-service");
     throw;
   }
 
   span->Finish();
 
-  XTRACE("TextHandler::UploadText complete");
+  // XTRACE("TextHandler::UploadText complete");
 
   response.baggage = GET_CURRENT_BAGGAGE().str();
 

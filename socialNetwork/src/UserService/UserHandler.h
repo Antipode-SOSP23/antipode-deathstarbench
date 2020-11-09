@@ -171,7 +171,7 @@ void UserHandler::RegisterUserWithId(
     XTrace::StartTrace("UserHandler-RegisterUserWithId");
   }
 
-  XTRACE("UserHandler::RegisterUserWithId", {{"RequestID", std::to_string(req_id)}});
+  // XTRACE("UserHandler::RegisterUserWithId", {{"RequestID", std::to_string(req_id)}});
   // Initialize a span
   TextMapReader reader(carrier);
   std::map<std::string, std::string> writer_text_map;
@@ -189,7 +189,7 @@ void UserHandler::RegisterUserWithId(
     ServiceException se;
     se.errorCode = ErrorCode::SE_MONGODB_ERROR;
     se.message = "Failed to pop a client from MongoDB pool";
-    XTRACE("Failed to pop a client from MongoDB pool");
+    // XTRACE("Failed to pop a client from MongoDB pool");
     throw se;
   }
   auto collection = mongoc_client_get_collection(
@@ -222,7 +222,7 @@ void UserHandler::RegisterUserWithId(
     mongoc_cursor_destroy(cursor);
     mongoc_collection_destroy(collection);
     mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
-    XTRACE("User " + username + " already existed");
+    // XTRACE("User " + username + " already existed");
     throw se;
   } else {
     bson_t *new_doc = bson_new();
@@ -236,7 +236,7 @@ void UserHandler::RegisterUserWithId(
     BSON_APPEND_UTF8(new_doc, "password", password_hashed.c_str());
 
     bson_error_t error;
-    XTRACE("MongoInsertUser start");
+    // XTRACE("MongoInsertUser start");
     auto user_insert_span = opentracing::Tracer::Global()->StartSpan(
         "MongoInsertUser", { opentracing::ChildOf(&span->context()) });
     if (!mongoc_collection_insert_one(
@@ -254,10 +254,10 @@ void UserHandler::RegisterUserWithId(
       throw se;
     } else {
       LOG(debug) << "User: " << username << " registered";
-      XTRACE("User: " + username + " registered");
+      // XTRACE("User: " + username + " registered");
     }
     user_insert_span->Finish();
-    XTRACE("MongoInsertUser complete");
+    // XTRACE("MongoInsertUser complete");
     bson_destroy(new_doc);
   }
   bson_destroy(query);
@@ -271,7 +271,7 @@ void UserHandler::RegisterUserWithId(
       ServiceException se;
       se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
       se.message = "Failed to connect to social-graph-service";
-      XTRACE("Failed to connect to social-graph-service");
+      // XTRACE("Failed to connect to social-graph-service");
       throw se;
     }
     auto social_graph_client = social_graph_client_wrapper->GetClient();
@@ -283,14 +283,14 @@ void UserHandler::RegisterUserWithId(
     } catch (...) {
       _social_graph_client_pool->Push(social_graph_client_wrapper);
       LOG(error) << "Failed to insert user to social-graph-client";
-      XTRACE("Failed to insert user to social-graph-client");
+      // XTRACE("Failed to insert user to social-graph-client");
       throw;
     }
     _social_graph_client_pool->Push(social_graph_client_wrapper);
   }
 
   span->Finish();
-  XTRACE("UserHandler::RegisterUserWithUserId complete");
+  // XTRACE("UserHandler::RegisterUserWithUserId complete");
   response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
@@ -313,7 +313,7 @@ void UserHandler::RegisterUser(
     XTrace::StartTrace("UserHandler-RegisterUser");
   }
 
-  XTRACE("UserHandler::RegisterUser", {{"RequestID", std::to_string(req_id)}});
+  // XTRACE("UserHandler::RegisterUser", {{"RequestID", std::to_string(req_id)}});
   // Initialize a span
   TextMapReader reader(carrier);
   std::map<std::string, std::string> writer_text_map;
@@ -357,7 +357,7 @@ void UserHandler::RegisterUser(
   std::string user_id_str = _machine_id + timestamp_hex + counter_hex;
   int64_t user_id = stoul(user_id_str, nullptr, 16) & 0x7FFFFFFFFFFFFFFF;;
   LOG(debug) << "The user_id of the request " << req_id << " is " << user_id;
-  XTRACE("User_id of the request is " + std::to_string(req_id));
+  // XTRACE("User_id of the request is " + std::to_string(req_id));
 
   // Store user info into mongodb
   mongoc_client_t *mongodb_client = mongoc_client_pool_pop(
@@ -366,7 +366,7 @@ void UserHandler::RegisterUser(
     ServiceException se;
     se.errorCode = ErrorCode::SE_MONGODB_ERROR;
     se.message = "Failed to pop a client from MongoDB pool";
-    XTRACE("Failed to pop a client from MongoDB pool");
+    // XTRACE("Failed to pop a client from MongoDB pool");
     throw se;
   }
   auto collection = mongoc_client_get_collection(
@@ -399,7 +399,7 @@ void UserHandler::RegisterUser(
     mongoc_cursor_destroy(cursor);
     mongoc_collection_destroy(collection);
     mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
-    XTRACE("User " + username + " already existed");
+    // XTRACE("User " + username + " already existed");
     throw se;
   } else {
     bson_t *new_doc = bson_new();
@@ -412,7 +412,7 @@ void UserHandler::RegisterUser(
     std::string password_hashed = picosha2::hash256_hex_string(password + salt);
     BSON_APPEND_UTF8(new_doc, "password", password_hashed.c_str());
 
-    XTRACE("MongoInsertUser start");
+    // XTRACE("MongoInsertUser start");
     auto user_insert_span = opentracing::Tracer::Global()->StartSpan(
         "MongoInsertUser", { opentracing::ChildOf(&span->context()) });
     if (!mongoc_collection_insert_one(
@@ -427,14 +427,14 @@ void UserHandler::RegisterUser(
       mongoc_cursor_destroy(cursor);
       mongoc_collection_destroy(collection);
       mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
-      XTRACE("Failed to insert user " + username + " to MongoDB");
+      // XTRACE("Failed to insert user " + username + " to MongoDB");
       throw se;
     } else {
       LOG(debug) << "User: " << username << " registered";
-      XTRACE("User: " + username + " registered");
+      // XTRACE("User: " + username + " registered");
     }
     user_insert_span->Finish();
-    XTRACE("MongoInsertUser complete");
+    // XTRACE("MongoInsertUser complete");
     bson_destroy(new_doc);
   }
   bson_destroy(query);
@@ -448,7 +448,7 @@ void UserHandler::RegisterUser(
       ServiceException se;
       se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
       se.message = "Failed to connect to social-graph-service";
-      XTRACE("Failed to connect to social-graph-service");
+      // XTRACE("Failed to connect to social-graph-service");
       throw se;
     }
     auto social_graph_client = social_graph_client_wrapper->GetClient();
@@ -460,7 +460,7 @@ void UserHandler::RegisterUser(
     } catch (...) {
       _social_graph_client_pool->Push(social_graph_client_wrapper);
       LOG(error) << "Failed to insert user to social-graph-service";
-      XTRACE("Failed to insert user to social-graph-service");
+      // XTRACE("Failed to insert user to social-graph-service");
       throw;
     }
 
@@ -468,7 +468,7 @@ void UserHandler::RegisterUser(
   }
 
   span->Finish();
-  XTRACE("UserService::RegisterUser complete");
+  // XTRACE("UserService::RegisterUser complete");
   response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
@@ -488,7 +488,7 @@ void UserHandler::UploadCreatorWithUsername(
     XTrace::StartTrace("UserHandler-UploadCreatorWithUsername");
   }
 
-  XTRACE("UserHandler::UploadCreatorWithUsername", {{"RequestID", std::to_string(req_id)}});
+  // XTRACE("UserHandler::UploadCreatorWithUsername", {{"RequestID", std::to_string(req_id)}});
   TextMapReader reader(carrier);
   std::map<std::string, std::string> writer_text_map;
   TextMapWriter writer(writer_text_map);
@@ -506,7 +506,7 @@ void UserHandler::UploadCreatorWithUsername(
       _memcached_client_pool, true, &memcached_rc);
   char *user_id_mmc;
   if (memcached_client) {
-    XTRACE("MemcahedGetUserId start");
+    // XTRACE("MemcahedGetUserId start");
     auto id_get_span = opentracing::Tracer::Global()->StartSpan(
         "MmcGetUserId", { opentracing::ChildOf(&span->context()) });
     user_id_mmc = memcached_get(
@@ -517,7 +517,7 @@ void UserHandler::UploadCreatorWithUsername(
         &memcached_flags,
         &memcached_rc);
     id_get_span->Finish();
-    XTRACE("MemcachedGetUserId end");
+    // XTRACE("MemcachedGetUserId end");
     if (!user_id_mmc && memcached_rc != MEMCACHED_NOTFOUND) {
       ServiceException se;
       se.errorCode = ErrorCode::SE_MEMCACHED_ERROR;
@@ -528,7 +528,7 @@ void UserHandler::UploadCreatorWithUsername(
     memcached_pool_push(_memcached_client_pool, memcached_client);
   } else {
     LOG(warning) << "Failed to pop a client from memcached pool";
-    XTRACE("Failed to pop a client from memcached pool");
+    // XTRACE("Failed to pop a client from memcached pool");
   }
 
   int64_t user_id = -1;
@@ -536,7 +536,7 @@ void UserHandler::UploadCreatorWithUsername(
   if (user_id_mmc) {
     cached = true;
     LOG(debug) << "Found user_id of username :" << username  << " in Memcached";
-    XTRACE("Found user_id of username :" + username + " in Memcached");
+    // XTRACE("Found user_id of username :" + username + " in Memcached");
     user_id = std::stoul(user_id_mmc);
     free(user_id_mmc);
   }
@@ -544,14 +544,14 @@ void UserHandler::UploadCreatorWithUsername(
   // If not cached in memcached
   else {
     LOG(debug) << "user_id not cached in Memcached";
-    XTRACE("user_id not cached in Memcached");
+    // XTRACE("user_id not cached in Memcached");
     mongoc_client_t *mongodb_client = mongoc_client_pool_pop(
         _mongodb_client_pool);
     if (!mongodb_client) {
       ServiceException se;
       se.errorCode = ErrorCode::SE_MONGODB_ERROR;
       se.message = "Failed to pop a client from MongoDB pool";
-      XTRACE("Failed to pop a client from MongoDB pool");
+      // XTRACE("Failed to pop a client from MongoDB pool");
       throw se;
     }
     auto collection = mongoc_client_get_collection(
@@ -560,13 +560,13 @@ void UserHandler::UploadCreatorWithUsername(
       ServiceException se;
       se.errorCode = ErrorCode::SE_MONGODB_ERROR;
       se.message = "Failed to create collection user from DB user";
-      XTRACE("Failed to create collection user from DB user");
+      // XTRACE("Failed to create collection user from DB user");
       throw se;
     }
     bson_t *query = bson_new();
     BSON_APPEND_UTF8(query, "username", username.c_str());
 
-    XTRACE("MongoFindUser start");
+    // XTRACE("MongoFindUser start");
     auto find_span = opentracing::Tracer::Global()->StartSpan(
         "MongoFindUser", { opentracing::ChildOf(&span->context()) });
     mongoc_cursor_t *cursor = mongoc_collection_find_with_opts(
@@ -574,7 +574,7 @@ void UserHandler::UploadCreatorWithUsername(
     const bson_t *doc;
     bool found = mongoc_cursor_next(cursor, &doc);
     find_span->Finish();
-    XTRACE("MongoFindUser complete");
+    // XTRACE("MongoFindUser complete");
     if (!found) {
       bson_error_t error;
       if (mongoc_cursor_error (cursor, &error)) {
@@ -596,7 +596,7 @@ void UserHandler::UploadCreatorWithUsername(
         ServiceException se;
         se.errorCode = ErrorCode::SE_THRIFT_HANDLER_ERROR;
         se.message = "User: " + username + " is not registered";
-        XTRACE("User " + username + " is not registered");
+        // XTRACE("User " + username + " is not registered");
         throw se;
       }
     } else {
@@ -615,7 +615,7 @@ void UserHandler::UploadCreatorWithUsername(
         se.errorCode = ErrorCode::SE_THRIFT_HANDLER_ERROR;
         se.message = "user_id attribute of user: " + username +
             " was not found in the User object";
-        XTRACE("user_id attribute of user: " + username + " was not found in the User object");
+        // XTRACE("user_id attribute of user: " + username + " was not found in the User object");
         throw se;
       }
     }
@@ -635,7 +635,7 @@ void UserHandler::UploadCreatorWithUsername(
       ServiceException se;
       se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
       se.message = "Failed to connect to compose-post-service";
-      XTRACE("Failed to connect to compose-post-service");
+      // XTRACE("Failed to connect to compose-post-service");
       throw se;
     }
     auto compose_post_client = compose_post_client_wrapper->GetClient();
@@ -647,7 +647,7 @@ void UserHandler::UploadCreatorWithUsername(
     } catch (...) {
       _compose_client_pool->Push(compose_post_client_wrapper);
       LOG(error) << "Failed to upload creator to compose-post-service";
-      XTRACE("Failed to upload creator to compose-post-service");
+      // XTRACE("Failed to upload creator to compose-post-service");
       throw;
     }
     _compose_client_pool->Push(compose_post_client_wrapper);
@@ -658,7 +658,7 @@ void UserHandler::UploadCreatorWithUsername(
       _memcached_client_pool, true, &memcached_rc);
   if (memcached_client) {
     if (user_id != -1 && !cached) {
-      XTRACE("MemcachedSetUserId start");
+      // XTRACE("MemcachedSetUserId start");
       auto id_set_span = opentracing::Tracer::Global()->StartSpan(
           "MmcSetUserId", { opentracing::ChildOf(&span->context()) });
       std::string user_id_str = std::to_string(user_id);
@@ -672,22 +672,22 @@ void UserHandler::UploadCreatorWithUsername(
           static_cast<uint32_t>(0)
       );
       id_set_span->Finish();
-      XTRACE("MemcachedSetUserId complete");
+      // XTRACE("MemcachedSetUserId complete");
       if (memcached_rc != MEMCACHED_SUCCESS) {
         LOG(warning)
           << "Failed to set the user_id of user "
           << username << " to Memcached: "
           << memcached_strerror(memcached_client, memcached_rc);
-        XTRACE("Failed to set the user_id of user " + username + " to Memcached");
+        // XTRACE("Failed to set the user_id of user " + username + " to Memcached");
       }
     }
     memcached_pool_push(_memcached_client_pool, memcached_client);
   } else {
     LOG(warning) << "Failed to pop a client from memcached pool";
-    XTRACE("Failed to pop a client from memcached pool");
+    // XTRACE("Failed to pop a client from memcached pool");
   }
   span->Finish();
-  XTRACE("UserHandler::UploadCreatorWithUsername complete");
+  // XTRACE("UserHandler::UploadCreatorWithUsername complete");
   response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
@@ -708,7 +708,7 @@ void UserHandler::UploadCreatorWithUserId(
     XTrace::StartTrace("UserHandler-UploadCreatorWithUserId");
   }
 
-  XTRACE("UserHandler::UploadCreatorWithUserId", {{"RequestID", std::to_string(req_id)}});
+  // XTRACE("UserHandler::UploadCreatorWithUserId", {{"RequestID", std::to_string(req_id)}});
   TextMapReader reader(carrier);
   std::map<std::string, std::string> writer_text_map;
   TextMapWriter writer(writer_text_map);
@@ -727,7 +727,7 @@ void UserHandler::UploadCreatorWithUserId(
     ServiceException se;
     se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
     se.message = "Failed to connect to compose-post-service";
-    XTRACE("Failed to connect to compose-post-service");
+    // XTRACE("Failed to connect to compose-post-service");
     throw se;
   }
   auto compose_post_client = compose_post_client_wrapper->GetClient();
@@ -739,14 +739,14 @@ void UserHandler::UploadCreatorWithUserId(
   } catch (...) {
     _compose_client_pool->Push(compose_post_client_wrapper);
     LOG(error) << "Failed to upload creator to compose-post-service";
-    XTRACE("Failed to upload creator to compose-post-service");
+    // XTRACE("Failed to upload creator to compose-post-service");
     throw;
   }
 
   _compose_client_pool->Push(compose_post_client_wrapper);
 
   span->Finish();
-  XTRACE("UploadCreatorWithUserId complete");
+  // XTRACE("UploadCreatorWithUserId complete");
   response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
@@ -769,7 +769,7 @@ void UserHandler::Login(
     XTrace::StartTrace("UserHandler-Login");
   }
 
-  XTRACE("UserHandler::Login", {{"RequestID", std::to_string(req_id)}});
+  // XTRACE("UserHandler::Login", {{"RequestID", std::to_string(req_id)}});
   TextMapReader reader(carrier);
   std::map<std::string, std::string> writer_text_map;
   TextMapWriter writer(writer_text_map);
@@ -788,9 +788,9 @@ void UserHandler::Login(
   char *login_mmc;
   if (!memcached_client) {
     LOG(warning) << "Failed to pop a client from memcached pool";
-    XTRACE("Failed to pop a client from memcached pool");
+    // XTRACE("Failed to pop a client from memcached pool");
   } else {
-    XTRACE("MemcachedGetLogin start");
+    // XTRACE("MemcachedGetLogin start");
     auto get_login_span = opentracing::Tracer::Global()->StartSpan(
         "MmcGetLogin", { opentracing::ChildOf(&span->context()) });
     login_mmc = memcached_get(
@@ -817,7 +817,7 @@ void UserHandler::Login(
   if (login_mmc) {
     // If not cached in memcached
     LOG(debug) << "Found username: "<< username <<" in Memcached";
-    XTRACE("Found username: " + username + " in Memcached");
+    // XTRACE("Found username: " + username + " in Memcached");
     login_json = json::parse(std::string(login_mmc, login_size));
     password_stored = login_json["password"];
     salt_stored = login_json["salt"];
@@ -829,14 +829,14 @@ void UserHandler::Login(
   else {
     // If not cached in memcached
     LOG(debug) << "Username: " << username << " NOT cached in Memcached";
-    XTRACE("Username " + username + " NOT cached in Memcached");
+    // XTRACE("Username " + username + " NOT cached in Memcached");
     mongoc_client_t *mongodb_client = mongoc_client_pool_pop(
         _mongodb_client_pool);
     if (!mongodb_client) {
       ServiceException se;
       se.errorCode = ErrorCode::SE_MONGODB_ERROR;
       se.message = "Failed to pop a client from MongoDB pool";
-      XTRACE("Failed to pop a client from MongoDB pool");
+      // XTRACE("Failed to pop a client from MongoDB pool");
       throw se;
     }
     auto collection = mongoc_client_get_collection(
@@ -845,13 +845,13 @@ void UserHandler::Login(
       ServiceException se;
       se.errorCode = ErrorCode::SE_MONGODB_ERROR;
       se.message = "Failed to create collection user from DB user";
-      XTRACE("Failed to create collection user from DB user");
+      // XTRACE("Failed to create collection user from DB user");
       throw se;
     }
     bson_t *query = bson_new();
     BSON_APPEND_UTF8(query, "username", username.c_str());
 
-    XTRACE("MongoFindUser start");
+    // XTRACE("MongoFindUser start");
     auto find_span = opentracing::Tracer::Global()->StartSpan(
         "MongoFindUser", {opentracing::ChildOf(&span->context())});
     mongoc_cursor_t *cursor = mongoc_collection_find_with_opts(
@@ -859,7 +859,7 @@ void UserHandler::Login(
     const bson_t *doc;
     bool found = mongoc_cursor_next(cursor, &doc);
     find_span->Finish();
-    XTRACE("MongoFindUser complete");
+    // XTRACE("MongoFindUser complete");
 
     bson_error_t error;
     if (mongoc_cursor_error(cursor, &error)) {
@@ -883,12 +883,12 @@ void UserHandler::Login(
       ServiceException se;
       se.errorCode = ErrorCode::SE_UNAUTHORIZED;
       se.message = "User: " + username + " is not registered";
-      XTRACE("Username " + username + " doesn't exist in MongoDB");
+      // XTRACE("Username " + username + " doesn't exist in MongoDB");
       throw se;
 
     } else {
       LOG(debug) << "Username: " << username << " found in MongoDB";
-      XTRACE("Username: " + username + " found in MongoDB");
+      // XTRACE("Username: " + username + " found in MongoDB");
       bson_iter_t iter_password;
       bson_iter_t iter_salt;
       bson_iter_t iter_user_id;
@@ -910,7 +910,7 @@ void UserHandler::Login(
         ServiceException se;
         se.errorCode = ErrorCode::SE_THRIFT_HANDLER_ERROR;
         se.message = "user: " + username + " entry is NOT complete";
-        XTRACE("User: " + username + " entry is NOT complete");
+        // XTRACE("User: " + username + " entry is NOT complete");
         throw se;
       }
       bson_destroy(query);
@@ -944,14 +944,14 @@ void UserHandler::Login(
       ServiceException se;
       se.errorCode = ErrorCode::SE_UNAUTHORIZED;
       se.message = "Incorrect username or password";
-      XTRACE("incorrect username or password");
+      // XTRACE("incorrect username or password");
       throw se;
     }
   } else {
     ServiceException se;
     se.errorCode = ErrorCode::SE_THRIFT_HANDLER_ERROR;
     se.message = "Username: " + username + " incomplete login information.";
-    XTRACE("Username: " + username + " incomplete login information");
+    // XTRACE("Username: " + username + " incomplete login information");
     throw se;
   }
 
@@ -960,9 +960,9 @@ void UserHandler::Login(
         _memcached_client_pool, true, &memcached_rc);
     if (!memcached_client) {
       LOG(warning) << "Failed to pop a client from memcached pool";
-      XTRACE("Failed to pop a client from memcached pool");
+      // XTRACE("Failed to pop a client from memcached pool");
     } else {
-      XTRACE("MemcachedSetLogin start");
+      // XTRACE("MemcachedSetLogin start");
       auto set_login_span = opentracing::Tracer::Global()->StartSpan(
           "MmcSetLogin", { opentracing::ChildOf(&span->context()) });
       std::string login_str = login_json.dump();
@@ -976,19 +976,19 @@ void UserHandler::Login(
           0
       );
       set_login_span->Finish();
-      XTRACE("MemcachedSetLogin complete");
+      // XTRACE("MemcachedSetLogin complete");
       if (memcached_rc != MEMCACHED_SUCCESS) {
         LOG(warning)
           << "Failed to set the login info of user "
           << username << " to Memcached: "
           << memcached_strerror(memcached_client, memcached_rc);
-        XTRACE("Failed to set the login info of user " + username + " to Memcached");
+        // XTRACE("Failed to set the login info of user " + username + " to Memcached");
       }
       memcached_pool_push(_memcached_client_pool, memcached_client);
     }
   }
   span->Finish();
-  XTRACE("UserService::Login complete");
+  // XTRACE("UserService::Login complete");
   response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
@@ -1008,7 +1008,7 @@ void UserHandler::GetUserId(
     XTrace::StartTrace("UserHandler-GetUserId");
   }
 
-  XTRACE("UserHandler::GetUserId", {{"RequestID", std::to_string(req_id)}});
+  // XTRACE("UserHandler::GetUserId", {{"RequestID", std::to_string(req_id)}});
   TextMapReader reader(carrier);
   std::map<std::string, std::string> writer_text_map;
   TextMapWriter writer(writer_text_map);
@@ -1026,7 +1026,7 @@ void UserHandler::GetUserId(
       _memcached_client_pool, true, &memcached_rc);
   char *user_id_mmc;
   if (memcached_client) {
-    XTRACE("MemcachedGetUserId start");
+    // XTRACE("MemcachedGetUserId start");
     auto id_get_span = opentracing::Tracer::Global()->StartSpan(
         "MmcGetUserId", { opentracing::ChildOf(&span->context()) });
     user_id_mmc = memcached_get(
@@ -1047,7 +1047,7 @@ void UserHandler::GetUserId(
     memcached_pool_push(_memcached_client_pool, memcached_client);
   } else {
     LOG(warning) << "Failed to pop a client from memcached pool";
-    XTRACE("Failed to pop a client from memcached pool");
+    // XTRACE("Failed to pop a client from memcached pool");
   }
 
   int64_t user_id = -1;
@@ -1055,20 +1055,20 @@ void UserHandler::GetUserId(
   if (user_id_mmc) {
     cached = true;
     LOG(debug) << "Found user_id of username :" << username  << " in Memcached";
-    XTRACE("Found user_id of username :" + username + " in Memcached");
+    // XTRACE("Found user_id of username :" + username + " in Memcached");
     user_id = std::stoul(user_id_mmc);
     free(user_id_mmc);
   } else {
     // If not cached in memcached
     LOG(debug) << "user_id not cached in Memcached";
-    XTRACE("user_id not cached in Memcached");
+    // XTRACE("user_id not cached in Memcached");
     mongoc_client_t *mongodb_client = mongoc_client_pool_pop(
         _mongodb_client_pool);
     if (!mongodb_client) {
       ServiceException se;
       se.errorCode = ErrorCode::SE_MONGODB_ERROR;
       se.message = "Failed to pop a client from MongoDB pool";
-      XTRACE("Failed to pop a client from MongoDB pool");
+      // XTRACE("Failed to pop a client from MongoDB pool");
       throw se;
     }
     auto collection = mongoc_client_get_collection(
@@ -1077,13 +1077,13 @@ void UserHandler::GetUserId(
       ServiceException se;
       se.errorCode = ErrorCode::SE_MONGODB_ERROR;
       se.message = "Failed to create collection user from DB user";
-      XTRACE("Failed to pop a client from MongoDB pool");
+      // XTRACE("Failed to pop a client from MongoDB pool");
       throw se;
     }
     bson_t *query = bson_new();
     BSON_APPEND_UTF8(query, "username", username.c_str());
 
-    XTRACE("MongoFindUser start");
+    // XTRACE("MongoFindUser start");
     auto find_span = opentracing::Tracer::Global()->StartSpan(
         "MongoFindUser", { opentracing::ChildOf(&span->context()) });
     mongoc_cursor_t *cursor = mongoc_collection_find_with_opts(
@@ -1091,7 +1091,7 @@ void UserHandler::GetUserId(
     const bson_t *doc;
     bool found = mongoc_cursor_next(cursor, &doc);
     find_span->Finish();
-    XTRACE("MongoFindUser complete");
+    // XTRACE("MongoFindUser complete");
     if (!found) {
       bson_error_t error;
       if (mongoc_cursor_error (cursor, &error)) {
@@ -1113,12 +1113,12 @@ void UserHandler::GetUserId(
         ServiceException se;
         se.errorCode = ErrorCode::SE_THRIFT_HANDLER_ERROR;
         se.message = "User: " + username + " is not registered";
-        XTRACE("User: " + username + " is not registered");
+        // XTRACE("User: " + username + " is not registered");
         throw se;
       }
     } else {
       LOG(debug) << "User: " << username << " found in MongoDB";
-      XTRACE("User: " + username + " found in MongoDB");
+      // XTRACE("User: " + username + " found in MongoDB");
       bson_iter_t iter;
       if (bson_iter_init_find(&iter, doc, "user_id")) {
         user_id = bson_iter_value(&iter)->value.v_int64;
@@ -1133,7 +1133,7 @@ void UserHandler::GetUserId(
         se.errorCode = ErrorCode::SE_THRIFT_HANDLER_ERROR;
         se.message = "user_id attribute of user: " + username +
             " was not found in the User object";
-        XTRACE("user_id attribute of user: " + username + " was not found in the User object");
+        // XTRACE("user_id attribute of user: " + username + " was not found in the User object");
         throw se;
       }
     }
@@ -1148,9 +1148,9 @@ void UserHandler::GetUserId(
         _memcached_client_pool, true, &memcached_rc);
     if (!memcached_client) {
       LOG(warning) << "Failed to pop a client from memcached pool";
-      XTRACE("Failed to pop a client from memcached pool");
+      // XTRACE("Failed to pop a client from memcached pool");
     } else {
-      XTRACE("MemcachedSetUserId start");
+      // XTRACE("MemcachedSetUserId start");
       std::string user_id_str = std::to_string(user_id);
       auto set_login_span = opentracing::Tracer::Global()->StartSpan(
           "MmcSetUserId", { opentracing::ChildOf(&span->context()) });
@@ -1164,7 +1164,7 @@ void UserHandler::GetUserId(
           0
       );
       set_login_span->Finish();
-      XTRACE("MemcachedSetUserId complete");
+      // XTRACE("MemcachedSetUserId complete");
       if (memcached_rc != MEMCACHED_SUCCESS) {
         LOG(warning)
           << "Failed to set the login info of user "
@@ -1176,7 +1176,7 @@ void UserHandler::GetUserId(
   }
 
   span->Finish();
-  XTRACE("UserHandler::GetUserId complete");
+  // XTRACE("UserHandler::GetUserId complete");
   response.baggage = GET_CURRENT_BAGGAGE().str();
   response.result = user_id;
   DELETE_CURRENT_BAGGAGE();

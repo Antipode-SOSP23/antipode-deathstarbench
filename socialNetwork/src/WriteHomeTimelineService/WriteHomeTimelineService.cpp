@@ -56,7 +56,7 @@ void OnReceivedWorker(const AMQP::Message &msg) {
       XTrace::StartTrace("WriteHomeTimelineService");
     }
 
-    XTRACE("WriteHomeTimelineService::OnReceivedWorker");
+    // XTRACE("WriteHomeTimelineService::OnReceivedWorker");
     // Jaeger tracing
     TextMapReader span_reader(carrier);
     auto parent_span = opentracing::Tracer::Global()->Extract(span_reader);
@@ -110,7 +110,7 @@ void OnReceivedWorker(const AMQP::Message &msg) {
       ServiceException se;
       se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
       se.message = "Failed to connect to social-graph-service";
-      XTRACE("Failed to connect to social-graph-service");
+      // XTRACE("Failed to connect to social-graph-service");
       throw se;
     }
     auto social_graph_client = social_graph_client_wrapper->GetClient();
@@ -124,7 +124,7 @@ void OnReceivedWorker(const AMQP::Message &msg) {
       JOIN_CURRENT_BAGGAGE(b);
     } catch (...) {
       LOG(error) << "Failed to get followers from social-network-service";
-      XTRACE("Failed to get followers from social-network-service");
+      // XTRACE("Failed to get followers from social-network-service");
       _social_graph_client_pool->Push(social_graph_client_wrapper);
       throw;
     }
@@ -134,7 +134,7 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     followers_id_set.insert(user_mentions_id.begin(), user_mentions_id.end());
 
     // Update Redis ZSet
-    XTRACE("RedisUpdate start");
+    // XTRACE("RedisUpdate start");
     auto redis_span = opentracing::Tracer::Global()->StartSpan(
         "RedisUpdate", {opentracing::ChildOf(&span->context())});
     auto redis_client_wrapper = _redis_client_pool->Pop();
@@ -142,7 +142,7 @@ void OnReceivedWorker(const AMQP::Message &msg) {
       ServiceException se;
       se.errorCode = ErrorCode::SE_REDIS_ERROR;
       se.message = "Cannot connect to Redis server";
-      XTRACE("Cannot connect to Redis server");
+      // XTRACE("Cannot connect to Redis server");
       throw se;
     }
     auto redis_client = redis_client_wrapper->GetClient();
@@ -159,7 +159,7 @@ void OnReceivedWorker(const AMQP::Message &msg) {
 
     redis_client->sync_commit();
     redis_span->Finish();
-    XTRACE("RedisUpdate complete");
+    // XTRACE("RedisUpdate complete");
     _redis_client_pool->Push(redis_client_wrapper);
 
     // add metrics to span to read later

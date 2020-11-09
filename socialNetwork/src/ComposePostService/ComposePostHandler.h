@@ -118,7 +118,7 @@ void ComposePostHandler::UploadCreator(
     XTrace::StartTrace("ComposePostHandler");
   }
 
-  XTRACE("ComposePostHandler::UploadCreator", {{"RequestID", std::to_string(req_id)}});
+  // XTRACE("ComposePostHandler::UploadCreator", {{"RequestID", std::to_string(req_id)}});
 
   // Initialize a span
   TextMapReader reader(carrier);
@@ -133,17 +133,17 @@ void ComposePostHandler::UploadCreator(
   std::string creator_str = "{\"user_id\": " + std::to_string(creator.user_id)
       + ", \"username\": \"" + creator.username + "\"}";
 
-  XTRACE("Connecting to redis server");
+  // XTRACE("Connecting to redis server");
   auto redis_client_wrapper = _redis_client_pool->Pop();
   if (!redis_client_wrapper) {
     ServiceException se;
     se.errorCode = ErrorCode::SE_REDIS_ERROR;
     se.message = "Cannot connect to Redis server";
-    XTRACE("Cannot connect to Redis server");
+    // XTRACE("Cannot connect to Redis server");
     throw se;
   }
   auto redis_client = redis_client_wrapper->GetClient();
-  XTRACE("RedisHashSet start");
+  // XTRACE("RedisHashSet start");
   auto add_span = opentracing::Tracer::Global()->StartSpan(
       "RedisHashSet", {opentracing::ChildOf(&span->context())});
   auto hset_reply = redis_client->hset(std::to_string(req_id),
@@ -153,7 +153,7 @@ void ComposePostHandler::UploadCreator(
   redis_client->expire(std::to_string(req_id), REDIS_EXPIRE_TIME);
   redis_client->sync_commit();
   add_span->Finish();
-  XTRACE("RedisHashSet complete");
+  // XTRACE("RedisHashSet complete");
   _redis_client_pool->Push(redis_client_wrapper);
 
   auto num_components_reply = hlen_reply.get();
@@ -161,7 +161,7 @@ void ComposePostHandler::UploadCreator(
     ServiceException se;
     se.errorCode = ErrorCode::SE_REDIS_ERROR;
     se.message = "Failed to retrieve message from Redis";
-    XTRACE("Failed to retrieve message from Redis");
+    // XTRACE("Failed to retrieve message from Redis");
     throw se;
   }
 
@@ -171,7 +171,7 @@ void ComposePostHandler::UploadCreator(
   }
 
   span->Finish();
-  XTRACE("ComposePostHandler::Upload Creator complete");
+  // XTRACE("ComposePostHandler::Upload Creator complete");
 
   response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
@@ -192,7 +192,7 @@ void ComposePostHandler::UploadText(
     XTrace::StartTrace("ComposePostHandler");
   }
 
-  XTRACE("ComposePostHandler::UploadText", {{"RequestID", std::to_string(req_id)}});
+  // XTRACE("ComposePostHandler::UploadText", {{"RequestID", std::to_string(req_id)}});
 
   // Initialize a span
   TextMapReader reader(carrier);
@@ -209,11 +209,11 @@ void ComposePostHandler::UploadText(
     ServiceException se;
     se.errorCode = ErrorCode::SE_REDIS_ERROR;
     se.message = "Cannot connect to Redis server";
-    XTRACE("Cannot conenct to Redis server");
+    // XTRACE("Cannot conenct to Redis server");
     throw se;
   }
   auto redis_client = redis_client_wrapper->GetClient();
-  XTRACE("RedisHashSet start");
+  // XTRACE("RedisHashSet start");
   auto add_span = opentracing::Tracer::Global()->StartSpan(
       "RedisHashSet", {opentracing::ChildOf(&span->context())});
   auto hset_reply = redis_client->hset(std::to_string(req_id), "text", text);
@@ -222,7 +222,7 @@ void ComposePostHandler::UploadText(
   redis_client->expire(std::to_string(req_id), REDIS_EXPIRE_TIME);
   redis_client->sync_commit();
   add_span->Finish();
-  XTRACE("RedisHashSet Complete");
+  // XTRACE("RedisHashSet Complete");
   _redis_client_pool->Push(redis_client_wrapper);
 
   auto num_components_reply = hlen_reply.get();
@@ -230,7 +230,7 @@ void ComposePostHandler::UploadText(
     ServiceException se;
     se.errorCode = ErrorCode::SE_REDIS_ERROR;
     se.message = "Failed to retrieve message from Redis";
-    XTRACE("Failed to retrieve message from Redis");
+    // XTRACE("Failed to retrieve message from Redis");
     throw se;
   }
 
@@ -241,7 +241,7 @@ void ComposePostHandler::UploadText(
 
   span->Finish();
 
-  XTRACE("ComposePostHandler::UploadText Complete");
+  // XTRACE("ComposePostHandler::UploadText Complete");
   response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
@@ -261,7 +261,7 @@ void ComposePostHandler::UploadMedia(
     XTrace::StartTrace("ComposePostHandler");
   }
 
-  XTRACE("ComposePostHandler::UploadMedia", {{"RequestID", std::to_string(req_id)}});
+  // XTRACE("ComposePostHandler::UploadMedia", {{"RequestID", std::to_string(req_id)}});
 
   // Initialize a span
   TextMapReader reader(carrier);
@@ -288,11 +288,11 @@ void ComposePostHandler::UploadMedia(
     ServiceException se;
     se.errorCode = ErrorCode::SE_REDIS_ERROR;
     se.message = "Cannot connect to Redis server";
-    XTRACE("Cannot connect to Redis server");
+    // XTRACE("Cannot connect to Redis server");
     throw se;
   }
   auto redis_client = redis_client_wrapper->GetClient();
-  XTRACE("RedisHashSet start");
+  // XTRACE("RedisHashSet start");
   auto add_span = opentracing::Tracer::Global()->StartSpan(
       "RedisHashSet", {opentracing::ChildOf(&span->context())});
   auto hset_reply = redis_client->hset(std::to_string(req_id),
@@ -302,7 +302,7 @@ void ComposePostHandler::UploadMedia(
   redis_client->expire(std::to_string(req_id), REDIS_EXPIRE_TIME);
   redis_client->sync_commit();
   add_span->Finish();
-  XTRACE("RedisHashSet complete");
+  // XTRACE("RedisHashSet complete");
   _redis_client_pool->Push(redis_client_wrapper);
 
   auto num_components_reply = hlen_reply.get();
@@ -310,7 +310,7 @@ void ComposePostHandler::UploadMedia(
     ServiceException se;
     se.errorCode = ErrorCode::SE_REDIS_ERROR;
     se.message = "Failed to retrieve message from Redis";
-    XTRACE("Failed to retrieve message from Redis");
+    // XTRACE("Failed to retrieve message from Redis");
     throw se;
   }
 
@@ -321,7 +321,7 @@ void ComposePostHandler::UploadMedia(
 
   span->Finish();
 
-  XTRACE("ComposePostService::UploadMedia complete");
+  // XTRACE("ComposePostService::UploadMedia complete");
   response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
@@ -342,7 +342,7 @@ void ComposePostHandler::UploadUniqueId(
     XTrace::StartTrace("ComposePostHandler");
   }
 
-  XTRACE("ComposePostHandler::UploadUniqueId", {{"RequestID", std::to_string(req_id)}});
+  // XTRACE("ComposePostHandler::UploadUniqueId", {{"RequestID", std::to_string(req_id)}});
 
   // Initialize a span
   TextMapReader reader(carrier);
@@ -359,11 +359,11 @@ void ComposePostHandler::UploadUniqueId(
     ServiceException se;
     se.errorCode = ErrorCode::SE_REDIS_ERROR;
     se.message = "Cannot connect to Redis server";
-    XTRACE("Cannot connect to Redis server");
+    // XTRACE("Cannot connect to Redis server");
     throw se;
   }
   auto redis_client = redis_client_wrapper->GetClient();
-  XTRACE("RedisHashSet start");
+  // XTRACE("RedisHashSet start");
   auto add_span = opentracing::Tracer::Global()->StartSpan(
       "RedisHashSet", {opentracing::ChildOf(&span->context())});
   auto hset_reply_0 = redis_client->hset(std::to_string(req_id), "post_id",
@@ -375,7 +375,7 @@ void ComposePostHandler::UploadUniqueId(
   redis_client->expire(std::to_string(req_id), REDIS_EXPIRE_TIME);
   redis_client->sync_commit();
   add_span->Finish();
-  XTRACE("RedisHashSet complete");
+  // XTRACE("RedisHashSet complete");
   _redis_client_pool->Push(redis_client_wrapper);
 
   auto num_components_reply = hlen_reply.get();
@@ -384,7 +384,7 @@ void ComposePostHandler::UploadUniqueId(
     ServiceException se;
     se.errorCode = ErrorCode::SE_REDIS_ERROR;
     se.message = "Failed to retrieve message from Redis";
-    XTRACE("Failed to retrieve message from Redis");
+    // XTRACE("Failed to retrieve message from Redis");
     throw se;
   }
 ;
@@ -395,7 +395,7 @@ void ComposePostHandler::UploadUniqueId(
 
   span->Finish();
 
-  XTRACE("ComposePostService::UploadUniqueId complete");
+  // XTRACE("ComposePostService::UploadUniqueId complete");
   response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
@@ -415,7 +415,7 @@ void ComposePostHandler::UploadUrls(
     XTrace::StartTrace("ComposePostHandler");
   }
 
-  XTRACE("ComposePostHandler::UploadUrls", {{"RequestID", std::to_string(req_id)}});
+  // XTRACE("ComposePostHandler::UploadUrls", {{"RequestID", std::to_string(req_id)}});
 
   // Initialize a span
   TextMapReader reader(carrier);
@@ -429,7 +429,7 @@ void ComposePostHandler::UploadUrls(
 
   std::string urls_str = "[";
   if (!urls.empty()) {
-    XTRACE("List of urls not empty");
+    // XTRACE("List of urls not empty");
     for (auto &item : urls) {
       urls_str += "{\"shortened_url\": \"" + item.shortened_url +
           "\", \"expanded_url\": \"" + item.expanded_url + "\"},";
@@ -443,11 +443,11 @@ void ComposePostHandler::UploadUrls(
     ServiceException se;
     se.errorCode = ErrorCode::SE_REDIS_ERROR;
     se.message = "Cannot connect to Redis server";
-    XTRACE("Cannot connect to Redis server");
+    // XTRACE("Cannot connect to Redis server");
     throw se;
   }
   auto redis_client = redis_client_wrapper->GetClient();
-  XTRACE("RedisHashSet start");
+  // XTRACE("RedisHashSet start");
   auto add_span = opentracing::Tracer::Global()->StartSpan(
       "RedisHashSet", {opentracing::ChildOf(&span->context())});
   auto hset_reply = redis_client->hset(std::to_string(req_id), "urls", urls_str);
@@ -456,7 +456,7 @@ void ComposePostHandler::UploadUrls(
   redis_client->expire(std::to_string(req_id), REDIS_EXPIRE_TIME);
   redis_client->sync_commit();
   add_span->Finish();
-  XTRACE("RedisHashSet complete");
+  // XTRACE("RedisHashSet complete");
   _redis_client_pool->Push(redis_client_wrapper);
 
   auto num_components_reply = hlen_reply.get();
@@ -464,7 +464,7 @@ void ComposePostHandler::UploadUrls(
     ServiceException se;
     se.errorCode = ErrorCode::SE_REDIS_ERROR;
     se.message = "Failed to retrieve message from Redis";
-    XTRACE("Failed to retrieve message from Redis");
+    // XTRACE("Failed to retrieve message from Redis");
     throw se;
   }
 
@@ -475,7 +475,7 @@ void ComposePostHandler::UploadUrls(
 
   span->Finish();
 
-  XTRACE("ComposePostService::UploadUrls complete");
+  // XTRACE("ComposePostService::UploadUrls complete");
   response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
@@ -495,7 +495,7 @@ void ComposePostHandler::UploadUserMentions(
     XTrace::StartTrace("ComposePostHandler");
   }
 
-  XTRACE("ComposePostHandler::UploadUserMentions", {{"RequestID", std::to_string(req_id)}});
+  // XTRACE("ComposePostHandler::UploadUserMentions", {{"RequestID", std::to_string(req_id)}});
 
   // Initialize a span
   TextMapReader reader(carrier);
@@ -509,7 +509,7 @@ void ComposePostHandler::UploadUserMentions(
 
   std::string user_mentions_str = "[";
   if (!user_mentions.empty()) {
-    XTRACE("List of User Mentions not empty");
+    // XTRACE("List of User Mentions not empty");
     for (auto &item : user_mentions) {
       user_mentions_str += "{\"user_id\": " + std::to_string(item.user_id) +
           ", \"username\": \"" + item.username + "\"},";
@@ -523,11 +523,11 @@ void ComposePostHandler::UploadUserMentions(
     ServiceException se;
     se.errorCode = ErrorCode::SE_REDIS_ERROR;
     se.message = "Cannot connect to Redis server";
-    XTRACE("Cannot connect to Redis server");
+    // XTRACE("Cannot connect to Redis server");
     throw se;
   }
   auto redis_client = redis_client_wrapper->GetClient();
-  XTRACE("RedisHashSet start");
+  // XTRACE("RedisHashSet start");
   auto add_span = opentracing::Tracer::Global()->StartSpan(
       "RedisHashSet", {opentracing::ChildOf(&span->context())});
   auto hset_reply = redis_client->hset(std::to_string(req_id),
@@ -537,7 +537,7 @@ void ComposePostHandler::UploadUserMentions(
   redis_client->expire(std::to_string(req_id), REDIS_EXPIRE_TIME);
   redis_client->sync_commit();
   add_span->Finish();
-  XTRACE("RedisHashSet complete");
+  // XTRACE("RedisHashSet complete");
   _redis_client_pool->Push(redis_client_wrapper);
 
   auto num_components_reply = hlen_reply.get();
@@ -545,7 +545,7 @@ void ComposePostHandler::UploadUserMentions(
     ServiceException se;
     se.errorCode = ErrorCode::SE_REDIS_ERROR;
     se.message = "Failed to retrieve message from Redis";
-    XTRACE("Failed to retrieve message from Redis");
+    // XTRACE("Failed to retrieve message from Redis");
     throw se;
   }
 
@@ -557,7 +557,7 @@ void ComposePostHandler::UploadUserMentions(
 
   span->Finish();
 
-  XTRACE("ComposePostService::UploadUserMentions complete");
+  // XTRACE("ComposePostService::UploadUserMentions complete");
   response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
@@ -575,15 +575,15 @@ void ComposePostHandler::_ComposeAndUpload(
     XTrace::StartTrace("ComposePostHandler");
   }
 
-  XTRACE("ComposePostHandler::_ComposeAndUpload Start");
+  // XTRACE("ComposePostHandler::_ComposeAndUpload Start");
 
-  XTRACE("Redis RetrieveMessages start");
+  // XTRACE("Redis RetrieveMessages start");
   auto redis_client_wrapper = _redis_client_pool->Pop();
   if (!redis_client_wrapper) {
     ServiceException se;
     se.errorCode = ErrorCode::SE_REDIS_ERROR;
     se.message = "Cannot connect to Redis server";
-    XTRACE("Cannot connect to Redis server");
+    // XTRACE("Cannot connect to Redis server");
     throw se;
   }
   auto redis_client = redis_client_wrapper->GetClient();
@@ -618,7 +618,7 @@ void ComposePostHandler::_ComposeAndUpload(
     ServiceException se;
     se.errorCode = ErrorCode::SE_REDIS_ERROR;
     se.message = "Failed to retrieve messages from Redis";
-    XTRACE("Failed to retrieve messages from Redis");
+    // XTRACE("Failed to retrieve messages from Redis");
     _redis_client_pool->Push(redis_client_wrapper);
     throw se;
   }
@@ -628,17 +628,17 @@ void ComposePostHandler::_ComposeAndUpload(
     ServiceException se;
     se.errorCode = ErrorCode::SE_REDIS_ERROR;
     se.message = "Failed to retrieve messages from Redis";
-    XTRACE("Failed to retrieve messages from Redis");
+    // XTRACE("Failed to retrieve messages from Redis");
     _redis_client_pool->Push(redis_client_wrapper);
     throw se;
   }
 
   _redis_client_pool->Push(redis_client_wrapper);
 
-  XTRACE("Redis RetrieveMessages complete");
+  // XTRACE("Redis RetrieveMessages complete");
 
   // Compose the post
-  XTRACE("Compose Post start");
+  // XTRACE("Compose Post start");
   Post post;
   post.req_id = req_id;
   post.text = text_reply.as_string();
@@ -677,9 +677,9 @@ void ComposePostHandler::_ComposeAndUpload(
     post.urls.emplace_back(url);
   }
 
-  XTRACE("Compose Post complete");
+  // XTRACE("Compose Post complete");
   // Upload the post
-  XTRACE("Upload Post start");
+  // XTRACE("Upload Post start");
   Baggage upload_post_helper_baggage = BRANCH_CURRENT_BAGGAGE();
   std::promise<Baggage> upload_post_promise;
   std::future<Baggage> upload_post_future = upload_post_promise.get_future();
@@ -710,7 +710,7 @@ void ComposePostHandler::_ComposeAndUpload(
     upload_user_timeline_helper_baggage = upload_user_future.get();
     upload_home_timeline_helper_baggage = upload_home_future.get();
   } catch (std::exception &) {
-    XTRACE("Error whilst trying to get baggages from futures");
+    // XTRACE("Error whilst trying to get baggages from futures");
   }
 
   JOIN_CURRENT_BAGGAGE(upload_post_helper_baggage);
@@ -745,8 +745,8 @@ void ComposePostHandler::_ComposeAndUpload(
     }
   }
 
-  XTRACE("Upload Post complete");
-  XTRACE("ComposePostService::_ComposeAndUpload complete");
+  // XTRACE("Upload Post complete");
+  // XTRACE("ComposePostService::_ComposeAndUpload complete");
 
   DELETE_CURRENT_BAGGAGE();
 
@@ -768,7 +768,7 @@ void ComposePostHandler::_UploadPostHelper(
       ServiceException se;
       se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
       se.message = "Failed to connect to post-storage-service";
-      XTRACE("Failed to connect to post-storage-service");
+      // XTRACE("Failed to connect to post-storage-service");
       throw se;
     }
     auto post_storage_client = post_storage_client_wrapper->GetClient();
@@ -781,13 +781,13 @@ void ComposePostHandler::_UploadPostHelper(
     } catch (...) {
       LOG(error) << "Failed to store post to post-storage-service";
       _post_storage_client_pool->Push(post_storage_client_wrapper);
-      XTRACE("Failed to store post to post-storage-service");
+      // XTRACE("Failed to store post to post-storage-service");
       throw;
     }
     _post_storage_client_pool->Push(post_storage_client_wrapper);
   } catch (...) {
     LOG(error) << "Failed to connect to post-storage-service";
-    XTRACE("Failed to connect to post-storage-service");
+    // XTRACE("Failed to connect to post-storage-service");
     _post_storage_teptr = std::current_exception();
   }
   baggage_promise.set_value(BRANCH_CURRENT_BAGGAGE());
@@ -811,7 +811,7 @@ void ComposePostHandler::_UploadUserTimelineHelper(
       ServiceException se;
       se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
       se.message = "Failed to connect to user-timeline-service";
-      XTRACE("Failed to connect to user-timeline-service");
+      // XTRACE("Failed to connect to user-timeline-service");
       throw se;
     }
     auto user_timeline_client = user_timeline_client_wrapper->GetClient();
@@ -831,7 +831,7 @@ void ComposePostHandler::_UploadUserTimelineHelper(
     _user_timeline_client_pool->Push(user_timeline_client_wrapper);
   } catch (...) {
     LOG(error) << "Failed to write user-timeline to user-timeline-service";
-    XTRACE("Failed to write user-timeline to user-timeline-service");
+    // XTRACE("Failed to write user-timeline to user-timeline-service");
     _user_timeline_teptr = std::current_exception();
   }
   baggage_promise.set_value(BRANCH_CURRENT_BAGGAGE());
@@ -888,7 +888,7 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
       ServiceException se;
       se.errorCode = ErrorCode::SE_RABBITMQ_CONN_ERROR;
       se.message = "Failed to connect to home-timeline-rabbitmq";
-      XTRACE("Failed to connect to home-timeline-rabbitmq");
+      // XTRACE("Failed to connect to home-timeline-rabbitmq");
       throw se;
     }
     auto rabbitmq_channel = rabbitmq_client_wrapper->GetChannel();
@@ -897,7 +897,7 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
     _rabbitmq_client_pool->Push(rabbitmq_client_wrapper);
   } catch (...) {
     LOG(error) << "Failed to connected to home-timeline-rabbitmq";
-    XTRACE("Failed to connect to home-timeline-rabbitmq");
+    // XTRACE("Failed to connect to home-timeline-rabbitmq");
     _rabbitmq_teptr = std::current_exception();
   }
   baggage_promise.set_value(BRANCH_CURRENT_BAGGAGE());
