@@ -70,18 +70,18 @@ request = function()
 
   local username = "username_" .. user_id
   local text = stringRandom(256)
-  local num_user_mentions = -1 -- math.random(0, 5)
-  local num_urls = -1 -- math.random(0, 5)
-  local num_media = -1 --math.random(0, 4)
-  local media_ids = '['
-  local media_types = '['
+  local num_user_mentions = 0 -- math.random(0, 5)
+  local num_urls = 0 -- math.random(0, 5)
+  local num_media = 0 --math.random(0, 4)
+  local media_ids = ''
+  local media_types = ''
 
   -- find follower
   follower_id = followers[user_id][math.random(#followers[user_id])]
   -- follower_id = 624
 
   -- compose post
-  for i = 0, num_user_mentions, 1 do
+  for i = 1, num_user_mentions, 1 do
     local user_mention_id
     while (true) do
       user_mention_id = math.random(1, 962)
@@ -92,18 +92,18 @@ request = function()
     text = text .. " @username_" .. tostring(user_mention_id)
   end
 
-  for i = 0, num_urls, 1 do
+  for i = 1, num_urls, 1 do
     text = text .. " http://" .. stringRandom(64)
   end
 
-  for i = 0, num_media, 1 do
+  for i = 1, num_media, 1 do
     local media_id = decRandom(18)
     media_ids = media_ids .. "\"" .. media_id .. "\","
     media_types = media_types .. "\"png\","
   end
 
-  media_ids = media_ids:sub(1, #media_ids - 1) .. "]"
-  media_types = media_types:sub(1, #media_types - 1) .. "]"
+  media_ids = '[' .. media_ids:sub(1, #media_ids - 1) .. "]"
+  media_types = '[' .. media_types:sub(1, #media_types - 1) .. "]"
 
   local method = "POST"
   local path = os.getenv('HOST_EU') .. "/wrk2-api/post/compose"
