@@ -94,33 +94,37 @@ void TextHandler::UploadText(
   Baggage shortened_urls_baggage = BRANCH_CURRENT_BAGGAGE();
   std::future<std::vector<std::string>> shortened_urls_future = std::async(
       std::launch::async, [&, writer_text_map]() mutable {
-        BAGGAGE(shortened_urls_baggage);  // automatically set / reinstate baggage on destructor
-
-        auto url_client_wrapper = _url_client_pool->Pop();
-        if (!url_client_wrapper) {
-          ServiceException se;
-          se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
-          se.message = "Failed to connect to url-shorten-service";
-          XTRACE("Failed to connect to url-shorten-service");
-          throw se;
-        }
         std::vector<std::string> return_urls;
-        auto url_client = url_client_wrapper->GetClient();
-        try {
-          writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
-          UrlListRpcResponse url_response;
-          url_client->UploadUrls(url_response, req_id, urls, writer_text_map);
-          Baggage b = Baggage::deserialize(url_response.baggage);
-          JOIN_CURRENT_BAGGAGE(b);
-          return_urls = url_response.result;
-        } catch (...) {
-          LOG(error) << "Failed to upload urls to url-shorten-service";
+
+        if (urls.size() > 0) {
+          BAGGAGE(shortened_urls_baggage);  // automatically set / reinstate baggage on destructor
+
+          auto url_client_wrapper = _url_client_pool->Pop();
+          if (!url_client_wrapper) {
+            ServiceException se;
+            se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
+            se.message = "Failed to connect to url-shorten-service";
+            XTRACE("Failed to connect to url-shorten-service");
+            throw se;
+          }
+
+          auto url_client = url_client_wrapper->GetClient();
+          try {
+            writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
+            UrlListRpcResponse url_response;
+            url_client->UploadUrls(url_response, req_id, urls, writer_text_map);
+            Baggage b = Baggage::deserialize(url_response.baggage);
+            JOIN_CURRENT_BAGGAGE(b);
+            return_urls = url_response.result;
+          } catch (...) {
+            LOG(error) << "Failed to upload urls to url-shorten-service";
+            _url_client_pool->Push(url_client_wrapper);
+            XTRACE("Failed to upload urls to url-shorten-service");
+            throw;
+          }
+
           _url_client_pool->Push(url_client_wrapper);
-          XTRACE("Failed to upload urls to url-shorten-service");
-          throw;
-        }    
-        
-        _url_client_pool->Push(url_client_wrapper);
+        }
 
         return return_urls;
       });
@@ -130,30 +134,32 @@ void TextHandler::UploadText(
       std::launch::async, [&, writer_text_map]() mutable {
         BAGGAGE(user_mention_baggage);  // automatically set / reinstate baggage on destructor
 
-        auto user_mention_client_wrapper = _user_mention_client_pool->Pop();
-        if (!user_mention_client_wrapper) {
-          ServiceException se;
-          se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
-          se.message = "Failed to connected to user-mention-service";
-          XTRACE("Failed to connect to user-mention-service");
-          throw se;
-        }
-        std::vector<std::string> urls;
-        auto user_mention_client = user_mention_client_wrapper->GetClient();
-        try {
-          writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
-          user_mention_client->UploadUserMentions(response, req_id, user_mentions,
-                                                  writer_text_map);
-          Baggage b = Baggage::deserialize(response.baggage);
-          JOIN_CURRENT_BAGGAGE(b);
-        } catch (...) {
-          LOG(error) << "Failed to upload user_mentions to user-mention-service";
-          _user_mention_client_pool->Push(user_mention_client_wrapper);
-          XTRACE("Failed to upload user_mentions to user-mention-service");
-          throw;
-        }
+        if (user_mentions.size() > 0) {
+          auto user_mention_client_wrapper = _user_mention_client_pool->Pop();
+          if (!user_mention_client_wrapper) {
+            ServiceException se;
+            se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
+            se.message = "Failed to connected to user-mention-service";
+            XTRACE("Failed to connect to user-mention-service");
+            throw se;
+          }
+          std::vector<std::string> urls;
+          auto user_mention_client = user_mention_client_wrapper->GetClient();
+          try {
+            writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
+            user_mention_client->UploadUserMentions(response, req_id, user_mentions,
+                                                    writer_text_map);
+            Baggage b = Baggage::deserialize(response.baggage);
+            JOIN_CURRENT_BAGGAGE(b);
+          } catch (...) {
+            LOG(error) << "Failed to upload user_mentions to user-mention-service";
+            _user_mention_client_pool->Push(user_mention_client_wrapper);
+            XTRACE("Failed to upload user_mentions to user-mention-service");
+            throw;
+          }
 
-        _user_mention_client_pool->Push(user_mention_client_wrapper);
+          _user_mention_client_pool->Push(user_mention_client_wrapper);
+        }
       });
 
   std::vector<std::string> shortened_urls;
@@ -184,7 +190,7 @@ void TextHandler::UploadText(
     updated_text = text;
   }
 
-  
+
   Baggage upload_text_baggage = BRANCH_CURRENT_BAGGAGE();
   std::future<void> upload_text_future = std::async(
       std::launch::async, [&, writer_text_map]() mutable {
@@ -210,7 +216,7 @@ void TextHandler::UploadText(
           _compose_client_pool->Push(compose_post_client_wrapper);
           XTRACE("Failed to upload text to compose-post-service");
           throw;
-        }          
+        }
         _compose_client_pool->Push(compose_post_client_wrapper);
       });
 
