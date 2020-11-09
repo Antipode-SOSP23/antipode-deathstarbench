@@ -262,7 +262,7 @@ void UserMentionHandler::UploadUserMentions(
     LOG(error) << "Failed to upload user_mentions to user-mention-service";
     XTRACE("Failed to upload user_mentions to user-mention-service");
     throw;
-  }  
+  }
   _compose_client_pool->Push(compose_post_client_wrapper);
   span->Finish();
 
