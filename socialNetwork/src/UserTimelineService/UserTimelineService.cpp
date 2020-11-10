@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
   std::string post_storage_addr = config_json["post-storage-service"]["addr"];
 
   auto mongodb_client_pool = init_mongodb_client_pool(
-      config_json, "user-timeline", 1024);
+      config_json, "user-timeline", 10000);
 
   ClientPool<RedisClient> redis_client_pool("user-timeline-redis",
       redis_addr, redis_port, 0, 10000, 1000);
