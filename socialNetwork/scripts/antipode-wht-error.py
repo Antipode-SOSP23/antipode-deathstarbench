@@ -108,7 +108,7 @@ def _read_user_timeline(user_id):
 #
 # user_id = random.randrange(1, 962)
 user_id = 962
-# _register_user(user_id)
+_register_user(user_id)
 
 
 #---------
@@ -129,8 +129,8 @@ user_id = 962
 #   follower_ids.append(fid)
 
 follower_id = 624
-# _register_user(follower_id)
-# _follow_user(follower_id, user_id)
+_register_user(follower_id)
+_follow_user(user_id, follower_id)
 
 #---------
 # Create post
