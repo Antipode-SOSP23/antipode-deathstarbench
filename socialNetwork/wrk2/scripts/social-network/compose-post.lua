@@ -34,8 +34,8 @@ local host_eu = os.getenv('HOST_EU')
 local host_us = os.getenv('HOST_US')
 
 request = function()
-  -- local user_index = math.random(1, 962)
-  local user_index = 1
+  local user_index = math.random(1, 1000000)
+  -- local user_index = 1
   local username = "username_" .. tostring(user_index)
   local user_id = tostring(user_index)
   local text = stringRandom(256)
