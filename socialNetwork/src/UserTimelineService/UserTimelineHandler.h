@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <string>
+#include <chrono>
 
 #include <mongoc.h>
 #include <bson/bson.h>
@@ -117,9 +118,16 @@ void UserTimelineHandler::WriteUserTimeline(
       "MongoInsert", {opentracing::ChildOf(&span->context())});
   // If no document matches the query criteria,
   // insert a single document (upsert: true)
+
+  // measure query time
+  // auto t_start = std::chrono::high_resolution_clock::now();
   bool updated = mongoc_collection_find_and_modify(
       collection, query, nullptr, update, nullptr, false, true,
       true, &reply, &error);
+  // auto t_end = std::chrono::high_resolution_clock::now();
+  // double elapsed_time_ms = std::chrono::duration<double, std::milli>(t_end-t_start).count();
+  // LOG(error) << "MOOOOO MOOOOO MOOOOO MOOOOO MOOOOO MOOOOO MOOOOO --> " << elapsed_time_ms;
+
   update_span->Finish();
 
   if (!updated) {
