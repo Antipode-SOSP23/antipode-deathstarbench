@@ -46,27 +46,39 @@ local function loadFollowers()
 
   local followers = {}
   for line in io.lines(dataset_path) do
+    -- parse user and follower from dataset
     local user, follower = string.match(line, "(%d+)%s+(%d+)")
+    -- convert those ids to int
+    user = tonumber(user)
+    follower = tonumber(follower)
+    -- init followers array table entry if needed
     if followers[user] == nil then
       followers[user] = {}
     end
+    -- insert in table
     table.insert(followers[user], follower)
   end
   return followers
 end
 
-local followers = loadFollowers()
-local post_id = nil
+local function tableKeys(table)
+  local keyset={}
+  n = 0
+  for k,v in pairs(table) do
+    keyset[n]=k
+    n = n + 1
+  end
+  return keyset
+end
 
+local followers = loadFollowers()
+local usersWithFollowers = tableKeys(followers)
+
+local post_id = nil
 request = function()
    -- find the first ID with followers
-  local user_index = nil
-  -- local user_index = 962
-  local user_id = nil
-  repeat
-    user_index = math.random(2, 961)
-    user_id = tostring(user_index)
-  until followers[user_id] ~= nil
+  local user_index = usersWithFollowers[math.random(#usersWithFollowers - 1)]
+  local user_id = tostring(user_index)
 
   local username = "username_" .. user_id
   local text = stringRandom(256)
@@ -77,7 +89,7 @@ request = function()
   local media_types = ''
 
   -- find follower
-  follower_id = followers[user_id][math.random(#followers[user_id])]
+  follower_index = followers[user_index][math.random(#followers[user_index])]
   -- follower_id = 624
 
   -- compose post
@@ -125,7 +137,7 @@ request = function()
     local start = 0;
     local stop = 10;
 
-    local args = "user_id=" .. follower_id .. "&start=" .. start .. "&stop=" .. stop
+    local args = "user_id=" .. follower_index .. "&start=" .. start .. "&stop=" .. stop
     local method = "GET"
     local headers = {}
     headers["Content-Type"] = "application/x-www-form-urlencoded"
