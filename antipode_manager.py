@@ -22,6 +22,7 @@ import yaml
 import glob
 from jinja2 import Environment
 import textwrap
+from shutil import copyfile
 
 #############################
 # Pre-requisites
@@ -62,6 +63,11 @@ def _last_configuration(app, deploy_type):
   # find most recent one
   files.sort(key=os.path.getctime)
   return files[-1]
+
+def _remove_prefix(text, prefix):
+  if text.startswith(prefix):
+    return text[len(prefix):]
+  return text
 
 #############################
 # CONSTANTS
@@ -318,6 +324,11 @@ def deploy__socialNetwork__gsd(args):
   with open(new_compose_filepath, 'w') as f_compose:
     yaml.dump(compose, f_compose)
   print(f"\t [SAVED] '{new_compose_filepath.resolve()}'")
+
+  # copy file to socialNetwork folder
+  end_docker_compose_swarm = Path(app_dir, 'docker-compose-swarm.yml').resolve()
+  copyfile(new_compose_filepath.resolve(), end_docker_compose_swarm)
+  print(f"\t [INFO] Copied '{str(new_compose_filepath.resolve()).split('antipode-deathstarbench/')[1]}' to '{str(end_docker_compose_swarm).split('antipode-deathstarbench/')[1]}'")
 
   template = """
     [swarm_manager]
