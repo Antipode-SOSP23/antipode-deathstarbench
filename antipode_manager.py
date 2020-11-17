@@ -243,6 +243,11 @@ def build__socialNetwork__local(args):
   docker['build', '-t', 'wrk2:antipode', '.'] & FG
   os.chdir(app_dir)
 
+  # Build the redis-im image
+  os.chdir(app_dir.joinpath('docker', 'redis-im'))
+  docker['build', '-t', 'redis-im:antipode', '.'] & FG
+  os.chdir(app_dir)
+
   # Build the social network docker image
   docker['build', '-t', 'yg397/social-network-microservices:antipode', '.'] & FG
 
