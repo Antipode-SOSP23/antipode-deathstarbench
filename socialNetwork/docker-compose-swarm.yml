@@ -12,7 +12,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == node11
+        - node.hostname == saturn1
     hostname: compose-post-redis
     image: redis
     restart: always
@@ -22,7 +22,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == node11
+        - node.hostname == saturn1
     entrypoint: ComposePostService
     hostname: compose-post-service
     image: yg397/social-network-microservices:antipode
@@ -32,7 +32,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == node02
+        - node.hostname == saturn1
     hostname: home-timeline-redis
     image: redis
     restart: always
@@ -72,7 +72,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == node11
+        - node.hostname == saturn1
     hostname: media-frontend
     image: yg397/media-frontend:xenial
     ports:
@@ -85,23 +85,28 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == node11
+        - node.hostname == saturn1
     hostname: media-memcached
     image: memcached
     restart: always
   media-mongodb:
+    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata"
     deploy:
       placement:
         constraints:
-        - node.hostname == node11
+        - node.hostname == saturn1
     hostname: media-mongodb
     image: mongo
-    restart: always
+    volumes:
+    - target: /ramdata
+      tmpfs:
+        size: 3000000000
+      type: tmpfs
   media-service:
     deploy:
       placement:
         constraints:
-        - node.hostname == node11
+        - node.hostname == saturn1
     entrypoint: MediaService
     hostname: media-service
     image: yg397/social-network-microservices:antipode
@@ -121,7 +126,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == node23
+        - node.hostname == saturn1
     hostname: nginx-thrift
     image: yg397/openresty-thrift:latest
     ports:
@@ -153,7 +158,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == node04
+        - node.hostname == saturn1
     hostname: post-storage-memcached
     image: memcached
     restart: always
@@ -166,14 +171,19 @@ services:
     image: memcached
     restart: always
   post-storage-mongodb:
-    command: --replSet rs0 --oplogSize 128
+    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata  --replSet
+      rs0 --oplogSize 128"
     deploy:
       placement:
         constraints:
-        - node.hostname == node04
+        - node.hostname == saturn1
     hostname: post-storage-mongodb
     image: mongo
-    restart: always
+    volumes:
+    - target: /ramdata
+      tmpfs:
+        size: 3000000000
+      type: tmpfs
   post-storage-mongodb-setup:
     depends_on:
     - post-storage-mongodb
@@ -182,22 +192,31 @@ services:
       placement:
         constraints:
         - node.hostname == node25
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        max_attempts: 3
     image: mongodb-setup
     restart: 'no'
   post-storage-mongodb-us:
-    command: --replSet rs0 --oplogSize 128
+    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata --replSet
+      rs0 --oplogSize 128"
     deploy:
       placement:
         constraints:
         - node.hostname == node06
     hostname: post-storage-mongodb-us
     image: mongo
-    restart: always
+    volumes:
+    - target: /ramdata
+      tmpfs:
+        size: 3000000000
+      type: tmpfs
   post-storage-service:
     deploy:
       placement:
         constraints:
-        - node.hostname == node04
+        - node.hostname == saturn1
     entrypoint: PostStorageService
     hostname: post-storage-service
     image: yg397/social-network-microservices:antipode
@@ -214,18 +233,23 @@ services:
     image: yg397/social-network-microservices:antipode
     restart: always
   social-graph-mongodb:
+    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata"
     deploy:
       placement:
         constraints:
-        - node.hostname == node02
+        - node.hostname == saturn1
     hostname: social-graph-mongodb
     image: mongo
-    restart: always
+    volumes:
+    - target: /ramdata
+      tmpfs:
+        size: 3000000000
+      type: tmpfs
   social-graph-redis:
     deploy:
       placement:
         constraints:
-        - node.hostname == node02
+        - node.hostname == saturn1
     hostname: social-graph-redis
     image: redis
     restart: always
@@ -233,7 +257,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == node02
+        - node.hostname == saturn1
     entrypoint: SocialGraphService
     hostname: social-graph-service
     image: yg397/social-network-microservices:antipode
@@ -242,7 +266,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == node11
+        - node.hostname == saturn1
     entrypoint: TextService
     hostname: text-service
     image: yg397/social-network-microservices:antipode
@@ -251,7 +275,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == node11
+        - node.hostname == saturn1
     entrypoint: UniqueIdService
     hostname: unique-id-service
     image: yg397/social-network-microservices:antipode
@@ -260,23 +284,28 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == node11
+        - node.hostname == saturn1
     hostname: url-shorten-memcached
     image: memcached
     restart: always
   url-shorten-mongodb:
+    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata"
     deploy:
       placement:
         constraints:
-        - node.hostname == node11
+        - node.hostname == saturn1
     hostname: url-shorten-mongodb
     image: mongo
-    restart: always
+    volumes:
+    - target: /ramdata
+      tmpfs:
+        size: 3000000000
+      type: tmpfs
   url-shorten-service:
     deploy:
       placement:
         constraints:
-        - node.hostname == node11
+        - node.hostname == saturn1
     entrypoint: UrlShortenService
     hostname: url-shorten-service
     image: yg397/social-network-microservices:antipode
@@ -285,7 +314,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == node11
+        - node.hostname == saturn1
     hostname: user-memcached
     image: memcached
     restart: always
@@ -293,49 +322,60 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == node11
+        - node.hostname == saturn1
     entrypoint: UserMentionService
     hostname: user-mention-service
     image: yg397/social-network-microservices:antipode
     restart: always
   user-mongodb:
+    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata"
     deploy:
       placement:
         constraints:
-        - node.hostname == node11
+        - node.hostname == saturn1
     hostname: user-mongodb
     image: mongo
-    restart: always
+    volumes:
+    - target: /ramdata
+      tmpfs:
+        size: 3000000000
+      type: tmpfs
   user-service:
     deploy:
       placement:
         constraints:
-        - node.hostname == node11
+        - node.hostname == saturn1
     entrypoint: UserService
     hostname: user-service
     image: yg397/social-network-microservices:antipode
     restart: always
   user-timeline-mongodb:
+    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata"
     deploy:
       placement:
         constraints:
-        - node.hostname == node11
-    hostname: user-timeline-mongodb
+        - node.hostname == saturn1
     image: mongo
-    restart: always
+    volumes:
+    - target: /ramdata
+      tmpfs:
+        size: 3000000000
+      type: tmpfs
   user-timeline-redis:
     deploy:
       placement:
         constraints:
-        - node.hostname == node11
+        - node.hostname == saturn1
     hostname: user-timeline-redis
     image: redis
     restart: always
   user-timeline-service:
+    depends_on:
+    - user-timeline-mongodb
     deploy:
       placement:
         constraints:
-        - node.hostname == node11
+        - node.hostname == saturn1
     entrypoint: UserTimelineService
     hostname: user-timeline-service
     image: yg397/social-network-microservices:antipode
@@ -344,7 +384,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == node02
+        - node.hostname == saturn1
     environment:
       RABBITMQ_DEFAULT_VHOST: /
       RABBITMQ_ERLANG_COOKIE: WRITE-HOME-TIMELINE-RABBITMQ
@@ -357,7 +397,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == node02
+        - node.hostname == saturn1
     entrypoint: WriteHomeTimelineService
     hostname: write-home-timeline-service
     image: yg397/social-network-microservices:antipode
@@ -375,4 +415,4 @@ services:
     - 4080:4080
     - 5563:5563
     restart: always
-version: '3'
+version: '3.7'
