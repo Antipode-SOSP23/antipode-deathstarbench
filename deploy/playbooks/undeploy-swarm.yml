@@ -27,6 +27,9 @@
       register: out
       failed_when: "not(out.rc == 0 or 'This node is not part of a swarm' in out.stderr)"
 
+    - name: Prune docker system
+      shell: docker system prune --volumes
+
 
 - hosts: swarm_manager
   any_errors_fatal: true
