@@ -291,8 +291,10 @@ def deploy__socialNetwork__gsd(args):
         print("[ERROR] Found unknown nodes in GSD cluster: " + ', '.join(unknonwn_nodes))
         exit()
 
-  if args['lastest']:
+  if args['latest']:
     filepath = _last_configuration('socialNetwork', 'gsd')
+  if args['file']:
+    filepath = ROOT_PATH / args['file'].name
 
   # Update docker-compose.yml
   deploy_nodes = {}
@@ -487,8 +489,10 @@ def wkld__socialNetwork__gsd__hosts(args):
   # eu - nginx-thrift: node23
   # us - nginx-thrift-us: node24§
 
-  if args['lastest']:
+  if args['latest']:
     filepath = _last_configuration('socialNetwork', 'gsd')
+  if args['file']:
+    filepath = ROOT_PATH / args['file'].name
 
   with open(filepath, 'r') as f_conf:
     conf = yaml.load(f_conf, Loader=yaml.FullLoader)
@@ -510,8 +514,10 @@ def wkld__socialNetwork__gsd__run(args, hosts, exe_path, exe_args):
   app_dir = Path.cwd()
   os.chdir(app_dir.joinpath('..', 'deploy'))
 
-  if args['lastest']:
+  if args['latest']:
     conf_filepath = Path(_last_configuration('socialNetwork', 'gsd'))
+  if args['file']:
+    conf_filepath = ROOT_PATH / args['file'].name
 
   # Create inventory for clients
   template = """
@@ -635,8 +641,10 @@ def gather__socialNetwork__local(args):
 def gather__socialNetwork__gsd(args):
   filepath = None
 
-  if args['lastest']:
+  if args['latest']:
     filepath = _last_configuration('socialNetwork', 'gsd')
+  if args['file']:
+    filepath = ROOT_PATH / args['file'].name
 
   with open(filepath, 'r') as f_conf:
     conf = yaml.load(f_conf, Loader=yaml.FullLoader)
@@ -677,14 +685,14 @@ if __name__ == "__main__":
   # deploy file group
   deploy_file_group = deploy_parser.add_mutually_exclusive_group(required=True)
   deploy_file_group.add_argument('-n', '--new', action='store_true', help="Build a new deploy file")
-  deploy_file_group.add_argument('-l', '--lastest', action='store_true', help="Use last used deploy file")
+  deploy_file_group.add_argument('-l', '--latest', action='store_true', help="Use last used deploy file")
   deploy_file_group.add_argument('-f', '--file', type=argparse.FileType('r', encoding='UTF-8'), help="Use specific file")
 
   # workload application
   wkld_parser = subparsers.add_parser('wkld', help='Run HTTP workload generator')
   # deploy file group
   deploy_file_group = wkld_parser.add_mutually_exclusive_group(required=False)
-  deploy_file_group.add_argument('-l', '--lastest', action='store_true', help="Use last used deploy file")
+  deploy_file_group.add_argument('-l', '--latest', action='store_true', help="Use last used deploy file")
   deploy_file_group.add_argument('-f', '--file', type=argparse.FileType('r', encoding='UTF-8'), help="Use specific file")
   # comparable with wrk2 > ./wrk options
   wkld_parser.add_argument('-N', '--node', action='append', default=[], help="Run wkld on the following nodes")
@@ -703,7 +711,7 @@ if __name__ == "__main__":
   gather_parser = subparsers.add_parser('gather', help='Gather data from application')
   # deploy file group
   deploy_file_group = gather_parser.add_mutually_exclusive_group(required=False)
-  deploy_file_group.add_argument('-l', '--lastest', action='store_true', help="Use last used deploy file")
+  deploy_file_group.add_argument('-l', '--latest', action='store_true', help="Use last used deploy file")
   deploy_file_group.add_argument('-f', '--file', type=argparse.FileType('r', encoding='UTF-8'), help="Use specific file")
   # different metics to gather
   gather_parser.add_argument('-vl', '--visibility-latency', action='store_true', help="detached")
