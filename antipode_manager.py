@@ -547,15 +547,20 @@ def wkld__socialNetwork__gsd__run(args, hosts, exe_path, exe_args):
   print(f"\t [SAVED] '{inventory_filepath.resolve()}'")
 
   # Create script to run
-  out_folder = f"/tmp/dsb-wkld-data/{conf_filepath.stem}__{datetime.now().strftime('%Y%m%d%H%M%S')}"
+  conf_id = f"{conf_filepath.stem}__{datetime.now().strftime('%Y%m%d%H%M%S')}"
+  out_folder = f"/tmp/dsb-wkld-data/{conf_id}"
   out_filepath = f"{out_folder}/{conf_filepath.stem}__{datetime.now().strftime('%Y%m%d%H%M%S')}__$(hostname).out"
   template = """
     #! /bin/bash
 
+    export HOST_EU={{ host_eu }}
+    export HOST_US={{ host_us }}
     mkdir -p {{out_folder}}
     {{exe_path}} {{exe_args}} | tee {{out_filepath}}
   """
   script = Environment().from_string(template).render({
+    'host_eu': hosts['host_eu'],
+    'host_us': hosts['host_us'],
     'exe_path': exe_path,
     'exe_args': ' '.join([str(e) for e in exe_args]),
     'out_folder': out_folder,
@@ -582,7 +587,7 @@ def wkld__socialNetwork__gsd__run(args, hosts, exe_path, exe_args):
   else:
     input("Press any key when done ...")
 
-  ansible_playbook['wkld-gather.yml', '-i', 'clients_inventory.cfg', '-e', 'app=socialNetwork'] & FG
+  ansible_playbook['wkld-gather.yml', '-i', 'clients_inventory.cfg', '-e', 'app=socialNetwork', '-e', f'conf_id={conf_id}' ] & FG
 
 #############################
 # GATHER
