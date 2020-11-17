@@ -5,9 +5,15 @@ echo "*********************************"
 
 sleep 60 | echo "Sleeping"
 
-# Primary
 mongo mongodb://post-storage-mongodb:27017 replicaSet.js
+done=$?
 
 echo "*********************************"
-echo "Replica set DONE!"
+if [ "$done" -ne 0 ]; then
+  echo "Replica set FAILED!"
+else
+  echo "Replica set DONE!"
+fi
 echo "*********************************"
+
+exit $done
