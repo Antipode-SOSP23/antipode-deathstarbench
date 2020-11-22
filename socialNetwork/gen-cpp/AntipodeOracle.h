@@ -21,8 +21,8 @@ namespace social_network {
 class AntipodeOracleIf {
  public:
   virtual ~AntipodeOracleIf() {}
-  virtual bool MakeVisible(const int64_t object_id) = 0;
-  virtual bool IsVisible(const int64_t object_id) = 0;
+  virtual bool MakeVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier) = 0;
+  virtual bool IsVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier) = 0;
 };
 
 class AntipodeOracleIfFactory {
@@ -52,19 +52,20 @@ class AntipodeOracleIfSingletonFactory : virtual public AntipodeOracleIfFactory 
 class AntipodeOracleNull : virtual public AntipodeOracleIf {
  public:
   virtual ~AntipodeOracleNull() {}
-  bool MakeVisible(const int64_t /* object_id */) {
+  bool MakeVisible(const int64_t /* object_id */, const std::map<std::string, std::string> & /* carrier */) {
     bool _return = false;
     return _return;
   }
-  bool IsVisible(const int64_t /* object_id */) {
+  bool IsVisible(const int64_t /* object_id */, const std::map<std::string, std::string> & /* carrier */) {
     bool _return = false;
     return _return;
   }
 };
 
 typedef struct _AntipodeOracle_MakeVisible_args__isset {
-  _AntipodeOracle_MakeVisible_args__isset() : object_id(false) {}
+  _AntipodeOracle_MakeVisible_args__isset() : object_id(false), carrier(false) {}
   bool object_id :1;
+  bool carrier :1;
 } _AntipodeOracle_MakeVisible_args__isset;
 
 class AntipodeOracle_MakeVisible_args {
@@ -77,14 +78,19 @@ class AntipodeOracle_MakeVisible_args {
 
   virtual ~AntipodeOracle_MakeVisible_args() throw();
   int64_t object_id;
+  std::map<std::string, std::string>  carrier;
 
   _AntipodeOracle_MakeVisible_args__isset __isset;
 
   void __set_object_id(const int64_t val);
 
+  void __set_carrier(const std::map<std::string, std::string> & val);
+
   bool operator == (const AntipodeOracle_MakeVisible_args & rhs) const
   {
     if (!(object_id == rhs.object_id))
+      return false;
+    if (!(carrier == rhs.carrier))
       return false;
     return true;
   }
@@ -106,6 +112,7 @@ class AntipodeOracle_MakeVisible_pargs {
 
   virtual ~AntipodeOracle_MakeVisible_pargs() throw();
   const int64_t* object_id;
+  const std::map<std::string, std::string> * carrier;
 
   uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
 
@@ -175,8 +182,9 @@ class AntipodeOracle_MakeVisible_presult {
 };
 
 typedef struct _AntipodeOracle_IsVisible_args__isset {
-  _AntipodeOracle_IsVisible_args__isset() : object_id(false) {}
+  _AntipodeOracle_IsVisible_args__isset() : object_id(false), carrier(false) {}
   bool object_id :1;
+  bool carrier :1;
 } _AntipodeOracle_IsVisible_args__isset;
 
 class AntipodeOracle_IsVisible_args {
@@ -189,14 +197,19 @@ class AntipodeOracle_IsVisible_args {
 
   virtual ~AntipodeOracle_IsVisible_args() throw();
   int64_t object_id;
+  std::map<std::string, std::string>  carrier;
 
   _AntipodeOracle_IsVisible_args__isset __isset;
 
   void __set_object_id(const int64_t val);
 
+  void __set_carrier(const std::map<std::string, std::string> & val);
+
   bool operator == (const AntipodeOracle_IsVisible_args & rhs) const
   {
     if (!(object_id == rhs.object_id))
+      return false;
+    if (!(carrier == rhs.carrier))
       return false;
     return true;
   }
@@ -218,6 +231,7 @@ class AntipodeOracle_IsVisible_pargs {
 
   virtual ~AntipodeOracle_IsVisible_pargs() throw();
   const int64_t* object_id;
+  const std::map<std::string, std::string> * carrier;
 
   uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
 
@@ -311,11 +325,11 @@ class AntipodeOracleClient : virtual public AntipodeOracleIf {
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> getOutputProtocol() {
     return poprot_;
   }
-  bool MakeVisible(const int64_t object_id);
-  void send_MakeVisible(const int64_t object_id);
+  bool MakeVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier);
+  void send_MakeVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier);
   bool recv_MakeVisible();
-  bool IsVisible(const int64_t object_id);
-  void send_IsVisible(const int64_t object_id);
+  bool IsVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier);
+  void send_IsVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier);
   bool recv_IsVisible();
  protected:
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
@@ -367,22 +381,22 @@ class AntipodeOracleMultiface : virtual public AntipodeOracleIf {
     ifaces_.push_back(iface);
   }
  public:
-  bool MakeVisible(const int64_t object_id) {
+  bool MakeVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
-      ifaces_[i]->MakeVisible(object_id);
+      ifaces_[i]->MakeVisible(object_id, carrier);
     }
-    return ifaces_[i]->MakeVisible(object_id);
+    return ifaces_[i]->MakeVisible(object_id, carrier);
   }
 
-  bool IsVisible(const int64_t object_id) {
+  bool IsVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
-      ifaces_[i]->IsVisible(object_id);
+      ifaces_[i]->IsVisible(object_id, carrier);
     }
-    return ifaces_[i]->IsVisible(object_id);
+    return ifaces_[i]->IsVisible(object_id, carrier);
   }
 
 };
@@ -415,11 +429,11 @@ class AntipodeOracleConcurrentClient : virtual public AntipodeOracleIf {
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> getOutputProtocol() {
     return poprot_;
   }
-  bool MakeVisible(const int64_t object_id);
-  int32_t send_MakeVisible(const int64_t object_id);
+  bool MakeVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier);
+  int32_t send_MakeVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier);
   bool recv_MakeVisible(const int32_t seqid);
-  bool IsVisible(const int64_t object_id);
-  int32_t send_IsVisible(const int64_t object_id);
+  bool IsVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier);
+  int32_t send_IsVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier);
   bool recv_IsVisible(const int32_t seqid);
  protected:
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;

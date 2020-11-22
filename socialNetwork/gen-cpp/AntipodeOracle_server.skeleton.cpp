@@ -20,12 +20,14 @@ class AntipodeOracleHandler : virtual public AntipodeOracleIf {
     // Your initialization goes here
   }
 
-  bool MakeVisible(const int64_t object_id) {
+  bool MakeVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
+    printf("MakeVisible\n");
   }
 
-  bool IsVisible(const int64_t object_id) {
+  bool IsVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
+    printf("IsVisible\n");
   }
 
 };
@@ -42,3 +44,4 @@ int main(int argc, char **argv) {
   server.serve();
   return 0;
 }
+

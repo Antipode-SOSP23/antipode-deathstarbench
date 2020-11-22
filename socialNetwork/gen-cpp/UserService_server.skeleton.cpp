@@ -45,7 +45,7 @@ class UserServiceHandler : virtual public UserServiceIf {
     printf("UploadCreatorWithUsername\n");
   }
 
-  void GetUserId(LoginRpcResponse& _return, const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier) {
+  void GetUserId(UserIdRpcResponse& _return, const int64_t req_id, const std::string& username, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("GetUserId\n");
   }
@@ -64,3 +64,4 @@ int main(int argc, char **argv) {
   server.serve();
   return 0;
 }
+

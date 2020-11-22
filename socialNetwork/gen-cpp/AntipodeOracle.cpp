@@ -42,6 +42,29 @@ uint32_t AntipodeOracle_MakeVisible_args::read(::apache::thrift::protocol::TProt
           xfer += iprot->skip(ftype);
         }
         break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_MAP) {
+          {
+            this->carrier.clear();
+            uint32_t _size410;
+            ::apache::thrift::protocol::TType _ktype411;
+            ::apache::thrift::protocol::TType _vtype412;
+            xfer += iprot->readMapBegin(_ktype411, _vtype412, _size410);
+            uint32_t _i414;
+            for (_i414 = 0; _i414 < _size410; ++_i414)
+            {
+              std::string _key415;
+              xfer += iprot->readString(_key415);
+              std::string& _val416 = this->carrier[_key415];
+              xfer += iprot->readString(_val416);
+            }
+            xfer += iprot->readMapEnd();
+          }
+          this->__isset.carrier = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
       default:
         xfer += iprot->skip(ftype);
         break;
@@ -63,6 +86,19 @@ uint32_t AntipodeOracle_MakeVisible_args::write(::apache::thrift::protocol::TPro
   xfer += oprot->writeI64(this->object_id);
   xfer += oprot->writeFieldEnd();
 
+  xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 2);
+  {
+    xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->carrier.size()));
+    std::map<std::string, std::string> ::const_iterator _iter417;
+    for (_iter417 = this->carrier.begin(); _iter417 != this->carrier.end(); ++_iter417)
+    {
+      xfer += oprot->writeString(_iter417->first);
+      xfer += oprot->writeString(_iter417->second);
+    }
+    xfer += oprot->writeMapEnd();
+  }
+  xfer += oprot->writeFieldEnd();
+
   xfer += oprot->writeFieldStop();
   xfer += oprot->writeStructEnd();
   return xfer;
@@ -80,6 +116,19 @@ uint32_t AntipodeOracle_MakeVisible_pargs::write(::apache::thrift::protocol::TPr
 
   xfer += oprot->writeFieldBegin("object_id", ::apache::thrift::protocol::T_I64, 1);
   xfer += oprot->writeI64((*(this->object_id)));
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 2);
+  {
+    xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>((*(this->carrier)).size()));
+    std::map<std::string, std::string> ::const_iterator _iter418;
+    for (_iter418 = (*(this->carrier)).begin(); _iter418 != (*(this->carrier)).end(); ++_iter418)
+    {
+      xfer += oprot->writeString(_iter418->first);
+      xfer += oprot->writeString(_iter418->second);
+    }
+    xfer += oprot->writeMapEnd();
+  }
   xfer += oprot->writeFieldEnd();
 
   xfer += oprot->writeFieldStop();
@@ -249,6 +298,29 @@ uint32_t AntipodeOracle_IsVisible_args::read(::apache::thrift::protocol::TProtoc
           xfer += iprot->skip(ftype);
         }
         break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_MAP) {
+          {
+            this->carrier.clear();
+            uint32_t _size419;
+            ::apache::thrift::protocol::TType _ktype420;
+            ::apache::thrift::protocol::TType _vtype421;
+            xfer += iprot->readMapBegin(_ktype420, _vtype421, _size419);
+            uint32_t _i423;
+            for (_i423 = 0; _i423 < _size419; ++_i423)
+            {
+              std::string _key424;
+              xfer += iprot->readString(_key424);
+              std::string& _val425 = this->carrier[_key424];
+              xfer += iprot->readString(_val425);
+            }
+            xfer += iprot->readMapEnd();
+          }
+          this->__isset.carrier = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
       default:
         xfer += iprot->skip(ftype);
         break;
@@ -270,6 +342,19 @@ uint32_t AntipodeOracle_IsVisible_args::write(::apache::thrift::protocol::TProto
   xfer += oprot->writeI64(this->object_id);
   xfer += oprot->writeFieldEnd();
 
+  xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 2);
+  {
+    xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->carrier.size()));
+    std::map<std::string, std::string> ::const_iterator _iter426;
+    for (_iter426 = this->carrier.begin(); _iter426 != this->carrier.end(); ++_iter426)
+    {
+      xfer += oprot->writeString(_iter426->first);
+      xfer += oprot->writeString(_iter426->second);
+    }
+    xfer += oprot->writeMapEnd();
+  }
+  xfer += oprot->writeFieldEnd();
+
   xfer += oprot->writeFieldStop();
   xfer += oprot->writeStructEnd();
   return xfer;
@@ -287,6 +372,19 @@ uint32_t AntipodeOracle_IsVisible_pargs::write(::apache::thrift::protocol::TProt
 
   xfer += oprot->writeFieldBegin("object_id", ::apache::thrift::protocol::T_I64, 1);
   xfer += oprot->writeI64((*(this->object_id)));
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 2);
+  {
+    xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>((*(this->carrier)).size()));
+    std::map<std::string, std::string> ::const_iterator _iter427;
+    for (_iter427 = (*(this->carrier)).begin(); _iter427 != (*(this->carrier)).end(); ++_iter427)
+    {
+      xfer += oprot->writeString(_iter427->first);
+      xfer += oprot->writeString(_iter427->second);
+    }
+    xfer += oprot->writeMapEnd();
+  }
   xfer += oprot->writeFieldEnd();
 
   xfer += oprot->writeFieldStop();
@@ -422,19 +520,20 @@ uint32_t AntipodeOracle_IsVisible_presult::read(::apache::thrift::protocol::TPro
   return xfer;
 }
 
-bool AntipodeOracleClient::MakeVisible(const int64_t object_id)
+bool AntipodeOracleClient::MakeVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier)
 {
-  send_MakeVisible(object_id);
+  send_MakeVisible(object_id, carrier);
   return recv_MakeVisible();
 }
 
-void AntipodeOracleClient::send_MakeVisible(const int64_t object_id)
+void AntipodeOracleClient::send_MakeVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier)
 {
   int32_t cseqid = 0;
   oprot_->writeMessageBegin("MakeVisible", ::apache::thrift::protocol::T_CALL, cseqid);
 
   AntipodeOracle_MakeVisible_pargs args;
   args.object_id = &object_id;
+  args.carrier = &carrier;
   args.write(oprot_);
 
   oprot_->writeMessageEnd();
@@ -483,19 +582,20 @@ bool AntipodeOracleClient::recv_MakeVisible()
   throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "MakeVisible failed: unknown result");
 }
 
-bool AntipodeOracleClient::IsVisible(const int64_t object_id)
+bool AntipodeOracleClient::IsVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier)
 {
-  send_IsVisible(object_id);
+  send_IsVisible(object_id, carrier);
   return recv_IsVisible();
 }
 
-void AntipodeOracleClient::send_IsVisible(const int64_t object_id)
+void AntipodeOracleClient::send_IsVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier)
 {
   int32_t cseqid = 0;
   oprot_->writeMessageBegin("IsVisible", ::apache::thrift::protocol::T_CALL, cseqid);
 
   AntipodeOracle_IsVisible_pargs args;
   args.object_id = &object_id;
+  args.carrier = &carrier;
   args.write(oprot_);
 
   oprot_->writeMessageEnd();
@@ -586,7 +686,7 @@ void AntipodeOracleProcessor::process_MakeVisible(int32_t seqid, ::apache::thrif
 
   AntipodeOracle_MakeVisible_result result;
   try {
-    result.success = iface_->MakeVisible(args.object_id);
+    result.success = iface_->MakeVisible(args.object_id, args.carrier);
     result.__isset.success = true;
   } catch (ServiceException &se) {
     result.se = se;
@@ -643,7 +743,7 @@ void AntipodeOracleProcessor::process_IsVisible(int32_t seqid, ::apache::thrift:
 
   AntipodeOracle_IsVisible_result result;
   try {
-    result.success = iface_->IsVisible(args.object_id);
+    result.success = iface_->IsVisible(args.object_id, args.carrier);
     result.__isset.success = true;
   } catch (ServiceException &se) {
     result.se = se;
@@ -684,13 +784,13 @@ void AntipodeOracleProcessor::process_IsVisible(int32_t seqid, ::apache::thrift:
   return processor;
 }
 
-bool AntipodeOracleConcurrentClient::MakeVisible(const int64_t object_id)
+bool AntipodeOracleConcurrentClient::MakeVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier)
 {
-  int32_t seqid = send_MakeVisible(object_id);
+  int32_t seqid = send_MakeVisible(object_id, carrier);
   return recv_MakeVisible(seqid);
 }
 
-int32_t AntipodeOracleConcurrentClient::send_MakeVisible(const int64_t object_id)
+int32_t AntipodeOracleConcurrentClient::send_MakeVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier)
 {
   int32_t cseqid = this->sync_.generateSeqId();
   ::apache::thrift::async::TConcurrentSendSentry sentry(&this->sync_);
@@ -698,6 +798,7 @@ int32_t AntipodeOracleConcurrentClient::send_MakeVisible(const int64_t object_id
 
   AntipodeOracle_MakeVisible_pargs args;
   args.object_id = &object_id;
+  args.carrier = &carrier;
   args.write(oprot_);
 
   oprot_->writeMessageEnd();
@@ -772,13 +873,13 @@ bool AntipodeOracleConcurrentClient::recv_MakeVisible(const int32_t seqid)
   } // end while(true)
 }
 
-bool AntipodeOracleConcurrentClient::IsVisible(const int64_t object_id)
+bool AntipodeOracleConcurrentClient::IsVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier)
 {
-  int32_t seqid = send_IsVisible(object_id);
+  int32_t seqid = send_IsVisible(object_id, carrier);
   return recv_IsVisible(seqid);
 }
 
-int32_t AntipodeOracleConcurrentClient::send_IsVisible(const int64_t object_id)
+int32_t AntipodeOracleConcurrentClient::send_IsVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier)
 {
   int32_t cseqid = this->sync_.generateSeqId();
   ::apache::thrift::async::TConcurrentSendSentry sentry(&this->sync_);
@@ -786,6 +887,7 @@ int32_t AntipodeOracleConcurrentClient::send_IsVisible(const int64_t object_id)
 
   AntipodeOracle_IsVisible_pargs args;
   args.object_id = &object_id;
+  args.carrier = &carrier;
   args.write(oprot_);
 
   oprot_->writeMessageEnd();
