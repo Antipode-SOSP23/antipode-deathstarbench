@@ -90,7 +90,7 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     // loop oracle calls until its visible
     bool antipode_oracle_response = false;
     try {
-      antipode_oracle_response = antipode_oracle_client->IsVisible(post_id);
+      antipode_oracle_response = antipode_oracle_client->IsVisible(post_id, writer_text_map);
     } catch (...) {
       LOG(error) << "[ANTIPODE] Failed to check post visibility in Oracle";
       _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
@@ -100,6 +100,8 @@ void OnReceivedWorker(const AMQP::Message &msg) {
 
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     duration<double, std::milli> time_span = t2 - t1;
+    span->SetTag("wht_antipode_duration", std::to_string(time_span.count()));
+
     //----------
     // ANTIPODE
     //----------
@@ -166,10 +168,10 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     high_resolution_clock::time_point end_worker_ts = high_resolution_clock::now();
     duration<double, std::milli> worker_timespent = end_worker_ts - start_worker_ts;
 
-    uint64_t ts = duration_cast<milliseconds>(end_worker_ts.time_since_epoch()).count();
-
     span->SetTag("wht_worker_duration", std::to_string(worker_timespent.count()));
-    span->SetTag("wht_worker_endts", std::to_string(ts));
+    uint64_t ts = duration_cast<milliseconds>(end_worker_ts.time_since_epoch()).count();
+    span->SetTag("wht_notification_ts", std::to_string(ts));
+
   } catch (...) {
     LOG(error) << "OnReveived worker error";
     throw;

@@ -5,7 +5,7 @@
 #include <string>
 #include <regex>
 #include <future>
-
+#include <chrono>
 
 #include "../../gen-cpp/AntipodeOracle.h"
 #include "../logger.h"
@@ -31,6 +31,8 @@ using namespace ::apache::thrift;
 using namespace ::apache::thrift::protocol;
 using namespace ::apache::thrift::transport;
 using namespace ::apache::thrift::server;
+// for clock usage
+using namespace std::chrono;
 
 namespace social_network {
 
@@ -42,21 +44,43 @@ namespace social_network {
       // Your initialization goes here
     }
 
-    bool MakeVisible(const int64_t object_id) {
-      cache.insert(object_id);
+    bool MakeVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier) {
       LOG(debug) << "[ANTIPODE] Making '" << object_id << "' visible ..." ;
+
+      cache.insert(object_id);
       return true;
     }
 
-    bool IsVisible(const int64_t object_id) {
+    bool IsVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier) {
       LOG(debug) << "[ANTIPODE] Checking '" << object_id << "' for visibility ..." ;
 
+      // Jaeger tracing
+      TextMapReader span_reader(carrier);
+      auto parent_span = opentracing::Tracer::Global()->Extract(span_reader);
+      auto span = opentracing::Tracer::Global()->StartSpan(
+          "IsVisible",
+          {opentracing::ChildOf(parent_span->get())});
+      std::map<std::string, std::string> writer_text_map;
+      TextMapWriter writer(writer_text_map);
+      opentracing::Tracer::Global()->Inject(span->context(), writer);
+
+      // evaluation
+      high_resolution_clock::time_point start_ts = high_resolution_clock::now();
+      int attempts = 0;
+
+      // perform operation
       tbb::concurrent_unordered_set<int64_t, tbb::tbb_hash<int64_t>, std::equal_to<int>>::iterator cacheit;
       while(true){
+        attempts++;
+
         cacheit = cache.find(object_id);
-        while (cacheit != cache.end()){
-          LOG(debug) << "[ANTIPODE] CHEKING FIND: " << *cacheit;
-          ++cacheit;
+        if (cacheit != cache.end()){
+          // add metrics to span to read later
+          high_resolution_clock::time_point end_ts = high_resolution_clock::now();
+          duration<double, std::milli> timespent = end_ts - start_ts;
+          span->SetTag("antipode_isvisible_duration", std::to_string(timespent.count()));
+          span->SetTag("antipode_isvisible_attempts", std::to_string(attempts));
+
           return true;
         }
       }

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <future>
+#include <chrono>
 
 #include <mongoc.h>
 #include <libmemcached/memcached.h>
@@ -22,6 +23,9 @@
 #include "../ThriftClient.h"
 #include <xtrace/xtrace.h>
 #include <xtrace/baggage.h>
+
+// for clock usage
+using namespace std::chrono;
 
 namespace social_network {
 using json = nlohmann::json;
@@ -75,8 +79,9 @@ void PostStorageHandler::StorePostAsync(
   //----------
 
   // force WritHomeTimeline to an error by sleeping
+
   // LOG(debug) << "[ANTIPODE] Sleeping ...";
-  // std::this_thread::sleep_for (std::chrono::seconds(30));
+  // std::this_thread::sleep_for (std::chrono::milliseconds(300));
   // LOG(debug) << "[ANTIPODE] Done Sleeping!";
 
   //----------
@@ -210,6 +215,11 @@ void PostStorageHandler::StorePostAsync(
   mongoc_collection_destroy(collection);
   mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
 
+  // eval
+  high_resolution_clock::time_point end_ts = high_resolution_clock::now();
+  uint64_t ts = duration_cast<milliseconds>(end_ts.time_since_epoch()).count();
+  span->SetTag("poststorage_post_visible", std::to_string(ts));
+
   //----------
   // ANTIPODE
   //----------
@@ -225,7 +235,7 @@ void PostStorageHandler::StorePostAsync(
   auto antipode_oracle_client = antipode_orable_client_wrapper->GetClient();
   bool antipode_oracle_response;
   try {
-    antipode_oracle_response = antipode_oracle_client->MakeVisible(post.post_id);
+    antipode_oracle_response = antipode_oracle_client->MakeVisible(post.post_id, writer_text_map);
   } catch (...) {
     LOG(error) << "[ANTIPODE] Failed to write post visibility to Oracle";
     _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);

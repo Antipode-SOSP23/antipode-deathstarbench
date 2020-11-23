@@ -574,8 +574,18 @@ void ComposePostHandler::_ComposeAndUpload(
   if (!XTrace::IsTracing()) {
     XTrace::StartTrace("ComposePostHandler");
   }
-
   // XTRACE("ComposePostHandler::_ComposeAndUpload Start");
+
+  // Initialize a span
+  TextMapReader reader(carrier);
+  std::map<std::string, std::string> writer_text_map;
+  TextMapWriter writer(writer_text_map);
+  auto parent_span = opentracing::Tracer::Global()->Extract(reader);
+  auto span = opentracing::Tracer::Global()->StartSpan(
+    "_ComposeAndUpload",
+    { opentracing::ChildOf(parent_span->get()) });
+  opentracing::Tracer::Global()->Inject(span->context(), writer);
+
 
   // XTRACE("Redis RetrieveMessages start");
   auto redis_client_wrapper = _redis_client_pool->Pop();
@@ -678,6 +688,8 @@ void ComposePostHandler::_ComposeAndUpload(
   }
 
   // XTRACE("Compose Post complete");
+  span->SetTag("composepost_id", post.post_id);
+
   // Upload the post
   // XTRACE("Upload Post start");
   Baggage upload_post_helper_baggage = BRANCH_CURRENT_BAGGAGE();
@@ -745,6 +757,7 @@ void ComposePostHandler::_ComposeAndUpload(
     }
   }
 
+  span->Finish();
   // XTRACE("Upload Post complete");
   // XTRACE("ComposePostService::_ComposeAndUpload complete");
 
