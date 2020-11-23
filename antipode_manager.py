@@ -597,23 +597,24 @@ def wkld__socialNetwork__gsd__run(args, hosts, exe_path, exe_args):
 #############################
 # GATHER
 #
+def _fetch_span_tag(tags, tag_to_search):
+  return next(item for item in tags if item['key'] == tag_to_search)['value']
+
 def gather(args):
   try:
     app_dir = Path.cwd()
     # get host for each zone
     jaeger_host = getattr(sys.modules[__name__], f"gather__{args['app']}__{_deploy_type(args)}")(args)
 
-    if args['visibility_latency']:
-      limit = int(input(f"Visit {jaeger_host}/dependencies to check number of flowing requests: "))
-      next_round = 0
-      traces = []
+    limit = int(input(f"Visit {jaeger_host}/dependencies to check number of flowing requests: "))
+    traces = []
 
+    if args['antipode_ts']:
       # curl -X GET "jaeger:16686/api/traces?service=write-home-timeline-service&prettyPrint=true
       params = (
-        ('service', 'write-home-timeline-service'),
+        ('service', 'antipode-oracle'),
         ('limit', limit),
-        # ('offset', total_num), -- offset is not working
-        ('lookback', '1h'),
+        ('lookback', '10m'),
         # ('prettyPrint', 'true'),
       )
       response = requests.get(f'{jaeger_host}/api/traces', params=params)
@@ -633,24 +634,93 @@ def gather(args):
       # pick only the traces with the desired info
       for trace in content['data']:
         trace_info = {
-          'trace_id': trace['spans'][0]['traceID'],
+          # 'trace_id': trace['spans'][0]['traceID'],
+          'post_id': -1,
+          'antipode_isvisible_duration': -1,
+          'antipode_isvisible_attempts': -1,
+          'wht_antipode_duration': -1,
           'wht_worker_duration': -1,
-          'wht_worker_endts': -1,
+          'wht_worker_per_antipode': -1,
         }
 
+        # search trace info in different spans
         for s in trace['spans']:
-          for t in s['tags']:
-            if t['key'] == 'wht_worker_duration':
-              trace_info['wht_worker_duration'] = float(t['value'])
-            if t['key'] == 'wht_worker_endts':
-              # v = datetime.fromtimestamp(v / 1000.0)
-              trace_info['wht_worker_endts'] = t['value']
+          if s['operationName'] == '_ComposeAndUpload':
+            trace_info['post_id'] = int(_fetch_span_tag(s['tags'], 'composepost_id'))
+
+          if s['operationName'] == 'IsVisible':
+            trace_info['antipode_isvisible_duration'] = float(_fetch_span_tag(s['tags'], 'antipode_isvisible_duration'))
+            trace_info['antipode_isvisible_attempts'] = int(_fetch_span_tag(s['tags'], 'antipode_isvisible_attempts'))
+
+          if s['operationName'] == 'FanoutHomeTimelines':
+            trace_info['wht_antipode_duration'] = float(_fetch_span_tag(s['tags'], 'wht_antipode_duration'))
+            trace_info['wht_worker_duration'] = float(_fetch_span_tag(s['tags'], 'wht_worker_duration'))
+
+        # percentage of time spent in antipode
+        trace_info['wht_worker_per_antipode'] = trace_info['wht_antipode_duration'] / trace_info['wht_worker_duration']
+        traces.append(trace_info)
+
+      df = pd.DataFrame(traces)
+      df = df.set_index('post_id')
+      print(df.describe())
+
+    elif args['visibility_latency']:
+      # curl -X GET "jaeger:16686/api/traces?service=write-home-timeline-service&prettyPrint=true
+      params = (
+        ('service', 'post-storage-service'),
+        ('limit', limit),
+        ('lookback', '10m'),
+        # ('prettyPrint', 'true'),
+      )
+      response = requests.get(f'{jaeger_host}/api/traces', params=params)
+
+      # error if we do not get a 200 OK code
+      if response.status_code != 200 :
+        print("[ERROR] Could not fetch traces from Jaeger")
+        exit(-1)
+
+      # error if we do not retreive all traces
+      if len(traces) == limit:
+        print(f"[WARN] Fetched the same amount of traces as the limit ({limit}). Increase the limit to fetch all traces.")
+
+      # read returned traces
+      content = response.json()
+
+      # pick only the traces with the desired info
+      for trace in content['data']:
+        trace_info = {
+          # 'trace_id': trace['spans'][0]['traceID'],
+          'post_id': -1,
+          'poststorage_post_visible': -1,
+          'wht_notification_ts': -1,
+          'post_notification_diff_ms': -1,
+        }
+
+        # search trace info in different spans
+        for s in trace['spans']:
+          if s['operationName'] == '_ComposeAndUpload':
+            trace_info['post_id'] = int(_fetch_span_tag(s['tags'], 'composepost_id'))
+
+          if s['operationName'] == 'FanoutHomeTimelines':
+            trace_info['wht_notification_ts'] = int(_fetch_span_tag(s['tags'], 'wht_notification_ts'))
+
+          if s['operationName'] == 'StorePost':
+            trace_info['poststorage_post_visible'] = int(_fetch_span_tag(s['tags'], 'poststorage_post_visible'))
+
+        # computes the different in ms from post to notification
+        diff = datetime.fromtimestamp(trace_info['poststorage_post_visible']/1000.0) - datetime.fromtimestamp(trace_info['wht_notification_ts']/1000.0)
+        trace_info['post_notification_diff_ms'] = float(diff.total_seconds() * 1000)
 
         traces.append(trace_info)
 
       df = pd.DataFrame(traces)
-      df = df.set_index('trace_id')
+      df = df.set_index('post_id')
       print(df.describe())
+      print("")
+      num_posts_before_notifications = sum(df['post_notification_diff_ms'].pct_change().fillna(0) >= 0)
+      num_notifications_before_posts = sum(df['post_notification_diff_ms'].pct_change().fillna(0) < 0)
+      print(f"% posts ready before notifications: {num_posts_before_notifications/float(len(df))}")
+      print(f"% notifications ready before posts: {num_notifications_before_posts/float(len(df))}")
 
   except KeyboardInterrupt:
     # if the compose gets interrupted we just continue with the script
@@ -735,7 +805,8 @@ if __name__ == "__main__":
   deploy_file_group.add_argument('-l', '--latest', action='store_true', help="Use last used deploy file")
   deploy_file_group.add_argument('-f', '--file', type=argparse.FileType('r', encoding='UTF-8'), help="Use specific file")
   # different metics to gather
-  gather_parser.add_argument('-vl', '--visibility-latency', action='store_true', help="detached")
+  gather_parser.add_argument('-vl', '--visibility-latency', action='store_true', help="gather visibility latency information")
+  gather_parser.add_argument('-ats', '--antipode-ts', action='store_true', help="gathers antipode timestamps and duration information")
 
 
   args = vars(main_parser.parse_args())
