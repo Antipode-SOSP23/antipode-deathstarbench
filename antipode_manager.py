@@ -36,6 +36,9 @@ from shutil import copyfile
 
 ROOT_PATH = Path(os.path.abspath(os.path.dirname(sys.argv[0])))
 
+# pandas global settings
+pd.set_option('display.float_format', lambda x: '%.3f' % x)
+
 #############################
 # HELPER
 #
@@ -614,7 +617,7 @@ def gather(args):
       params = (
         ('service', 'antipode-oracle'),
         ('limit', limit),
-        ('lookback', '10m'),
+        ('lookback', '1h'),
         # ('prettyPrint', 'true'),
       )
       response = requests.get(f'{jaeger_host}/api/traces', params=params)
@@ -632,7 +635,11 @@ def gather(args):
       content = response.json()
 
       # pick only the traces with the desired info
+      i = 0
       for trace in content['data']:
+        i += 1
+        if i % 1000 == 0: print(f"\t{i}/{limit}", flush=True)
+
         trace_info = {
           # 'trace_id': trace['spans'][0]['traceID'],
           'post_id': -1,
@@ -669,7 +676,7 @@ def gather(args):
       params = (
         ('service', 'post-storage-service'),
         ('limit', limit),
-        ('lookback', '10m'),
+        ('lookback', '1h'),
         # ('prettyPrint', 'true'),
       )
       response = requests.get(f'{jaeger_host}/api/traces', params=params)
@@ -687,7 +694,11 @@ def gather(args):
       content = response.json()
 
       # pick only the traces with the desired info
+      i = 0
       for trace in content['data']:
+        i += 1
+        if i % 1000 == 0: print(f"\t{i}/{limit}", flush=True)
+
         trace_info = {
           # 'trace_id': trace['spans'][0]['traceID'],
           'post_id': -1,
@@ -717,8 +728,8 @@ def gather(args):
       df = df.set_index('post_id')
       print(df.describe())
       print("")
-      num_posts_before_notifications = sum(df['post_notification_diff_ms'].pct_change().fillna(0) >= 0)
-      num_notifications_before_posts = sum(df['post_notification_diff_ms'].pct_change().fillna(0) < 0)
+      num_posts_before_notifications = len([n for n in df['post_notification_diff_ms'] if n >= 0])
+      num_notifications_before_posts = len([n for n in df['post_notification_diff_ms'] if n < 0])
       print(f"% posts ready before notifications: {num_posts_before_notifications/float(len(df))}")
       print(f"% notifications ready before posts: {num_notifications_before_posts/float(len(df))}")
 
