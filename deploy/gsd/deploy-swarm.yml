@@ -35,8 +35,7 @@
 
     - name: Initialize Docker Swarm Network
       shell: >
-            docker network create
-            --attachable -d overlay {{ swarm_overlay_network }}
+            docker network create --attachable -d overlay {{ swarm_overlay_network }}
       when: swarm_status.rc != 0
       run_once: true
 

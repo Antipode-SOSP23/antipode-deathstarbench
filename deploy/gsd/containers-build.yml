@@ -9,11 +9,11 @@
   #   - app: socialNetwork
 
   tasks:
-    - name: Pull the images of containers used for DSB
-      shell: >
-            docker pull {{item}}
-      with_items:
-        - "{{ apps[app]['containers']['to_pull'] }}"
+    # - name: Pull the images of containers used for DSB
+    #   shell: >
+    #         docker pull {{item}}
+    #   with_items:
+    #     - "{{ apps[app]['containers']['to_pull'] }}"
 
 
     - name: Build the images of containers used for DSB
