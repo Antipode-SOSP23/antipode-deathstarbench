@@ -1,0 +1,83 @@
+---
+- hosts: swarm_manager
+  any_errors_fatal: true
+  gather_facts: no
+  become: no
+  vars:
+    - app: "socialNetwork"
+  # vars_files:
+  #     - vars.yaml
+
+  tasks:
+    - name: Create deploy folder
+      file:
+        path: "/code/deploy/gcp/"
+        state: directory
+
+    - name: Upload portainer compose
+      synchronize:
+        src: "./docker-compose-portainer.yml"
+        dest: "/code/deploy/gcp/"
+        use_ssh_args: yes
+        mode: push
+
+    - name: Upload ansible inventory
+      synchronize:
+        src: "./inventory.cfg"
+        dest: "/code/deploy/gcp/"
+        use_ssh_args: yes
+        mode: push
+
+    - name: Upload configurations
+      synchronize:
+        src: "{{ configuration_filepath }}"
+        dest: "/code/deploy/configurations/"
+        use_ssh_args: yes
+        mode: push
+
+    - name: Upload antipode_manager
+      synchronize:
+        src: "../../antipode_manager.py"
+        dest: "/code/"
+        use_ssh_args: yes
+        mode: push
+
+    - name: Install pip packages
+      shell: >
+        pip install {{ item }}
+      with_items:
+        - plumbum
+        - requests
+        - pyyaml
+        - ansible
+        - aiohttp
+
+- hosts: all
+  any_errors_fatal: true
+  become: no
+  gather_facts: no
+
+  tasks:
+    - name: Create app folder
+      file:
+        path: "/code/{{ app }}"
+        state: directory
+
+    - name: Upload application '{{ app }}' folder
+      synchronize:
+        src: "../../{{ app }}/"
+        dest: "/code/{{ app }}"
+        use_ssh_args: yes
+        recursive: true
+        mode: push
+
+    - name: Pull images from GCP registry
+      shell: >
+        docker pull gcr.io/pluribus/{{item}} &&
+        docker tag gcr.io/pluribus/{{item}} {{item}}
+      with_items:
+        - mongodb-setup
+        - yg397/openresty-thrift:latest
+        - yg397/social-network-microservices:antipode
+        - wrk2:antipode
+        - redis-im:antipode

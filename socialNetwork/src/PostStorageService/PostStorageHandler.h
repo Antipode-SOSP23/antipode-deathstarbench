@@ -54,6 +54,8 @@ class PostStorageHandler : public PostStorageServiceIf {
   memcached_pool_st *_memcached_client_pool;
   mongoc_client_pool_t *_mongodb_client_pool;
   ClientPool<ThriftClient<AntipodeOracleClient>> *_antipode_oracle_client_pool;
+
+  bool _ReadPostUs(int64_t post_id);
 };
 
 PostStorageHandler::PostStorageHandler(
@@ -81,7 +83,7 @@ void PostStorageHandler::StorePostAsync(
   // force WritHomeTimeline to an error by sleeping
 
   // LOG(debug) << "[ANTIPODE] Sleeping ...";
-  // std::this_thread::sleep_for (std::chrono::milliseconds(300));
+  std::this_thread::sleep_for (std::chrono::milliseconds(100));
   // LOG(debug) << "[ANTIPODE] Done Sleeping!";
 
   //----------
@@ -425,7 +427,8 @@ void PostStorageHandler::ReadPost(
         // XTRACE("Post " + std::to_string(post_id) + " doesn't exist in MongoDB");
         throw se;
       }
-    } else {
+    }
+    else {
       // XTRACE("Post " + std::to_string(post_id) + " found in MongoDB");
       LOG(debug) << "Post_id: " << post_id << " found in MongoDB";
       auto post_json_char = bson_as_json(doc, nullptr);
@@ -845,6 +848,11 @@ void PostStorageHandler::ReadPosts(
   response.baggage = GET_CURRENT_BAGGAGE().str();
   response.result = _return;
   DELETE_CURRENT_BAGGAGE();
+}
+
+bool PostStorageHandler::_ReadPostUs(
+    int64_t post_id) {
+  return false;
 }
 
 } // namespace social_network

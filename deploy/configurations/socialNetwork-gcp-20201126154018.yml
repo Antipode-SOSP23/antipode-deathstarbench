@@ -1,0 +1,83 @@
+services:
+  #----------------------------------------------------------
+  # Write notifications at EU replica
+  #----------------------------------------------------------
+  social-graph-service: node01
+  social-graph-mongodb: node01
+  social-graph-redis: node01
+  #
+  write-home-timeline-service: node01
+  write-home-timeline-rabbitmq: node01
+  #
+  home-timeline-redis: node01
+
+  #----------------------------------------------------------
+  # read notifications at US replica
+  #----------------------------------------------------------
+  home-timeline-redis-us: node01
+  home-timeline-service: node01
+
+  #----------------------------------------------------------
+  # write post at replica EU
+  #----------------------------------------------------------
+  post-storage-service: node01
+  post-storage-memcached: node01
+  post-storage-mongodb: node01
+
+  #----------------------------------------------------------
+  # read post at US replica
+  #----------------------------------------------------------
+  post-storage-service-us: node01
+  post-storage-memcached-us: node01
+  post-storage-mongodb-us: node01
+
+  #----------------------------------------------------------
+  # compose posts EU
+  #----------------------------------------------------------
+  compose-post-redis: node01
+  compose-post-service: node01
+  unique-id-service: node01
+  text-service: node01
+  user-timeline-service: node01
+  user-timeline-redis: node01
+  user-timeline-mongodb: node01
+  #
+  url-shorten-service: node01
+  url-shorten-memcached: node01
+  url-shorten-mongodb: node01
+  user-service: node01
+  user-memcached: node01
+  user-mongodb: node01
+  media-service: node01
+  media-memcached: node01
+  media-mongodb: node01
+  media-frontend: node01
+  user-mention-service: node01
+
+  #----------------------------------------------------------
+  # Coordinator
+  #----------------------------------------------------------
+  antipode-oracle: node01
+
+  #----------------------------------------------------------
+  # Frontend EU
+  #----------------------------------------------------------
+  nginx-thrift: node01
+
+  #----------------------------------------------------------
+  # Frontend US
+  #----------------------------------------------------------
+  nginx-thrift-us: node01
+
+  #----------------------------------------------------------
+  # Admin tasks
+  #----------------------------------------------------------
+  jaeger: node01
+  xtrace-server: node01
+  mongodb-admin: node01
+  post-storage-mongodb-setup: node01
+
+nodes:
+  node01:
+    hostname: node01.pluribus
+    zone: europe-west3-c

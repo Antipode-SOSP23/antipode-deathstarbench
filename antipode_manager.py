@@ -1,28 +1,18 @@
 #!/usr/bin/env python3
 
 import os
-import sys
-import stat
+from plumbum import local
+from plumbum import FG, BG
+from plumbum.cmd import python3
+from datetime import datetime
+import time
+import glob
 import re
 from pprint import pprint
 from pathlib import Path
-from plumbum import local
-from plumbum import FG, BG
-from plumbum.cmd import docker_compose, docker, ansible_playbook
-from plumbum.cmd import make
-from plumbum.cmd import python3
+import sys
+import stat
 import itertools
-import urllib.parse
-import requests
-from datetime import datetime
-import pandas as pd
-import click
-import time
-import yaml
-import glob
-from jinja2 import Environment
-import textwrap
-from shutil import copyfile
 
 #############################
 # Pre-requisites
@@ -34,51 +24,16 @@ from shutil import copyfile
 # > pip install plumbum ansible
 #
 
-ROOT_PATH = Path(os.path.abspath(os.path.dirname(sys.argv[0])))
-
-# pandas global settings
-pd.set_option('display.float_format', lambda x: '%.3f' % x)
-
-#############################
-# HELPER
-#
-def _index_containing_substring(the_list, substring):
-  for i, s in enumerate(the_list):
-    if substring in s:
-      return i
-  return -1
-
-def _deploy_type(args):
-  for k in AVAILABLE_DEPLOY_TYPES.keys():
-    if args[k]: return k
-  return None
-
-def _last_configuration(app, deploy_type):
-  conf_base_path = ROOT_PATH / 'deploy' / 'configurations'
-  pattern = conf_base_path / f"{app}-{deploy_type}-*.yml"
-  files = glob.glob(str(pattern))
-
-  # not files found
-  if not files:
-    print("[ERROR] No file found!")
-    exit(-1)
-
-  # find most recent one
-  files.sort(key=os.path.getctime)
-  return files[-1]
-
-def _remove_prefix(text, prefix):
-  if text.startswith(prefix):
-    return text[len(prefix):]
-  return text
-
 #############################
 # CONSTANTS
 #
+ROOT_PATH = Path(os.path.abspath(os.path.dirname(sys.argv[0])))
+
 # available deploys
 AVAILABLE_DEPLOY_TYPES = {
   'local': { 'name': 'Localhost' },
   'gsd': { 'name': 'GSD Cluster' },
+  'gcp': { 'name': 'Google Cloud Platform' },
 }
 # name of the folder where the app root is
 AVAILABLE_APPLICATIONS = [
@@ -116,7 +71,66 @@ AVAILABLE_WKLD_ENDPOINTS = {
     },
   }
 }
-AVAILABLE_NODES = {
+SOCIAL_NETWORK_DEFAULT_SERVICES = {
+  'services': {
+    'social-graph-service': 'HOSTNAME',
+    'social-graph-mongodb': 'HOSTNAME',
+    'social-graph-redis': 'HOSTNAME',
+    'write-home-timeline-service': 'HOSTNAME',
+    'write-home-timeline-rabbitmq': 'HOSTNAME',
+    'home-timeline-redis': 'HOSTNAME',
+    'home-timeline-redis-us': 'HOSTNAME',
+    'home-timeline-service': 'HOSTNAME',
+    'post-storage-service': 'HOSTNAME',
+    'post-storage-memcached': 'HOSTNAME',
+    'post-storage-mongodb': 'HOSTNAME',
+    'post-storage-service-us': 'HOSTNAME',
+    'post-storage-memcached-us': 'HOSTNAME',
+    'post-storage-mongodb-us': 'HOSTNAME',
+    'user-timeline-service': 'HOSTNAME',
+    'user-timeline-redis': 'HOSTNAME',
+    'user-timeline-mongodb': 'HOSTNAME',
+    'compose-post-redis': 'HOSTNAME',
+    'compose-post-service': 'HOSTNAME',
+    'url-shorten-service': 'HOSTNAME',
+    'url-shorten-memcached': 'HOSTNAME',
+    'url-shorten-mongodb': 'HOSTNAME',
+    'user-service': 'HOSTNAME',
+    'user-memcached': 'HOSTNAME',
+    'user-mongodb': 'HOSTNAME',
+    'media-service': 'HOSTNAME',
+    'media-memcached': 'HOSTNAME',
+    'media-mongodb': 'HOSTNAME',
+    'media-frontend': 'HOSTNAME',
+    'text-service': 'HOSTNAME',
+    'unique-id-service': 'HOSTNAME',
+    'user-mention-service': 'HOSTNAME',
+    'antipode-oracle': 'HOSTNAME',
+    'nginx-thrift': 'HOSTNAME',
+    'nginx-thrift-us': 'HOSTNAME',
+    'jaeger': 'HOSTNAME',
+    'xtrace-server': 'HOSTNAME',
+    'mongodb-admin': 'HOSTNAME',
+    'post-storage-mongodb-setup': 'HOSTNAME',
+  },
+  'nodes': {
+    'HOSTNAME': {
+      'hostname': 'HOSTNAME',
+      'zone': 'europe-west3-c'
+    }
+  }
+}
+CONTAINERS_BUILT = [
+  'mongodb-setup',
+  'yg397/openresty-thrift:latest',
+  'yg397/social-network-microservices:antipode',
+  'wrk2:antipode',
+  'redis-im:antipode',
+  'wrk2:antipode',
+]
+
+# GSD Constants
+GSD_AVAILABLE_NODES = {
   'node01': '10.100.0.11',
   'node02': '10.100.0.12',
   'node03': '10.100.0.13',
@@ -153,66 +167,178 @@ AVAILABLE_NODES = {
   'saturn1': '146.193.41.71',
   'saturn2': '146.193.41.77',
 }
-SWARM_MANAGER_NODE = { 'node34': '10.100.0.44' }
+GSD_SWARM_MANAGER_NODE = { 'node34': '10.100.0.44' }
 
-# socialNetwork
-SOCIAL_NETWORK_DEFAULT_SERVICES = {
-  'social-graph-service': 'HOSTNAME',
-  'social-graph-mongodb': 'HOSTNAME',
-  'social-graph-redis': 'HOSTNAME',
-  'write-home-timeline-service': 'HOSTNAME',
-  'write-home-timeline-rabbitmq': 'HOSTNAME',
-  'home-timeline-redis': 'HOSTNAME',
-  'home-timeline-redis-us': 'HOSTNAME',
-  'home-timeline-service': 'HOSTNAME',
-  'post-storage-service': 'HOSTNAME',
-  'post-storage-memcached': 'HOSTNAME',
-  'post-storage-mongodb': 'HOSTNAME',
-  'post-storage-service-us': 'HOSTNAME',
-  'post-storage-memcached-us': 'HOSTNAME',
-  'post-storage-mongodb-us': 'HOSTNAME',
-  'user-timeline-service': 'HOSTNAME',
-  'user-timeline-redis': 'HOSTNAME',
-  'user-timeline-mongodb': 'HOSTNAME',
-  'compose-post-redis': 'HOSTNAME',
-  'compose-post-service': 'HOSTNAME',
-  'url-shorten-service': 'HOSTNAME',
-  'url-shorten-memcached': 'HOSTNAME',
-  'url-shorten-mongodb': 'HOSTNAME',
-  'user-service': 'HOSTNAME',
-  'user-memcached': 'HOSTNAME',
-  'user-mongodb': 'HOSTNAME',
-  'media-service': 'HOSTNAME',
-  'media-memcached': 'HOSTNAME',
-  'media-mongodb': 'HOSTNAME',
-  'media-frontend': 'HOSTNAME',
-  'text-service': 'HOSTNAME',
-  'unique-id-service': 'HOSTNAME',
-  'user-mention-service': 'HOSTNAME',
-  'antipode-oracle': 'HOSTNAME',
-  'nginx-thrift': 'HOSTNAME',
-  'nginx-thrift-us': 'HOSTNAME',
-  'jaeger': 'HOSTNAME',
-  'xtrace-server': 'HOSTNAME',
-  'mongodb-admin': 'HOSTNAME',
-  'post-storage-mongodb-setup': 'HOSTNAME',
-}
+# GCP Constants
+GCP_DOCKER_IMAGE_NAME = 'gcp-manager:antipode'
+GCP_CREDENTIALS_FILE = ROOT_PATH / 'deploy' / 'gcp' / 'pluribus.json'
+# GCP_PROJECT_ID = 'antipode-296620'
+GCP_PROJECT_ID = 'pluribus'
+GCP_MACHINE_IMAGE_LINK = f"https://www.googleapis.com/compute/v1/projects/{GCP_PROJECT_ID}/global/images/antipode"
+
+
+#############################
+# HELPER
+#
+def _index_containing_substring(the_list, substring):
+  for i, s in enumerate(the_list):
+    if substring in s:
+      return i
+  return -1
+
+def _deploy_type(args):
+  for k in AVAILABLE_DEPLOY_TYPES.keys():
+    if args[k]: return k
+  return None
+
+def _last_configuration(app, deploy_type):
+  conf_base_path = ROOT_PATH / 'deploy' / 'configurations'
+  pattern = conf_base_path / f"{app}-{deploy_type}-*.yml"
+  files = glob.glob(str(pattern))
+
+  # not files found
+  if not files:
+    print("[ERROR] No file found!")
+    exit(-1)
+
+  # find most recent one
+  files.sort(key=os.path.getctime)
+  return files[-1]
+
+def _remove_prefix(text, prefix):
+  if text.startswith(prefix):
+    return text[len(prefix):]
+  return text
+
+def _is_inside_docker():
+  return os.path.isfile('/.dockerenv')
+
+def _force_docker():
+  if not _is_inside_docker():
+    import platform
+    import subprocess
+    from plumbum.cmd import docker
+
+    # if image is not built, we do it
+    if docker['images', 'gcp-manager:antipode', '--format', '"{{.ID}}"']().strip() == '':
+      os.chdir(ROOT_PATH / 'deploy' / 'gcp')
+      docker['build', '-t', 'gcp-manager:antipode', '.'] & FG
+
+    args = list()
+    args.extend(['docker', 'run', '--rm', '-t',
+      # run docker from host inside the container
+      '-v', '/var/run/docker.sock:/var/run/docker.sock',
+      '-v', '/usr/bin/docker:/usr/bin/docker',
+      '-v', '/usr/bin/docker-compose:/usr/bin/docker-compose',
+      # mount code volumes
+      '-v', f"{ROOT_PATH / 'deploy'}:/code/deploy",
+      '-v', f"{ROOT_PATH / 'antipode_manager.py'}:/code/antipode_manager.py",
+      '-v', f"{ROOT_PATH / 'socialNetwork'}:/code/socialNetwork",
+      '-w', '/code',
+      GCP_DOCKER_IMAGE_NAME
+    ])
+    args = args + sys.argv
+    subprocess.call(args)
+    # print(' '.join(args))
+    exit()
+
+def _gcp_create_instance(zone, name, machine_type, hostname, firewall_tags):
+  import googleapiclient.discovery
+
+  compute = googleapiclient.discovery.build('compute', 'v1')
+  config = {
+    'name': name,
+    'machineType': f"zones/{zone}/machineTypes/{machine_type}",
+    'disks': [
+      {
+        'boot': True,
+        'autoDelete': True,
+        'initializeParams': {
+          'sourceImage': GCP_MACHINE_IMAGE_LINK,
+        }
+      }
+    ],
+    'hostname': hostname,
+    # Specify a network interface with NAT to access the public internet.
+    'networkInterfaces': [
+      {
+        'network': 'global/networks/default',
+        'accessConfigs': [
+          {'type': 'ONE_TO_ONE_NAT', 'name': 'External NAT'}
+        ]
+      }
+    ],
+    # tags for firewall rules
+    "tags": {
+      "items": firewall_tags,
+    },
+  }
+  try:
+    ret = compute.instances().insert(
+        project=GCP_PROJECT_ID,
+        zone=zone,
+        body=config
+      ).execute()
+    return ret['status'] == 'RUNNING'
+  except googleapiclient.errors.HttpError as e:
+    pprint(e)
+
+def _gcp_delete_instance(zone, name):
+  import googleapiclient.discovery
+  compute = googleapiclient.discovery.build('compute', 'v1')
+
+  ret = compute.instances().delete(
+      project=GCP_PROJECT_ID,
+      zone=zone,
+      instance=name
+    ).execute()
+
+  return ret['status'] == 'RUNNING'
+
+def _gcp_get_instance(zone, name):
+  import googleapiclient.discovery
+  compute = googleapiclient.discovery.build('compute', 'v1')
+
+  return compute.instances().get(project=GCP_PROJECT_ID, zone=zone, instance=name).execute()
+
+def _inventory_to_dict(filepath):
+  from ansible.parsing.dataloader import DataLoader
+  from ansible.inventory.manager import InventoryManager
+  from ansible.vars.manager import VariableManager
+
+  loader = DataLoader()
+  inventory = InventoryManager(loader=loader, sources=str(filepath))
+  variable_manager = VariableManager(loader=loader, inventory=inventory)
+
+  # other methods:
+  # - inventory.get_host('manager.antipode-296620').vars
+
+  loaded_inventory = {}
+  for hostname,info in inventory.hosts.items():
+    loaded_inventory[info.vars['gcp_name']] = {
+      'external_ip': info.vars['ansible_host'],
+      'internal_ip': info.vars['gcp_host'],
+      'zone': info.vars['gcp_zone'],
+      'hostname': hostname,
+    }
+
+  return loaded_inventory
 
 #############################
 # BUILD
 #
 def build(args):
   try:
-    app_dir = Path.cwd()
     getattr(sys.modules[__name__], f"build__{args['app']}__{_deploy_type(args)}")(args)
-    os.chdir(app_dir)
   except KeyboardInterrupt:
     # if the compose gets interrupted we just continue with the script
     pass
 
-
 def build__socialNetwork__local(args):
-  app_dir = Path.cwd()
+  from plumbum.cmd import docker
+
+  app_dir = ROOT_PATH / args['app']
+  os.chdir(app_dir)
 
   # By default, the DeathStarBench pulls its containers from docker hub.
   # We need to override these with our modified X-Trace containers.
@@ -229,38 +355,112 @@ def build__socialNetwork__local(args):
   # Build the base docker image that contains all the dependent libraries.  We modified this to add X-Trace and protocol buffers.
   os.chdir(app_dir.joinpath('docker', 'thrift-microservice-deps', 'cpp'))
   docker[thrift_microservice_args] & FG
-  os.chdir(app_dir)
 
   # Build the nginx server image. We modified this to add X-Trace and protocol buffers
   os.chdir(app_dir.joinpath('docker', 'openresty-thrift'))
   docker[openresty_thrift_args] & FG
-  os.chdir(app_dir)
 
   # Build the mongodb setup image
   os.chdir(app_dir.joinpath('docker', 'mongodb-setup', 'post-storage'))
   docker['build', '-t', 'mongodb-setup', '.'] & FG
-  os.chdir(app_dir)
 
   # Build the wrk2 image
   os.chdir(app_dir.joinpath('docker', 'wrk2'))
   docker['build', '-t', 'wrk2:antipode', '.'] & FG
-  os.chdir(app_dir)
 
   # Build the redis-im image
   os.chdir(app_dir.joinpath('docker', 'redis-im'))
   docker['build', '-t', 'redis-im:antipode', '.'] & FG
-  os.chdir(app_dir)
 
   # Build the social network docker image
+  os.chdir(app_dir)
   docker['build', '-t', 'yg397/social-network-microservices:antipode', '.'] & FG
 
 def build__socialNetwork__gsd(args):
+  from plumbum.cmd import ansible_playbook
+
   # change path to playbooks folder
-  app_dir = Path.cwd()
-  os.chdir(app_dir.joinpath('..', 'deploy', 'playbooks'))
+  os.chdir(ROOT_PATH / 'deploy' / 'gsd')
 
   ansible_playbook['containers-build.yml', '-e', 'app=socialNetwork'] & FG
   ansible_playbook['containers-backup.yml', '-e', 'app=socialNetwork'] & FG
+
+def build__socialNetwork__gcp(args):
+  from plumbum.cmd import docker
+
+  # part of GCP build process is to also build `antipode` image
+  # which is a Debian based image with a preset of packages and docker pulls done
+  # here is the set of instructions to perform that
+  #
+  # 1) Start a simple VM and SSH into it using the web interface
+  # 2) Install Docker (https://docs.docker.com/engine/install/debian/):
+  #     - sudo apt-get update
+  #     - sudo apt-get install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
+  #     - curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
+  #     - sudo apt-key fingerprint 0EBFCD88
+  #     - sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
+  #     - sudo apt-get update
+  #     - sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+  # 3) Install Docker Compose
+  #     - sudo curl -L "https://github.com/docker/compose/releases/download/1.27.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+  #     - sudo chmod +x /usr/local/bin/docker-compose
+  # 4) Install extras
+  #     - sudo apt-get install -y rsync less vim htop jq python3-pip
+  # 5) Pull public docker images:
+  #     - docker pull jaegertracing/all-in-one:latest
+  #     - docker pull jonathanmace/xtrace-server:latest
+  #     - docker pull memcached:latest
+  #     - docker pull mongo:latest
+  #     - docker pull mrvautin/adminmongo:latest
+  #     - docker pull rabbitmq:latest
+  #     - docker pull redis:latest
+  #     - docker pull portainer/agent:latest
+  #     - docker pull portainer/portainer-ce:latest
+  #     - docker pull yg397/media-frontend:xenial
+  # 6) Add alias for python
+  #     - sudo ln -s /usr/bin/python3 /usr/bin/python
+  #     - sudo ln -s /usr/bin/pip3 /usr/bin/pip
+  # 7) Clean cache
+  #     - sudo apt-get clean
+  #     - sudo apt-get autoclean
+  # 8) Create a copy of the JSON credentials file
+  #     - sudo vim /<PROJECT_ID>.json
+  #     - copy paste the local content
+  #     - authenticate with gcloud:
+  #       sudo gcloud auth activate-service-account --key-file=/pluribus.json
+  #       sudo gcloud auth configure-docker
+  # 9) Close the ssh session and start a local GCP container
+  #     - Start container with:
+  #     - In the GCP console, in the SSH context menu, copy the gcloud command, it will look something like:
+  #       gcloud beta compute ssh --zone "europe-west3-c" "antipode-dev" --project "pluribus"
+  #     - Just press enter on the steps until keys are generated and you are logged in
+  #     - Copy the files from the container to outside
+  #       docker cp <CONTAINER ID>:/root/.ssh/google_compute_engine .
+  #       docker cp <CONTAINER ID>:/root/.ssh/google_compute_engine.pub .
+  #     - Rename file to: <GCP_PROJECT_ID>_google_compute_engine*
+  # 10) Create firewall rules for the following tags:
+  #     - 'portainer'
+  #         IP Addresses: 0.0.0.0/0
+  #         TCP ports: 9000, 8000
+  #     - 'swarm':
+  #         IP Addresses: 0.0.0.0/0
+  #         TCP ports: 2376, 2377, 7946
+  #         UDP ports: 7946, 4789
+  #     - 'nodes':
+  #         IP Addresses: 0.0.0.0/0
+  #         TCP ports: 9001, 16686, 8080, 8081, 8082, 1234, 4080, 5563
+  #
+
+  # locally build the images needed
+  if not _is_inside_docker(): build__socialNetwork__local(args)
+
+  # now we go into docker container and push everything to GCP
+  _force_docker()
+  for tag in CONTAINERS_BUILT:
+    gcp_tag = f"gcr.io/{GCP_PROJECT_ID}/{tag}"
+    docker['tag', tag, gcp_tag] & FG
+    docker['push', gcp_tag] & FG
+    docker['rmi', gcp_tag] & FG
 
 
 #############################
@@ -268,9 +468,7 @@ def build__socialNetwork__gsd(args):
 #
 def deploy(args):
   try:
-    app_dir = Path.cwd()
     getattr(sys.modules[__name__], f"deploy__{args['app']}__{_deploy_type(args)}")(args)
-    os.chdir(app_dir)
   except KeyboardInterrupt:
     # if the compose gets interrupted we just continue with the script
     pass
@@ -279,8 +477,15 @@ def deploy__socialNetwork__local(args):
   return None
 
 def deploy__socialNetwork__gsd(args):
-  app_dir = Path.cwd()
-  os.chdir(app_dir.joinpath('..', 'deploy'))
+  from plumbum.cmd import ansible_playbook
+  from jinja2 import Environment
+  import click
+  import yaml
+  import textwrap
+  from shutil import copyfile
+
+  app_dir = ROOT_PATH / args['app']
+  os.chdir(ROOT_PATH / 'deploy')
 
   # base path of configuration file
   conf_base_path = Path(Path.cwd(), 'configurations')
@@ -291,20 +496,18 @@ def deploy__socialNetwork__gsd(args):
     # write default configuration to file
     with open(filepath, 'w') as f_conf:
       yaml.dump(SOCIAL_NETWORK_DEFAULT_SERVICES, f_conf)
-      print(f"\t [SAVED] '{filepath.abspath()}'")
-
-    # wait for editor to close
-    print("[INFO] Waiting for editor to close new configuration file ...")
-    click.edit(filename=filepath)
+      print(f"\t [SAVED] '{filepath}'")
+      # wait for editor to close
+      print("[INFO] Waiting for editor to close new configuration file ...")
+      click.edit(filename=filepath)
 
     # check if all nodes are known
     with open(filepath, 'r') as f_conf:
       conf = yaml.load(f_conf, Loader=yaml.FullLoader)
-      unknonwn_nodes = [ n for n in set(conf.values()) if n not in AVAILABLE_NODES.keys() ]
+      unknonwn_nodes = [ n for n in set(conf['services'].values()) if n not in GSD_AVAILABLE_NODES.keys() ]
       if unknonwn_nodes:
         print("[ERROR] Found unknown nodes in GSD cluster: " + ', '.join(unknonwn_nodes))
         exit()
-
   if args['latest']:
     filepath = _last_configuration('socialNetwork', 'gsd')
   if args['file']:
@@ -317,9 +520,9 @@ def deploy__socialNetwork__gsd(args):
     compose = yaml.load(f_compose, Loader=yaml.FullLoader)
 
     # get all the nodes that will be used in deploy
-    deploy_nodes = { n:AVAILABLE_NODES[n] for n in set(conf.values()) }
+    deploy_nodes = { n:GSD_AVAILABLE_NODES[n] for n in set(conf['services'].values()) }
 
-    for sid,hostname in conf.items():
+    for sid,hostname in conf['services'].items():
       # get all the constraints
       deploy_constraints = compose['services'][sid]['deploy']['placement']['constraints']
       # get he id of constraint of the node hostname
@@ -328,10 +531,10 @@ def deploy__socialNetwork__gsd(args):
       deploy_constraints[node_constraint_index] = f'node.hostname == {hostname}'
 
   # create new docker compose
-  new_compose_filepath = Path('docker-compose-swarm.yml')
+  new_compose_filepath = ROOT_PATH / 'deploy' / 'gsd' / 'docker-compose-swarm.yml'
   with open(new_compose_filepath, 'w') as f_compose:
     yaml.dump(compose, f_compose)
-  print(f"\t [SAVED] '{new_compose_filepath.resolve()}'")
+  print(f"\t [SAVED] '{new_compose_filepath}'")
 
   # copy file to socialNetwork folder
   end_docker_compose_swarm = Path(app_dir, 'docker-compose-swarm.yml').resolve()
@@ -348,11 +551,11 @@ def deploy__socialNetwork__gsd(args):
     {% endfor %}
   """
   inventory = Environment().from_string(template).render({
-    'swarm_manager': SWARM_MANAGER_NODE,
+    'swarm_manager': GSD_SWARM_MANAGER_NODE,
     'deploy_nodes': dict(sorted(deploy_nodes.items())),
   })
 
-  inventory_filepath = Path('playbooks/inventory.cfg')
+  inventory_filepath = Path('gsd/inventory.cfg')
   with open(inventory_filepath, 'w') as f:
     # remove empty lines and dedent for easier read
     f.write(textwrap.dedent(inventory))
@@ -360,7 +563,7 @@ def deploy__socialNetwork__gsd(args):
   print(f"\t [SAVED] '{inventory_filepath.resolve()}'")
 
   # run playbooks
-  os.chdir(app_dir.joinpath('..', 'deploy', 'playbooks'))
+  os.chdir(ROOT_PATH / 'deploy' / 'gsd')
   # first restore all images to everyone
   ansible_playbook['containers-restore.yml', '-e', 'app=socialNetwork'] & FG
   # then deploy everywhere
@@ -368,20 +571,174 @@ def deploy__socialNetwork__gsd(args):
 
   print("[INFO] Deploy Complete!")
 
+def deploy__socialNetwork__gcp(args):
+  _force_docker()
+  import click
+  from jinja2 import Environment
+  import yaml
+  import textwrap
+  from plumbum.cmd import ansible_playbook
+
+
+  app_dir = ROOT_PATH / args['app']
+  os.chdir(ROOT_PATH / 'deploy')
+
+  # base path of configuration file
+  conf_base_path = ROOT_PATH / 'deploy' / 'configurations'
+  if args['new']:
+    filepath = conf_base_path / f"socialNetwork-gcp-{time.strftime('%Y%m%d%H%M%S')}.yml"
+
+    # write default configuration to file
+    with open(filepath, 'w') as f_conf:
+      yaml.dump(SOCIAL_NETWORK_DEFAULT_SERVICES, f_conf)
+      print(f"\t [SAVED] '{filepath}'")
+      print("[INFO] Waiting for editor to close new configuration file ...")
+      click.edit(filename=filepath)
+
+    print("[INFO] Appending GCP Project ID to node ids ...")
+    # open file and check if GCP_PROJECT_ID is appended to every node id
+    with open(filepath, 'r') as f_conf:
+      written_conf = yaml.load(f_conf, Loader=yaml.FullLoader)
+      for k,v in written_conf['nodes'].items():
+        # defaults hostname to id
+        if 'hostname' not in v:
+          v['hostname'] = k
+        # append the project id to hostname
+        if GCP_PROJECT_ID not in v['hostname']:
+          written_conf['nodes'][k]['hostname'] = f"{v['hostname']}.{GCP_PROJECT_ID}"
+
+    with open(filepath, 'w') as f_conf:
+      yaml.dump(written_conf, f_conf)
+  if args['latest']:
+    filepath = _last_configuration('socialNetwork', 'gcp')
+  if args['file']:
+    filepath = ROOT_PATH / args['file'].name
+
+
+  with open(filepath, 'r') as f_conf:
+    conf = yaml.load(f_conf, Loader=yaml.FullLoader)
+    inventory = {}
+
+    # create the swarm manager node
+    inventory['manager'] = {
+      'hostname': f"manager.{GCP_PROJECT_ID}",
+      'zone': 'europe-west3-c',
+      'external_ip': None,
+      'internal_ip': None,
+    }
+    _gcp_create_instance(
+      zone='europe-west3-c',
+      name='manager',
+      machine_type='g1-small',
+      hostname=f"manager.{GCP_PROJECT_ID}",
+      firewall_tags=['portainer','swarm']
+    )
+
+    # get all the unique node ids to create in GCP
+    for node_key, node_info in conf['nodes'].items():
+      inventory[node_key] = {
+        'hostname': node_info['hostname'],
+        'zone': node_info['zone'],
+        'external_ip': None,
+        'internal_ip': None,
+      }
+      _gcp_create_instance(
+        zone=node_info['zone'],
+        name=node_key,
+        machine_type='e2-standard-8',
+        hostname=node_info['hostname'],
+        firewall_tags=['swarm','nodes']
+      )
+
+    # wait for instances public ips
+    while inventory['manager'].get('external_ip', None) is None:
+      metadata = _gcp_get_instance('europe-west3-c', 'manager')
+      try:
+        inventory['manager']['external_ip'] = metadata['networkInterfaces'][0]['accessConfigs'][0]['natIP']
+        inventory['manager']['internal_ip'] = metadata['networkInterfaces'][0]['networkIP']
+      except KeyError:
+        inventory['manager']['external_ip'] = None
+        inventory['manager']['internal_ip'] = None
+
+    for node_key, node_info in conf['nodes'].items():
+      while inventory[node_key].get('external_ip', None) is None:
+        metadata = _gcp_get_instance(node_info['zone'], node_key)
+        try:
+          inventory[node_key]['external_ip'] = metadata['networkInterfaces'][0]['accessConfigs'][0]['natIP']
+          inventory[node_key]['internal_ip'] = metadata['networkInterfaces'][0]['networkIP']
+        except KeyError:
+          inventory[node_key]['external_ip'] = None
+          inventory[node_key]['internal_ip'] = None
+
+    # now build the inventory
+    # if you want to get a new google_compute_engine key:
+    #   1) go to https://console.cloud.google.com/compute/instances
+    #   2) choose one instance, click on SSH triangle for more options
+    #   3) 'View gcloud command'
+    #   4) Run that command and then copy the generated key
+    #
+    template = """
+      [swarm_manager]
+      {{ swarm_manager['hostname'] }} ansible_host={{ swarm_manager['external_ip'] }} gcp_zone={{ swarm_manager['zone'] }} gcp_name=manager gcp_host={{ swarm_manager['internal_ip'] }} ansible_user=root ansible_ssh_private_key_file=/code/deploy/gcp/{{ project_id }}_google_compute_engine
+
+
+      [cluster]
+      {% for node_name,node in deploy_nodes.items() %}
+      {{ node['hostname'] }} ansible_host={{ node['external_ip'] }} gcp_zone={{ node['zone'] }} gcp_name={{ node_name }} gcp_host={{ node['internal_ip'] }} ansible_user=root ansible_ssh_private_key_file=/code/deploy/gcp/{{ project_id }}_google_compute_engine
+      {% endfor %}
+    """
+    inventory = Environment().from_string(template).render({
+      'project_id': GCP_PROJECT_ID,
+      'swarm_manager': inventory['manager'],
+      'deploy_nodes': { node_name: inventory[node_name] for node_name in inventory if node_name != 'manager' },
+    })
+
+    inventory_filepath = Path('gcp/inventory.cfg')
+    with open(inventory_filepath, 'w') as f:
+      # remove empty lines and dedent for easier read
+      f.write(textwrap.dedent(inventory))
+
+    print(f"\t [SAVED] '{inventory_filepath.resolve()}'")
+
+    # replace hostname in docker_compose_sparm
+    with open(app_dir / 'docker-compose.yml', 'r') as f_app_compose, open(app_dir / 'docker-compose-swarm.yml', 'w') as f_swarm_compose:
+      app_compose = yaml.load(f_app_compose, Loader=yaml.FullLoader)
+
+      for service, node_id in conf['services'].items():
+        # get all the constraints
+        deploy_constraints = app_compose['services'][service]['deploy']['placement']['constraints']
+        # get the id of constraint of the node hostname
+        node_constraint_index = _index_containing_substring(deploy_constraints, 'node.hostname')
+        # replace docker-compose with that constraint
+        # deploy_constraints[node_constraint_index] = f"node.hostname == {conf['nodes'][node_id]['hostname']}"
+        deploy_constraints[node_constraint_index] = f"node.hostname == {node_id}"
+
+      # now write the compose into a new file
+      yaml.dump(app_compose, f_swarm_compose)
+      print(f"\t [SAVED] '{app_dir / 'docker-compose-swarm.yml'}'")
+
+  # run playbooks
+  os.chdir(ROOT_PATH / 'deploy' / 'gcp')
+
+  # copy all the needed files to remote
+  ansible_playbook['deploy-setup.yml', '-e', 'app=socialNetwork', '-e', f"configuration_filepath={str(filepath)}"] & FG
+  # then deploy everywhere
+  ansible_playbook['deploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
+
 
 #############################
 # RUN
 #
 def run(args):
   try:
-    app_dir = Path.cwd()
     getattr(sys.modules[__name__], f"run__{args['app']}__{_deploy_type(args)}")(args)
-    os.chdir(app_dir)
   except KeyboardInterrupt:
     # if the compose gets interrupted we just continue with the script
     pass
 
 def run__socialNetwork__local(args):
+  from plumbum.cmd import docker_compose, docker
+
   run_args = ['up']
   # run containers in detached mode
   if args['detached']:
@@ -392,15 +749,31 @@ def run__socialNetwork__local(args):
   # Fixes error: "WARNING: Connection pool is full, discarding connection: localhost"
   # ref: https://github.com/docker/compose/issues/6638#issuecomment-576743595
   with local.env(COMPOSE_PARALLEL_LIMIT=99):
+    os.chdir(ROOT_PATH / args['app'])
     docker_compose[run_args] & FG
 
 def run__socialNetwork__gsd(args):
+  from plumbum.cmd import ansible_playbook
+
   # change path to playbooks folder
-  app_dir = Path.cwd()
-  os.chdir(app_dir.joinpath('..', 'deploy', 'playbooks'))
+  os.chdir(ROOT_PATH / 'deploy' / 'gsd')
 
   ansible_playbook['start-portainer.yml'] & FG
-  print(f"[INFO] Portainer link (u/pwd: admin/antipode): http://{next(iter(SWARM_MANAGER_NODE))}:9000 ")
+  print(f"[INFO] Portainer link (u/pwd: admin/antipode): http://{next(iter(GSD_SWARM_MANAGER_NODE))}:9000 ")
+
+  ansible_playbook['start-dsb.yml', '-e', 'app=socialNetwork'] & FG
+  print("[INFO] Run Complete!")
+
+def run__socialNetwork__gcp(args):
+  _force_docker()
+  from plumbum.cmd import ansible_playbook
+
+  # change path to playbooks folder
+  os.chdir(ROOT_PATH / 'deploy' / 'gcp')
+  inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'inventory.cfg')
+
+  ansible_playbook['start-portainer.yml'] & FG
+  print(f"[INFO] Portainer link (u/pwd: admin/antipode): http://{inventory['manager']['external_ip']}:9000 ")
 
   ansible_playbook['start-dsb.yml', '-e', 'app=socialNetwork'] & FG
   print("[INFO] Run Complete!")
@@ -411,15 +784,15 @@ def run__socialNetwork__gsd(args):
 #
 def clean(args):
   try:
-    app_dir = Path.cwd()
     getattr(sys.modules[__name__], f"clean__{args['app']}__{_deploy_type(args)}")(args)
-    os.chdir(app_dir)
   except KeyboardInterrupt:
     # if the compose gets interrupted we just continue with the script
     pass
 
 def clean__socialNetwork__local(args):
-  app_dir = Path.cwd()
+  from plumbum.cmd import docker_compose, docker
+
+  os.chdir(ROOT_PATH / args['app'])
   # first stops the containers
   docker_compose['stop'] & FG
 
@@ -431,20 +804,41 @@ def clean__socialNetwork__local(args):
     docker_compose['down'] & FG
 
 def clean__socialNetwork__gsd(args):
+  from plumbum.cmd import ansible_playbook
+
   # change path to playbooks folder
-  app_dir = Path.cwd()
-  os.chdir(app_dir.joinpath('..', 'deploy', 'playbooks'))
+  os.chdir(ROOT_PATH / 'deploy' / 'gsd')
 
   ansible_playbook['undeploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
   print("[INFO] Clean Complete!")
+
+def clean__socialNetwork__gcp(args):
+  _force_docker()
+  from plumbum.cmd import ansible_playbook
+
+  # change path to playbooks folder
+  os.chdir(ROOT_PATH / 'deploy' / 'gcp')
+  inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'inventory.cfg')
+
+  ansible_playbook['undeploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
+  print("[INFO] Clean Complete!")
+
+  # delete instances if strong enabled
+  if args['strong']:
+    for name,host in inventory.items():
+      _gcp_delete_instance(host['zone'], name)
 
 
 #############################
 # WORKLOAD
 #
 def wkld(args):
+  import urllib.parse
+
   try:
-    app_dir = Path.cwd()
+    app_dir = ROOT_PATH / args['app']
+    os.chdir(app_dir)
+
     # get host for each zone
     hosts = getattr(sys.modules[__name__], f"wkld__{args['app']}__{_deploy_type(args)}__hosts")(args)
 
@@ -488,12 +882,10 @@ def wkld(args):
         exe_path = 'python3'
         exe_args = [script_path]
 
-      os.chdir(app_dir)
       # run workload for endpoint
       with local.env(HOST_EU=hosts['host_eu']), local.env(HOST_US=hosts['host_us']):
         getattr(sys.modules[__name__], f"wkld__{args['app']}__{_deploy_type(args)}__run")(args, hosts, exe_path, exe_args)
 
-    os.chdir(app_dir)
   except KeyboardInterrupt:
     # if the compose gets interrupted we just continue with the script
     pass
@@ -505,6 +897,7 @@ def wkld__socialNetwork__local__hosts(args):
   }
 
 def wkld__socialNetwork__gsd__hosts(args):
+  import yaml
   # eu - nginx-thrift: node23
   # us - nginx-thrift-us: node24§
 
@@ -516,8 +909,25 @@ def wkld__socialNetwork__gsd__hosts(args):
   with open(filepath, 'r') as f_conf:
     conf = yaml.load(f_conf, Loader=yaml.FullLoader)
     return {
-      'host_eu': f"http://{conf['nginx-thrift']}:8080",
-      'host_us': f"http://{conf['nginx-thrift-us']}:8082",
+      'host_eu': f"http://{conf['services']['nginx-thrift']}:8080",
+      'host_us': f"http://{conf['services']['nginx-thrift-us']}:8082",
+    }
+
+def wkld__socialNetwork__gcp__hosts(args):
+  import yaml
+
+  if args['latest']:
+    filepath = _last_configuration('socialNetwork', 'gcp')
+  if args['file']:
+    filepath = ROOT_PATH / args['file'].name
+
+  with open(filepath, 'r') as f_conf:
+    conf = yaml.load(f_conf, Loader=yaml.FullLoader)
+    inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'inventory.cfg')
+
+    return {
+      'host_eu': f"http://{inventory[conf['services']['nginx-thrift']]['external_ip']}:8080",
+      'host_us': f"http://{inventory[conf['services']['nginx-thrift-us']]['external_ip']}:8082",
     }
 
 def wkld__socialNetwork__local__run(args, hosts, exe_path, exe_args):
@@ -525,13 +935,18 @@ def wkld__socialNetwork__local__run(args, hosts, exe_path, exe_args):
   exe[exe_args] & FG
 
 def wkld__socialNetwork__gsd__run(args, hosts, exe_path, exe_args):
+  from plumbum.cmd import ansible_playbook
+  from jinja2 import Environment
+  import textwrap
+
+
   if not args['node']:
     print("[INFO] No nodes passed onto gsd deployment workload. Using current node with remote hosts.")
     wkld__socialNetwork__local__run(args, hosts, exe_path, exe_args)
     return
 
-  app_dir = Path.cwd()
-  os.chdir(app_dir.joinpath('..', 'deploy'))
+  app_dir = ROOT_PATH / args['app']
+  os.chdir(ROOT_PATH / 'deploy')
 
   if args['latest']:
     conf_filepath = Path(_last_configuration('socialNetwork', 'gsd'))
@@ -545,9 +960,9 @@ def wkld__socialNetwork__gsd__run(args, hosts, exe_path, exe_args):
     {% endfor %}
   """
   inventory = Environment().from_string(template).render({
-    'client_nodes': { n:AVAILABLE_NODES[n] for n in set(args['node']) },
+    'client_nodes': { n:GSD_AVAILABLE_NODES[n] for n in set(args['node']) },
   })
-  inventory_filepath = Path('playbooks/clients_inventory.cfg')
+  inventory_filepath = Path('gsd/clients_inventory.cfg')
   with open(inventory_filepath, 'w') as f:
     # remove empty lines and dedent for easier read
     f.write(textwrap.dedent(inventory))
@@ -574,7 +989,7 @@ def wkld__socialNetwork__gsd__run(args, hosts, exe_path, exe_args):
     'out_folder': out_folder,
     'out_filepath': out_filepath,
   })
-  script_filepath = Path('playbooks/wkld-start.sh')
+  script_filepath = Path('gsd/wkld-start.sh')
   with open(script_filepath, 'w') as f:
     # remove empty lines and dedent for easier read
     f.write(textwrap.dedent(script))
@@ -584,7 +999,7 @@ def wkld__socialNetwork__gsd__run(args, hosts, exe_path, exe_args):
   print(f"\t [SAVED] '{script_filepath.resolve()}'")
 
   # change path to playbooks folder
-  os.chdir(app_dir.joinpath('..', 'deploy', 'playbooks'))
+  os.chdir(ROOT_PATH / 'deploy' / 'gsd')
   ansible_playbook['wkld-start.yml', '-i', 'clients_inventory.cfg', '-e', 'app=socialNetwork'] & FG
 
   # sleep before gather
@@ -597,6 +1012,19 @@ def wkld__socialNetwork__gsd__run(args, hosts, exe_path, exe_args):
 
   ansible_playbook['wkld-gather.yml', '-i', 'clients_inventory.cfg', '-e', 'app=socialNetwork', '-e', f'conf_id={conf_id}' ] & FG
 
+def wkld__socialNetwork__gcp__run(args, hosts, exe_path, exe_args):
+  from plumbum.cmd import ansible_playbook
+  from jinja2 import Environment
+  import textwrap
+
+
+  if not args['node']:
+    print("[INFO] No nodes passed onto GCP deployment workload. Using current node with remote hosts.")
+    wkld__socialNetwork__local__run(args, hosts, exe_path, exe_args)
+    return
+  else:
+    print("TODO: REMOTE CLIENT CONFIG!!!")
+
 #############################
 # GATHER
 #
@@ -604,8 +1032,11 @@ def _fetch_span_tag(tags, tag_to_search):
   return next(item for item in tags if item['key'] == tag_to_search)['value']
 
 def gather(args):
+  import pandas as pd
+  import requests
+  pd.set_option('display.float_format', lambda x: '%.3f' % x)
+
   try:
-    app_dir = Path.cwd()
     # get host for each zone
     jaeger_host = getattr(sys.modules[__name__], f"gather__{args['app']}__{_deploy_type(args)}")(args)
 
@@ -635,11 +1066,7 @@ def gather(args):
       content = response.json()
 
       # pick only the traces with the desired info
-      i = 0
       for trace in content['data']:
-        i += 1
-        if i % 1000 == 0: print(f"\t{i}/{limit}", flush=True)
-
         trace_info = {
           # 'trace_id': trace['spans'][0]['traceID'],
           'post_id': -1,
@@ -669,7 +1096,7 @@ def gather(args):
 
       df = pd.DataFrame(traces)
       df = df.set_index('post_id')
-      print(df.describe())
+      print(df.describe(percentiles=[.25, .5, .75, .90, .99]))
 
     elif args['visibility_latency']:
       # curl -X GET "jaeger:16686/api/traces?service=write-home-timeline-service&prettyPrint=true
@@ -694,11 +1121,7 @@ def gather(args):
       content = response.json()
 
       # pick only the traces with the desired info
-      i = 0
       for trace in content['data']:
-        i += 1
-        if i % 1000 == 0: print(f"\t{i}/{limit}", flush=True)
-
         trace_info = {
           # 'trace_id': trace['spans'][0]['traceID'],
           'post_id': -1,
@@ -726,7 +1149,7 @@ def gather(args):
 
       df = pd.DataFrame(traces)
       df = df.set_index('post_id')
-      print(df.describe())
+      print(df.describe(percentiles=[.25, .5, .75, .90, .99]))
       print("")
       num_posts_before_notifications = len([n for n in df['post_notification_diff_ms'] if n >= 0])
       num_notifications_before_posts = len([n for n in df['post_notification_diff_ms'] if n < 0])
@@ -741,6 +1164,8 @@ def gather__socialNetwork__local(args):
   return 'http://localhost:16686'
 
 def gather__socialNetwork__gsd(args):
+  import yaml
+
   filepath = None
 
   if args['latest']:
@@ -750,7 +1175,7 @@ def gather__socialNetwork__gsd(args):
 
   with open(filepath, 'r') as f_conf:
     conf = yaml.load(f_conf, Loader=yaml.FullLoader)
-    return f"http://{conf['jaeger']}:16686"
+    return f"http://{conf['services']['jaeger']}:16686"
 
 #############################
 # MAIN
@@ -785,7 +1210,7 @@ if __name__ == "__main__":
   # deploy application
   deploy_parser = subparsers.add_parser('deploy', help='Deploy application')
   # deploy file group
-  deploy_file_group = deploy_parser.add_mutually_exclusive_group(required=True)
+  deploy_file_group = deploy_parser.add_mutually_exclusive_group(required=False)
   deploy_file_group.add_argument('-n', '--new', action='store_true', help="Build a new deploy file")
   deploy_file_group.add_argument('-l', '--latest', action='store_true', help="Use last used deploy file")
   deploy_file_group.add_argument('-f', '--file', type=argparse.FileType('r', encoding='UTF-8'), help="Use specific file")
@@ -824,8 +1249,8 @@ if __name__ == "__main__":
   command = args.pop('which')
 
   # change application dir if necessary
-  if Path.cwd().name != args['app']:
-    os.chdir(Path.cwd().joinpath(args['app']))
+  # if Path.cwd().name != args['app']:
+  #   os.chdir(Path.cwd().joinpath(args['app']))
 
   # call parser method dynamically
   getattr(sys.modules[__name__], command)(args)

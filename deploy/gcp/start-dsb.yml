@@ -1,0 +1,45 @@
+---
+- hosts: swarm_manager
+  gather_facts: no
+  become: no
+  any_errors_fatal: true
+  vars:
+    - stack: deathstarbench
+    - app: socialNetwork
+    - num_services: 38
+
+  tasks:
+    - name: Run DSB Stack
+      shell: >
+          cd /code/{{ app }} ;
+          docker stack deploy --compose-file ./docker-compose-swarm.yml {{ stack }}
+      register: out
+      failed_when: "not(out.rc == 0) or 'fail' in out.stderr"
+
+    - name: Ensure DSB stack is deployed
+      # mongodb-setup has to run before DSB stack is deployed
+      shell: >
+            docker stack services {{ stack }} --format {% raw %}'{{.Name}};{{.Replicas}}'{%endraw%} | grep -v 'post-storage-mongodb-setup' | grep '1/1' | wc -l
+      register: cmd_res
+      retries: 12
+      delay: 30
+      until: (cmd_res.stdout | int) == num_services
+
+    - name: Ensure MongoDB setup is finished
+      # mongodb-setup has to run before DSB stack is deployed
+      shell: >
+            docker stack services {{ stack }} --format {% raw %}'{{.Name}};{{.Replicas}}'{%endraw%} | grep 'post-storage-mongodb-setup' | grep '0/1' | wc -l
+      register: cmd_res
+      # 1 minute
+      retries: 6
+      delay: 30
+      until: (cmd_res.stdout | int) == 1
+
+    - name: Init social graph
+      # task sleeps to make sure everything is initialized
+      shell: >
+            sleep 60 ;
+            cd /code ;
+            python antipode_manager.py {{ app }} --gcp wkld -l -E init-social-graph -r 1
+      register: out
+      failed_when: "not(out.rc == 0) or 'fail' in out.stderr"

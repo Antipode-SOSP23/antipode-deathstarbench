@@ -1,0 +1,64 @@
+FROM python:3.7-slim
+
+LABEL maintainer="jfloff@gsd.inesc-id.pt"
+LABEL maintainer="daniel@gsd.inesc-id.pt"
+
+# install needed packages
+RUN set -ex ;\
+    apt-get update ;\
+    apt-get install -y --no-install-recommends \
+        # gcp
+        apt-transport-https \
+        ca-certificates \
+        gnupg \
+        curl \
+        jq \
+        # others
+        sudo \
+        rsync \
+        openssh-client \
+        git \
+        ;\
+    rm -rf /var/lib/apt/lists/*
+
+#-----------------------------------------------------------------------------
+# install gcloud
+#-----------------------------------------------------------------------------
+ARG AUTH_FILE=pluribus.json
+COPY $AUTH_FILE /configs/$AUTH_FILE
+ENV GOOGLE_APPLICATION_CREDENTIALS /configs/$AUTH_FILE
+RUN set -ex ;\
+    echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list ;\
+    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add - ;\
+    apt-get update ;\
+    apt-get install -y --no-install-recommends \
+        google-cloud-sdk \
+        ;\
+    rm -rf /var/lib/apt/lists/*
+
+RUN set -ex ;\
+    # vars
+    export GCP_PROJECT_ID=$(jq -r '.project_id' ${GOOGLE_APPLICATION_CREDENTIALS}) ;\
+    # config
+    gcloud config configurations list ;\
+    gcloud config configurations activate default ;\
+    gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS} ;\
+    gcloud config set project $GCP_PROJECT_ID ;\
+    gcloud auth configure-docker ;\
+    gcloud config list
+
+#-----------------------------------------------------------------------------
+# install python packages
+#-----------------------------------------------------------------------------
+RUN set -ex ;\
+    pip install --no-cache-dir --upgrade \
+        google-api-python-client \
+        plumbum \
+        pandas \
+        pyyaml \
+        jinja2 \
+        click \
+        ansible
+
+# switch user to install zsh with a some plugins
+CMD bash

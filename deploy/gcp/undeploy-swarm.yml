@@ -1,0 +1,45 @@
+- hosts: swarm_manager
+  any_errors_fatal: true
+  become: no
+  gather_facts: no
+  vars:
+   - swarm_overlay_network: deathstarbench_network
+  # vars_files:
+  #     - vars.yaml
+
+  tasks:
+    - name: Undeploy deathstarbench service
+      shell: >
+        docker stack rm deathstarbench
+      ignore_errors: yes
+
+
+- hosts: cluster
+  any_errors_fatal: true
+  become: no
+  gather_facts: no
+  # vars_files:
+  #     - vars.yaml
+
+  tasks:
+    - name: Make worker nodes leave the Swarm
+      shell: docker swarm leave -f
+      register: out
+      failed_when: "not(out.rc == 0 or 'This node is not part of a swarm' in out.stderr)"
+
+    - name: Prune docker system
+      shell: docker system prune --volumes
+
+
+- hosts: swarm_manager
+  any_errors_fatal: true
+  become: no
+  gather_facts: no
+  #vars_files:
+  #    - vars.yaml
+
+  tasks:
+    - name: Make manager nodes leave the Swarm
+      shell: docker swarm leave -f
+      register: out
+      failed_when: "not(out.rc == 0 or 'This node is not part of a swarm' in out.stderr)"
