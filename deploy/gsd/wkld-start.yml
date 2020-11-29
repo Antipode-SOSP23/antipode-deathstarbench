@@ -23,7 +23,7 @@
 
       - name: Start client
         shell: >
-            cd /home/jfloff/nas_inesc/antipode/antipode-deathstarbench/deploy/playbooks ;
+            cd /home/jfloff/nas_inesc/antipode/antipode-deathstarbench/deploy/gsd ;
             tmux new-session -d -s client_init "./wkld-start.sh && exit";
         args:
           executable: /bin/bash

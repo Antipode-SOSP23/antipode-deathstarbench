@@ -4,13 +4,13 @@ apps:
       to_pull:
         - jaegertracing/all-in-one:latest
         - jonathanmace/xtrace-server:latest
-        - memcached
-        - mongo
-        - mrvautin/adminmongo
-        - rabbitmq
-        - redis
-        - portainer/agent
-        - portainer/portainer-ce
+        - memcached:latest
+        - mongo:latest
+        - mrvautin/adminmongo:latest
+        - rabbitmq:latest
+        - redis:latest
+        - portainer/agent:latest
+        - portainer/portainer-ce:latest
         # this container can be built but we are not modifying this version
         - yg397/media-frontend:xenial
       to_build:
