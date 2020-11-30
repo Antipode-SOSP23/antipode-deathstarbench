@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
   int user_port = config_json["user-service"]["port"];
 
   mongoc_client_pool_t *mongodb_client_pool =
-      init_mongodb_client_pool(config_json, "social-graph", 1024);
+      init_mongodb_client_pool(config_json, "social-graph", "", 1024);
 
   if (mongodb_client_pool == nullptr) {
     return EXIT_FAILURE;

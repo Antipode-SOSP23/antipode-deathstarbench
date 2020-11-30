@@ -14,15 +14,16 @@ namespace social_network {
 mongoc_client_pool_t* init_mongodb_client_pool(
     const json &config_json,
     const std::string &service_name,
+    const std::string &zone,
     uint32_t max_size
 ) {
-  std::string zone = "";
-  if (std::getenv("ZONE") != NULL) {
-    std::string zone_env_str(std::getenv("ZONE"));
-    zone = "-" + zone_env_str;
+  std::string zone_concat = "";
+  if (!zone.empty()) {
+    zone_concat = "-" + zone;
   }
-  std::string addr = config_json[service_name + "-mongodb" + zone]["addr"];
-  int port = config_json[service_name + "-mongodb" + zone]["port"];
+
+  std::string addr = config_json[service_name + "-mongodb" + zone_concat]["addr"];
+  int port = config_json[service_name + "-mongodb" + zone_concat]["port"];
   std::string uri_str = "mongodb://" + addr + ":" +
       std::to_string(port) + "/?appname=" + service_name + "-service";
   uri_str += "&" MONGOC_URI_SERVERSELECTIONTIMEOUTMS "="

@@ -101,6 +101,7 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     duration<double, std::milli> time_span = t2 - t1;
     span->SetTag("wht_antipode_duration", std::to_string(time_span.count()));
+    LOG(debug) << "[ANTIPODE] Finished IsVisible for post_id: " << post_id;
 
     //----------
     // ANTIPODE

@@ -17,6 +17,7 @@ using namespace social_network;
 
 static memcached_pool_st* memcached_client_pool;
 static mongoc_client_pool_t* mongodb_client_pool;
+static mongoc_client_pool_t* mongodb_client_pool_us;
 
 void sigintHandler(int sig) {
   if (memcached_client_pool != nullptr) {
@@ -24,6 +25,9 @@ void sigintHandler(int sig) {
   }
   if (mongodb_client_pool != nullptr) {
     mongoc_client_pool_destroy(mongodb_client_pool);
+  }
+  if (mongodb_client_pool_us != nullptr) {
+    mongoc_client_pool_destroy(mongodb_client_pool_us);
   }
   exit(EXIT_SUCCESS);
 }
@@ -38,11 +42,13 @@ int main(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  int port = config_json["post-storage-service"]["port"];
-
   memcached_client_pool =
       init_memcached_client_pool(config_json, "post-storage", 32, 1024);
-  mongodb_client_pool = init_mongodb_client_pool(config_json, "post-storage", 1024);
+
+  int port = config_json["post-storage-service"]["port"];
+  std::string zone = (std::getenv("ZONE") == NULL) ? "" : std::getenv("ZONE");
+
+  mongodb_client_pool = init_mongodb_client_pool(config_json, "post-storage", zone, 1024);
   if (memcached_client_pool == nullptr || mongodb_client_pool == nullptr) {
     return EXIT_FAILURE;
   }
@@ -66,6 +72,21 @@ int main(int argc, char *argv[]) {
 
   mongoc_client_pool_push(mongodb_client_pool, mongodb_client);
 
+  // mongoc in US
+  mongodb_client_pool_us = init_mongodb_client_pool(config_json, "post-storage", "us", 1024);
+  if (mongodb_client_pool_us == nullptr) {
+    return EXIT_FAILURE;
+  }
+
+  mongoc_client_t *mongodb_client_us = mongoc_client_pool_pop(mongodb_client_pool_us);
+  if (!mongodb_client_us) {
+    LOG(fatal) << "Failed to pop mongoc client";
+    return EXIT_FAILURE;
+  }
+
+  mongoc_client_pool_push(mongodb_client_pool_us, mongodb_client_us);
+  //
+
   int antipode_oracle_port = config_json["antipode-oracle"]["port"];
   std::string antipode_oracle_addr = config_json["antipode-oracle"]["addr"];
 
@@ -78,6 +99,7 @@ int main(int argc, char *argv[]) {
           std::make_shared<PostStorageHandler>(
               memcached_client_pool,
               mongodb_client_pool,
+              mongodb_client_pool_us,
               &antipode_oracle_client_pool)),
       std::make_shared<TServerSocket>("0.0.0.0", port),
       std::make_shared<TFramedTransportFactory>(),
