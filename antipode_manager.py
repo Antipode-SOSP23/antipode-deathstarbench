@@ -496,7 +496,7 @@ def deploy__socialNetwork__gsd(args):
     # write default configuration to file
     with open(filepath, 'w') as f_conf:
       yaml.dump(SOCIAL_NETWORK_DEFAULT_SERVICES, f_conf)
-      print(f"\t [SAVED] '{filepath}'")
+      print(f"[SAVED] '{filepath}'")
       # wait for editor to close
       print("[INFO] Waiting for editor to close new configuration file ...")
       click.edit(filename=filepath)
@@ -534,12 +534,12 @@ def deploy__socialNetwork__gsd(args):
   new_compose_filepath = ROOT_PATH / 'deploy' / 'gsd' / 'docker-compose-swarm.yml'
   with open(new_compose_filepath, 'w') as f_compose:
     yaml.dump(compose, f_compose)
-  print(f"\t [SAVED] '{new_compose_filepath}'")
+  print(f"[SAVED] '{new_compose_filepath}'")
 
   # copy file to socialNetwork folder
   end_docker_compose_swarm = Path(app_dir, 'docker-compose-swarm.yml').resolve()
   copyfile(new_compose_filepath.resolve(), end_docker_compose_swarm)
-  print(f"\t [INFO] Copied '{str(new_compose_filepath.resolve()).split('antipode-deathstarbench/')[1]}' to '{str(end_docker_compose_swarm).split('antipode-deathstarbench/')[1]}'")
+  print(f"[INFO] Copied '{str(new_compose_filepath.resolve()).split('antipode-deathstarbench/')[1]}' to '{str(end_docker_compose_swarm).split('antipode-deathstarbench/')[1]}'")
 
   template = """
     [swarm_manager]
@@ -560,7 +560,7 @@ def deploy__socialNetwork__gsd(args):
     # remove empty lines and dedent for easier read
     f.write(textwrap.dedent(inventory))
 
-  print(f"\t [SAVED] '{inventory_filepath.resolve()}'")
+  print(f"[SAVED] '{inventory_filepath.resolve()}'")
 
   # run playbooks
   os.chdir(ROOT_PATH / 'deploy' / 'gsd')
@@ -591,7 +591,7 @@ def deploy__socialNetwork__gcp(args):
     # write default configuration to file
     with open(filepath, 'w') as f_conf:
       yaml.dump(SOCIAL_NETWORK_DEFAULT_SERVICES, f_conf)
-      print(f"\t [SAVED] '{filepath}'")
+      print(f"[SAVED] '{filepath}'")
       print("[INFO] Waiting for editor to close new configuration file ...")
       click.edit(filename=filepath)
 
@@ -636,6 +636,10 @@ def deploy__socialNetwork__gcp(args):
 
     # get all the unique node ids to create in GCP
     for node_key, node_info in conf['nodes'].items():
+      # skip client nodes
+      if node_key in conf['clients']:
+        continue
+
       inventory[node_key] = {
         'hostname': node_info['hostname'],
         'zone': node_info['zone'],
@@ -651,16 +655,7 @@ def deploy__socialNetwork__gcp(args):
       )
 
     # wait for instances public ips
-    while inventory['manager'].get('external_ip', None) is None:
-      metadata = _gcp_get_instance('europe-west3-c', 'manager')
-      try:
-        inventory['manager']['external_ip'] = metadata['networkInterfaces'][0]['accessConfigs'][0]['natIP']
-        inventory['manager']['internal_ip'] = metadata['networkInterfaces'][0]['networkIP']
-      except KeyError:
-        inventory['manager']['external_ip'] = None
-        inventory['manager']['internal_ip'] = None
-
-    for node_key, node_info in conf['nodes'].items():
+    for node_key, node_info in inventory.items():
       while inventory[node_key].get('external_ip', None) is None:
         metadata = _gcp_get_instance(node_info['zone'], node_key)
         try:
@@ -698,7 +693,7 @@ def deploy__socialNetwork__gcp(args):
       # remove empty lines and dedent for easier read
       f.write(textwrap.dedent(inventory))
 
-    print(f"\t [SAVED] '{inventory_filepath.resolve()}'")
+    print(f"[SAVED] '{inventory_filepath}'")
 
     # replace hostname in docker_compose_sparm
     with open(app_dir / 'docker-compose.yml', 'r') as f_app_compose, open(app_dir / 'docker-compose-swarm.yml', 'w') as f_swarm_compose:
@@ -715,7 +710,7 @@ def deploy__socialNetwork__gcp(args):
 
       # now write the compose into a new file
       yaml.dump(app_compose, f_swarm_compose)
-      print(f"\t [SAVED] '{app_dir / 'docker-compose-swarm.yml'}'")
+      print(f"[SAVED] '{app_dir / 'docker-compose-swarm.yml'}'")
 
   # run playbooks
   os.chdir(ROOT_PATH / 'deploy' / 'gcp')
@@ -819,6 +814,7 @@ def clean__socialNetwork__gcp(args):
   # change path to playbooks folder
   os.chdir(ROOT_PATH / 'deploy' / 'gcp')
   inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'inventory.cfg')
+  client_inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'clients_inventory.cfg')
 
   ansible_playbook['undeploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
   print("[INFO] Clean Complete!")
@@ -826,6 +822,8 @@ def clean__socialNetwork__gcp(args):
   # delete instances if strong enabled
   if args['strong']:
     for name,host in inventory.items():
+      _gcp_delete_instance(host['zone'], name)
+    for name,host in client_inventory.items():
       _gcp_delete_instance(host['zone'], name)
 
 
@@ -857,11 +855,10 @@ def wkld(args):
           wrk_args.extend(['--threads', args['threads']])
 
         # get details for the script and uri path
-        script_path = app_dir.joinpath(endpoint['script_path'])
-        script_path = '/scripts/' + str(script_path).split('wrk2/scripts/')[1]
+        docker_script_path = Path('/scripts') / endpoint['script_path'].split('wrk2/scripts/')[1]
         uri = urllib.parse.urljoin(hosts['host_eu'], endpoint['uri'])
         # add arguments to previous list
-        wrk_args.extend(['--latency', '--script', str(script_path), uri, '--rate', args['requests'] ])
+        wrk_args.extend(['--latency', '--script', docker_script_path, uri, '--rate', args['requests'] ])
 
         # add docker arguments
         wrk_args = ['run',
@@ -869,7 +866,7 @@ def wkld(args):
           '--network=host',
           '-e', f"HOST_EU={hosts['host_eu']}",
           '-e', f"HOST_US={hosts['host_us']}",
-          '-v', f"{app_dir.joinpath('wrk2','scripts')}:/scripts",
+          '-v', f"{app_dir / 'wrk2' / 'scripts'}:/scripts",
           'wrk2:antipode',
           './wrk'
         ] + wrk_args
@@ -967,7 +964,7 @@ def wkld__socialNetwork__gsd__run(args, hosts, exe_path, exe_args):
     # remove empty lines and dedent for easier read
     f.write(textwrap.dedent(inventory))
 
-  print(f"\t [SAVED] '{inventory_filepath.resolve()}'")
+  print(f"[SAVED] '{inventory_filepath.resolve()}'")
 
   # Create script to run
   conf_id = f"{conf_filepath.stem}__{datetime.now().strftime('%Y%m%d%H%M%S')}"
@@ -989,18 +986,18 @@ def wkld__socialNetwork__gsd__run(args, hosts, exe_path, exe_args):
     'out_folder': out_folder,
     'out_filepath': out_filepath,
   })
-  script_filepath = Path('gsd/wkld-start.sh')
+  script_filepath = Path('gsd/wkld-run.sh')
   with open(script_filepath, 'w') as f:
     # remove empty lines and dedent for easier read
     f.write(textwrap.dedent(script))
   # add executable permissions
   script_filepath.chmod(script_filepath.stat().st_mode | stat.S_IEXEC)
 
-  print(f"\t [SAVED] '{script_filepath.resolve()}'")
+  print(f"[SAVED] '{script_filepath.resolve()}'")
 
   # change path to playbooks folder
   os.chdir(ROOT_PATH / 'deploy' / 'gsd')
-  ansible_playbook['wkld-start.yml', '-i', 'clients_inventory.cfg', '-e', 'app=socialNetwork'] & FG
+  ansible_playbook['wkld-run.yml', '-i', 'clients_inventory.cfg', '-e', 'app=socialNetwork'] & FG
 
   # sleep before gather
   if args['duration'] is not None:
@@ -1016,14 +1013,122 @@ def wkld__socialNetwork__gcp__run(args, hosts, exe_path, exe_args):
   from plumbum.cmd import ansible_playbook
   from jinja2 import Environment
   import textwrap
+  import yaml
 
+  if args['latest']:
+    conf_filepath = Path(_last_configuration('socialNetwork', 'gcp'))
+  if args['file']:
+    conf_filepath = ROOT_PATH / args['file'].name
 
-  if not args['node']:
-    print("[INFO] No nodes passed onto GCP deployment workload. Using current node with remote hosts.")
-    wkld__socialNetwork__local__run(args, hosts, exe_path, exe_args)
-    return
+  with open(conf_filepath, 'r') as f_conf:
+    conf = yaml.load(f_conf, Loader=yaml.FullLoader)
+
+    client_nodes = list(set(conf['clients']) & set(args['node']))
+    if not client_nodes:
+      print("[INFO] No nodes passed onto GCP deployment workload. Using current local node as client.")
+      wkld__socialNetwork__local__run(args, hosts, exe_path, exe_args)
+      return
+
+    # inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'inventory.cfg')
+    _force_docker()
+    os.chdir(ROOT_PATH / 'deploy')
+
+    # build inventory while creating instances
+    inventory = {}
+    for client_name in client_nodes:
+      client_info = conf['nodes'][client_name]
+
+      inventory[client_name] = {
+        'hostname': client_info['hostname'],
+        'zone': client_info['zone'],
+        'external_ip': None,
+        'internal_ip': None,
+      }
+      _gcp_create_instance(
+        zone=client_info['zone'],
+        name=client_name,
+        machine_type='g1-small',
+        hostname=client_info['hostname'],
+        firewall_tags=[]
+      )
+
+    # wait for instances public ips
+    print("[INFO] Waiting for GCP nodes to have public IP addresses ...")
+    for node_key, node_info in inventory.items():
+      while inventory[node_key].get('external_ip', None) is None:
+        metadata = _gcp_get_instance(node_info['zone'], node_key)
+        try:
+          inventory[node_key]['external_ip'] = metadata['networkInterfaces'][0]['accessConfigs'][0]['natIP']
+          inventory[node_key]['internal_ip'] = metadata['networkInterfaces'][0]['networkIP']
+        except KeyError:
+          inventory[node_key]['external_ip'] = None
+          inventory[node_key]['internal_ip'] = None
+    print("[INFO] GCP Nodes ready!")
+
+    # now build the inventory
+    # if you want to get a new google_compute_engine key:
+    #   1) go to https://console.cloud.google.com/compute/instances
+    #   2) choose one instance, click on SSH triangle for more options
+    #   3) 'View gcloud command'
+    #   4) Run that command and then copy the generated key
+    #
+    template = """
+      [clients]
+      {% for node_name,node in client_nodes.items() %}
+      {{ node['hostname'] }} ansible_host={{ node['external_ip'] }} gcp_zone={{ node['zone'] }} gcp_name={{ node_name }} gcp_host={{ node['internal_ip'] }} ansible_user=root ansible_ssh_private_key_file=/code/deploy/gcp/{{ project_id }}_google_compute_engine
+      {% endfor %}
+    """
+    inventory = Environment().from_string(template).render({
+      'project_id': GCP_PROJECT_ID,
+      'client_nodes': inventory,
+    })
+    inventory_filepath = ROOT_PATH / 'deploy' / 'gcp' / 'clients_inventory.cfg'
+    with open(inventory_filepath, 'w') as f:
+      # remove empty lines and dedent for easier read
+      f.write(textwrap.dedent(inventory))
+    print(f"[SAVED] '{inventory_filepath}'")
+
+    # Create script to run
+    conf_id = conf_filepath.stem
+    wkld_filename = f"{conf_id}__{datetime.now().strftime('%Y%m%d%H%M%S')}__$(hostname).out"
+    wkld_folderpath = f"/tmp/dsb-wkld-data/{conf_id}"
+    template = """
+      #! /bin/bash
+
+      export HOST_EU={{ host_eu }}
+      export HOST_US={{ host_us }}
+      mkdir -p {{wkld_folderpath}}
+      {{exe_path}} {{exe_args}} | tee {{wkld_folderpath}}/{{wkld_filename}}
+    """
+    script = Environment().from_string(template).render({
+      'host_eu': hosts['host_eu'],
+      'host_us': hosts['host_us'],
+      'exe_path': exe_path,
+      'exe_args': ' '.join([str(e) for e in exe_args]),
+      'wkld_folderpath': wkld_folderpath,
+      'wkld_filename': wkld_filename,
+    })
+    script_filepath = ROOT_PATH / 'deploy' / 'gcp' / 'wkld-run.sh'
+    with open(script_filepath, 'w') as f:
+      # remove empty lines and dedent for easier read
+      f.write(textwrap.dedent(script))
+    # add executable permissions
+    script_filepath.chmod(script_filepath.stat().st_mode | stat.S_IEXEC)
+
+  # change path to playbooks folder
+  os.chdir(ROOT_PATH / 'deploy' / 'gcp')
+  ansible_playbook['wkld-run.yml', '-i', 'clients_inventory.cfg', '-e', 'app=socialNetwork'] & FG
+
+  # sleep before gather
+  if args['duration'] is not None:
+    sleep_for = args['duration'] + 60
+    print(f"[INFO] Waiting {sleep_for} seconds for workload to be ready ...")
+    time.sleep(sleep_for)
   else:
-    print("TODO: REMOTE CLIENT CONFIG!!!")
+    input("Press any key when workload is done ...")
+
+  ansible_playbook['wkld-gather.yml', '-i', 'clients_inventory.cfg', '-e', 'app=socialNetwork', '-e', f'conf_id={conf_id}' ] & FG
+
 
 #############################
 # GATHER
@@ -1176,6 +1281,22 @@ def gather__socialNetwork__gsd(args):
   with open(filepath, 'r') as f_conf:
     conf = yaml.load(f_conf, Loader=yaml.FullLoader)
     return f"http://{conf['services']['jaeger']}:16686"
+
+def gather__socialNetwork__gcp(args):
+  import yaml
+
+  filepath = None
+  if args['latest']:
+    filepath = _last_configuration('socialNetwork', 'gcp')
+  if args['file']:
+    filepath = ROOT_PATH / args['file'].name
+
+  with open(filepath, 'r') as f_conf:
+    conf = yaml.load(f_conf, Loader=yaml.FullLoader)
+    inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'inventory.cfg')
+
+    jaeger_public_ip = inventory[conf['services']['jaeger']]['external_ip']
+    return f"http://{jaeger_public_ip}:16686"
 
 #############################
 # MAIN

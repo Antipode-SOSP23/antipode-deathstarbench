@@ -1,0 +1,16 @@
+---
+  - name: Gather wkld output files
+    hosts: clients
+    gather_facts: no
+    serial: 1
+    any_errors_fatal: true
+    vars:
+      - app: socialNetwork
+
+    tasks:
+      - name: Downloading data from remote node
+        synchronize:
+          src: "/tmp/dsb-wkld-data/{{ conf_id }}"
+          dest: "../wkld-data"
+          use_ssh_args: yes
+          mode: pull

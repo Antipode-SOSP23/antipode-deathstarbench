@@ -77,7 +77,13 @@ services:
   mongodb-admin: node01
   post-storage-mongodb-setup: node01
 
+clients:
+  - client01
+
 nodes:
   node01:
     hostname: node01.pluribus
+    zone: europe-west3-c
+  client01:
+    hostname: client01.pluribus
     zone: europe-west3-c

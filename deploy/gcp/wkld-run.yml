@@ -1,0 +1,34 @@
+---
+- hosts: clients
+  gather_facts: no
+  become: no
+  any_errors_fatal: true
+  vars:
+    - app: socialNetwork
+
+  tasks:
+    - name: Create deploy folder
+      file:
+        path: "/code/deploy/gcp/"
+        state: directory
+
+    - name: Copy wkld-run script
+      synchronize:
+        src: "./wkld-run.sh"
+        dest: "/code/deploy/gcp/"
+        use_ssh_args: yes
+        mode: push
+
+    - name: Pull images from GCP registry
+      shell: >
+        docker pull gcr.io/pluribus/{{item}} &&
+        docker tag gcr.io/pluribus/{{item}} {{item}}
+      with_items:
+        - wrk2:antipode
+
+    - name: Start client
+      shell: >
+        cd /code/deploy/gcp/ ;
+        tmux new-session -d -s client_init "./wkld-run.sh && exit";
+      args:
+        executable: /bin/bash
