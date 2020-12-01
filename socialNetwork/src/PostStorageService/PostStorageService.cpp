@@ -3,6 +3,7 @@
 #include <thrift/transport/TServerSocket.h>
 #include <thrift/transport/TBufferTransports.h>
 #include <signal.h>
+#include <nlohmann/json.hpp>
 
 #include "../utils.h"
 #include "../utils_memcached.h"
@@ -14,6 +15,7 @@ using apache::thrift::transport::TServerSocket;
 using apache::thrift::transport::TFramedTransportFactory;
 using apache::thrift::protocol::TBinaryProtocolFactory;
 using namespace social_network;
+using json = nlohmann::json;
 
 static memcached_pool_st* memcached_client_pool;
 static mongoc_client_pool_t* mongodb_client_pool;
@@ -59,17 +61,36 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
-  if (replica_ismaster(mongodb_client)) {
-    bool r = false;
-    while (!r) {
-      r = CreateIndex(mongodb_client, "post", "post_id", true);
-      if (!r) {
-        LOG(error) << "Failed to create mongodb index, try again";
-        sleep(1);
-      }
+  // ref: http://mongoc.org/libmongoc/1.14.0/mongoc_client_get_server_descriptions.html
+  // ensure client has connected
+  bson_error_t error;
+  bson_t *b = BCON_NEW ("ping", BCON_INT32 (1));
+  if(!mongoc_client_command_simple(mongodb_client, "db", b, NULL, NULL, &error)){
+    LOG(fatal) << "Failed to ping mongodb instance";
+    return EXIT_FAILURE;
+  }
+  // get latest server description
+  mongoc_server_description_t *sd;
+  sd = mongoc_client_get_server_description(mongodb_client, 1);
+  if (sd == NULL) {
+    LOG(fatal) << "Failed to fetch server description";
+    return EXIT_FAILURE;
+  }
+  // parse is master reply
+  auto is_master_bson = bson_as_json(mongoc_server_description_ismaster(sd), nullptr);
+  if (is_master_bson == NULL) {
+    LOG(fatal) << "Unable to fetch server is_master flag";
+    return EXIT_FAILURE;
+  }
+  mongoc_server_description_destroy(sd);
+  // parse bson to json
+  json is_master_json = json::parse(is_master_bson);
+  if (is_master_json["ismaster"]) {
+    if (!CreateIndex(mongodb_client, "post", "post_id", true)) {
+      LOG(fatal) << "Failed to create mongodb index on master";
+      return EXIT_FAILURE;
     }
   }
-
   mongoc_client_pool_push(mongodb_client_pool, mongodb_client);
 
   // mongoc in US
