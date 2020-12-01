@@ -1,0 +1,115 @@
+services:
+  #----------------------------------------------------------
+  # Write notifications at EU replica
+  #----------------------------------------------------------
+  # 4 cores
+  social-graph-service: saturn1
+  social-graph-redis: saturn1
+  #
+  # 1 / 2 cores
+  social-graph-mongodb: saturn1
+  #
+  #
+  # 5 cores
+  write-home-timeline-service: saturn1
+  write-home-timeline-rabbitmq: saturn1
+  home-timeline-redis: saturn1
+
+  #----------------------------------------------------------
+  # read notifications at US replica
+  #----------------------------------------------------------
+  # 4 cores
+  home-timeline-redis-us: saturn1
+  home-timeline-service: saturn1
+
+  #----------------------------------------------------------
+  # write post at replica EU
+  #----------------------------------------------------------
+  # 4 cores
+  post-storage-service: saturn1
+  post-storage-memcached: saturn1
+  #
+  # 1 / 2 cores
+  post-storage-mongodb: saturn1
+
+  #----------------------------------------------------------
+  # read post at US replica
+  #----------------------------------------------------------
+  # 4 cores
+  post-storage-service-us: saturn1
+  post-storage-memcached-us: saturn1
+  #
+  # 1 / 2 cores
+  post-storage-mongodb-us: saturn1
+
+  #----------------------------------------------------------
+  # compose posts EU
+  #----------------------------------------------------------
+  # 5 cores
+  compose-post-redis: saturn1
+  compose-post-service: saturn1
+  unique-id-service: saturn1
+  text-service: saturn1
+  #
+  #
+  # 5 cores
+  user-timeline-service: saturn1
+  user-timeline-redis: saturn1
+  user-timeline-mongodb: saturn1
+  #
+  #
+  # 5 cores
+  url-shorten-service: saturn1
+  url-shorten-memcached: saturn1
+  url-shorten-mongodb: saturn1
+  user-mention-service: saturn1
+  #
+  #
+  # 1 / 2 cores
+  user-service: saturn1
+  user-memcached: saturn1
+  user-mongodb: saturn1
+  #
+  #
+  # 1 core
+  media-service: saturn1
+  media-memcached: saturn1
+  media-mongodb: saturn1
+  media-frontend: saturn1
+
+  #----------------------------------------------------------
+  # Coordinator
+  #----------------------------------------------------------
+  # 1 / 2 cores
+  antipode-oracle: saturn1
+
+  #----------------------------------------------------------
+  # Frontend EU
+  #----------------------------------------------------------
+  # 1 / 2 cores
+  nginx-thrift: saturn1
+
+  #----------------------------------------------------------
+  # Frontend US
+  #----------------------------------------------------------
+  # 1 / 2 cores
+  nginx-thrift-us: saturn1
+
+  #----------------------------------------------------------
+  # Admin tasks
+  #----------------------------------------------------------
+  # 1 / 2 cores
+  jaeger: saturn1
+  xtrace-server: saturn1
+  mongodb-admin: saturn1
+  post-storage-mongodb-setup: saturn1
+
+########
+#
+# total DSB cores: 54
+# total DSB cores @ US: 12
+# total DSB cores @ EU: 42
+
+# * for 3 zones: 42 * 3 = 126
+
+# total client cores: N clients / 2

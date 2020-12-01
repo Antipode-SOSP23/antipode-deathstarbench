@@ -450,7 +450,8 @@ def build__socialNetwork__gcp(args):
   #         UDP ports: 7946, 4789
   #     - 'nodes':
   #         IP Addresses: 0.0.0.0/0
-  #         TCP ports: 9001, 16686, 8080, 8081, 8082, 1234, 4080, 5563
+  #         TCP ports: 9001,16686,8080,8081,8082,1234,4080,5563,15672,5672,5778,14268,14250,9411
+  #         UDP ports: 5775,6831,6832
   #
 
   # locally build the images needed
@@ -521,10 +522,22 @@ def deploy__socialNetwork__gsd(args):
     conf = yaml.load(f_conf, Loader=yaml.FullLoader)
     compose = yaml.load(f_compose, Loader=yaml.FullLoader)
 
+    # add network that is created on deploy playbook
+    compose['networks'] = {
+      'deathstarbench_network': {
+        'external': {
+          'name': 'deathstarbench_network'
+        }
+      }
+    }
+
     # get all the nodes that will be used in deploy
     deploy_nodes = { n:GSD_AVAILABLE_NODES[n] for n in set(conf['services'].values()) }
 
     for sid,hostname in conf['services'].items():
+      # replaces existing networks with new one
+      compose['services'][sid]['networks'] = [ 'deathstarbench_network' ]
+
       # get all the constraints
       deploy_constraints = compose['services'][sid]['deploy']['placement']['constraints']
       # get he id of constraint of the node hostname
@@ -619,8 +632,37 @@ def deploy__socialNetwork__gcp(args):
 
   with open(filepath, 'r') as f_conf:
     conf = yaml.load(f_conf, Loader=yaml.FullLoader)
-    inventory = {}
 
+    # replace hostname in docker_compose_swarm
+    with open(app_dir / 'docker-compose.yml', 'r') as f_app_compose, open(app_dir / 'docker-compose-swarm.yml', 'w') as f_swarm_compose:
+      app_compose = yaml.load(f_app_compose, Loader=yaml.FullLoader)
+
+      # add network that is created on deploy playbook
+      app_compose['networks'] = {
+        'deathstarbench_network': {
+          'external': {
+            'name': 'deathstarbench_network'
+          }
+        }
+      }
+
+      for service, node_id in conf['services'].items():
+        # replaces existing networks with new one
+        app_compose['services'][service]['networks'] = [ 'deathstarbench_network' ]
+
+        # replace the deploy constraints
+        deploy_constraints = app_compose['services'][service]['deploy']['placement']['constraints']
+        # get the id of constraint of the node hostname
+        node_constraint_index = _index_containing_substring(deploy_constraints, 'node.hostname')
+        # replace docker-compose with that constraint
+        deploy_constraints[node_constraint_index] = f"node.hostname == {node_id}"
+
+      # now write the compose into a new file
+      yaml.dump(app_compose, f_swarm_compose)
+      print(f"[SAVED] '{app_dir / 'docker-compose-swarm.yml'}'")
+
+    # Build inventory for ansible playbooks
+    inventory = {}
     # create the swarm manager node
     inventory['manager'] = {
       'hostname': f"manager.{GCP_PROJECT_ID}",
@@ -697,23 +739,6 @@ def deploy__socialNetwork__gcp(args):
 
     print(f"[SAVED] '{inventory_filepath}'")
 
-    # replace hostname in docker_compose_sparm
-    with open(app_dir / 'docker-compose.yml', 'r') as f_app_compose, open(app_dir / 'docker-compose-swarm.yml', 'w') as f_swarm_compose:
-      app_compose = yaml.load(f_app_compose, Loader=yaml.FullLoader)
-
-      for service, node_id in conf['services'].items():
-        # get all the constraints
-        deploy_constraints = app_compose['services'][service]['deploy']['placement']['constraints']
-        # get the id of constraint of the node hostname
-        node_constraint_index = _index_containing_substring(deploy_constraints, 'node.hostname')
-        # replace docker-compose with that constraint
-        # deploy_constraints[node_constraint_index] = f"node.hostname == {conf['nodes'][node_id]['hostname']}"
-        deploy_constraints[node_constraint_index] = f"node.hostname == {node_id}"
-
-      # now write the compose into a new file
-      yaml.dump(app_compose, f_swarm_compose)
-      print(f"[SAVED] '{app_dir / 'docker-compose-swarm.yml'}'")
-
   # run playbooks
   os.chdir(ROOT_PATH / 'deploy' / 'gcp')
 
@@ -756,7 +781,12 @@ def run__socialNetwork__gsd(args):
   os.chdir(ROOT_PATH / 'deploy' / 'gsd')
 
   ansible_playbook['start-portainer.yml'] & FG
-  print(f"[INFO] Portainer link (u/pwd: admin/antipode): http://{next(iter(GSD_SWARM_MANAGER_NODE))}:9000 ")
+  portainer_ip = GSD_AVAILABLE_NODES[next(iter(GSD_SWARM_MANAGER_NODE))]
+  print(f"[INFO] Portainer link (u/pwd: admin/antipode): http://{portainer_ip}:9000 ")
+
+  # weird bug when starting DSB right after deploying it
+  print("[INFO] Sleeping before deploying to avoid weird bugs ...!")
+  time.sleep(20)
 
   ansible_playbook['start-dsb.yml', '-e', 'app=socialNetwork'] & FG
   print("[INFO] Run Complete!")
@@ -771,6 +801,10 @@ def run__socialNetwork__gcp(args):
 
   ansible_playbook['start-portainer.yml'] & FG
   print(f"[INFO] Portainer link (u/pwd: admin/antipode): http://{inventory['manager']['external_ip']}:9000 ")
+
+  # weird bug when starting DSB right after deploying it
+  print("[INFO] Sleeping before deploying to avoid weird bugs ...!")
+  time.sleep(20)
 
   ansible_playbook['start-dsb.yml', '-e', 'app=socialNetwork'] & FG
   print("[INFO] Run Complete!")

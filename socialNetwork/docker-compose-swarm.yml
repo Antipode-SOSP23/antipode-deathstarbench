@@ -1,20 +1,28 @@
+networks:
+  deathstarbench_network:
+    external:
+      name: deathstarbench_network
 services:
   antipode-oracle:
     deploy:
       placement:
         constraints:
-        - node.hostname == antipode-oracle
+        - node.hostname == saturn1
     entrypoint: /usr/local/bin/AntipodeOracle
     hostname: antipode-oracle
     image: yg397/social-network-microservices:antipode
+    networks:
+    - deathstarbench_network
     restart: always
   compose-post-redis:
     deploy:
       placement:
         constraints:
-        - node.hostname == compose-post
+        - node.hostname == saturn1
     hostname: compose-post-redis
     image: redis
+    networks:
+    - deathstarbench_network
     restart: always
   compose-post-service:
     depends_on:
@@ -22,49 +30,59 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == compose-post
+        - node.hostname == saturn1
     entrypoint: ComposePostService
     hostname: compose-post-service
     image: yg397/social-network-microservices:antipode
+    networks:
+    - deathstarbench_network
     restart: always
   home-timeline-redis:
     command: redis-server --port 6379
     deploy:
       placement:
         constraints:
-        - node.hostname == home-timeline-eu
+        - node.hostname == saturn1
     hostname: home-timeline-redis
     image: redis
+    networks:
+    - deathstarbench_network
     restart: always
   home-timeline-redis-us:
     command: redis-server --slaveof home-timeline-redis 6379 --replica-read-only no
     deploy:
       placement:
         constraints:
-        - node.hostname == home-timeline-us
+        - node.hostname == saturn1
     hostname: home-timeline-redis-us
     image: redis
     links:
     - home-timeline-redis
+    networks:
+    - deathstarbench_network
     restart: always
   home-timeline-service:
     deploy:
       placement:
         constraints:
-        - node.hostname == home-timeline-us
+        - node.hostname == saturn1
     entrypoint: HomeTimelineService
     hostname: home-timeline-service
     image: yg397/social-network-microservices:antipode
+    networks:
+    - deathstarbench_network
     restart: always
   jaeger:
     deploy:
       placement:
         constraints:
-        - node.hostname == admin-tracing
+        - node.hostname == saturn1
     environment:
     - COLLECTOR_ZIPKIN_HTTP_PORT=9411
     hostname: jaeger
     image: jaegertracing/all-in-one:latest
+    networks:
+    - deathstarbench_network
     ports:
     - 16686:16686
     restart: always
@@ -72,9 +90,11 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == compose-others
+        - node.hostname == saturn1
     hostname: media-frontend
     image: yg397/media-frontend:xenial
+    networks:
+    - deathstarbench_network
     ports:
     - 8081:8080
     restart: always
@@ -85,18 +105,22 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == compose-others
+        - node.hostname == saturn1
     hostname: media-memcached
     image: memcached
+    networks:
+    - deathstarbench_network
     restart: always
   media-mongodb:
     command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata"
     deploy:
       placement:
         constraints:
-        - node.hostname == compose-others
+        - node.hostname == saturn1
     hostname: media-mongodb
     image: mongo
+    networks:
+    - deathstarbench_network
     volumes:
     - target: /ramdata
       tmpfs:
@@ -106,19 +130,23 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == compose-others
+        - node.hostname == saturn1
     entrypoint: MediaService
     hostname: media-service
     image: yg397/social-network-microservices:antipode
+    networks:
+    - deathstarbench_network
     restart: always
   mongodb-admin:
     deploy:
       placement:
         constraints:
-        - node.hostname == admin-tracing
+        - node.hostname == saturn1
     environment:
     - HOST=0.0.0.0
     image: mrvautin/adminmongo
+    networks:
+    - deathstarbench_network
     ports:
     - 1234:1234
     restart: always
@@ -126,9 +154,11 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == frontend-eu
+        - node.hostname == saturn1
     hostname: nginx-thrift
     image: yg397/openresty-thrift:latest
+    networks:
+    - deathstarbench_network
     ports:
     - 8080:8080
     restart: always
@@ -142,9 +172,11 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == frontend-us
+        - node.hostname == saturn1
     hostname: nginx-thrift
     image: yg397/openresty-thrift:latest
+    networks:
+    - deathstarbench_network
     ports:
     - 8082:8080
     restart: always
@@ -158,17 +190,21 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == post-storage-eu
+        - node.hostname == saturn1
     hostname: post-storage-memcached
     image: memcached
+    networks:
+    - deathstarbench_network
     restart: always
   post-storage-memcached-us:
     deploy:
       placement:
         constraints:
-        - node.hostname == post-storage-us
+        - node.hostname == saturn1
     hostname: post-storage-memcached-us
     image: memcached
+    networks:
+    - deathstarbench_network
     restart: always
   post-storage-mongodb:
     command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata  --replSet
@@ -176,9 +212,11 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == post-storage-eu
+        - node.hostname == saturn1
     hostname: post-storage-mongodb
     image: mongo
+    networks:
+    - deathstarbench_network
     volumes:
     - target: /ramdata
       tmpfs:
@@ -191,12 +229,14 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == admin-tracing
+        - node.hostname == saturn1
       restart_policy:
         condition: on-failure
         delay: 1s
         max_attempts: 3
     image: mongodb-setup
+    networks:
+    - deathstarbench_network
     restart: 'no'
   post-storage-mongodb-us:
     command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata --replSet
@@ -204,9 +244,11 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == post-storage-us
+        - node.hostname == saturn1
     hostname: post-storage-mongodb-us
     image: mongo
+    networks:
+    - deathstarbench_network
     volumes:
     - target: /ramdata
       tmpfs:
@@ -216,30 +258,36 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == post-storage-eu
+        - node.hostname == saturn1
     entrypoint: PostStorageService
     hostname: post-storage-service
     image: yg397/social-network-microservices:antipode
+    networks:
+    - deathstarbench_network
     restart: always
   post-storage-service-us:
     deploy:
       placement:
         constraints:
-        - node.hostname == post-storage-us
+        - node.hostname == saturn1
     entrypoint: PostStorageService
     environment:
     - ZONE=us
     hostname: post-storage-service-us
     image: yg397/social-network-microservices:antipode
+    networks:
+    - deathstarbench_network
     restart: always
   social-graph-mongodb:
     command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata"
     deploy:
       placement:
         constraints:
-        - node.hostname == social-graph
+        - node.hostname == saturn1
     hostname: social-graph-mongodb
     image: mongo
+    networks:
+    - deathstarbench_network
     volumes:
     - target: /ramdata
       tmpfs:
@@ -249,53 +297,65 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == social-graph
+        - node.hostname == saturn1
     hostname: social-graph-redis
     image: redis
+    networks:
+    - deathstarbench_network
     restart: always
   social-graph-service:
     deploy:
       placement:
         constraints:
-        - node.hostname == social-graph
+        - node.hostname == saturn1
     entrypoint: SocialGraphService
     hostname: social-graph-service
     image: yg397/social-network-microservices:antipode
+    networks:
+    - deathstarbench_network
     restart: always
   text-service:
     deploy:
       placement:
         constraints:
-        - node.hostname == compose-post
+        - node.hostname == saturn1
     entrypoint: TextService
     hostname: text-service
     image: yg397/social-network-microservices:antipode
+    networks:
+    - deathstarbench_network
     restart: always
   unique-id-service:
     deploy:
       placement:
         constraints:
-        - node.hostname == compose-post
+        - node.hostname == saturn1
     entrypoint: UniqueIdService
     hostname: unique-id-service
     image: yg397/social-network-microservices:antipode
+    networks:
+    - deathstarbench_network
     restart: always
   url-shorten-memcached:
     deploy:
       placement:
         constraints:
-        - node.hostname == compose-others
+        - node.hostname == saturn1
     hostname: url-shorten-memcached
     image: memcached
+    networks:
+    - deathstarbench_network
     restart: always
   url-shorten-mongodb:
     command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata"
     deploy:
       placement:
         constraints:
-        - node.hostname == compose-others
+        - node.hostname == saturn1
     hostname: url-shorten-mongodb
     image: mongo
+    networks:
+    - deathstarbench_network
     volumes:
     - target: /ramdata
       tmpfs:
@@ -305,36 +365,44 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == compose-others
+        - node.hostname == saturn1
     entrypoint: UrlShortenService
     hostname: url-shorten-service
     image: yg397/social-network-microservices:antipode
+    networks:
+    - deathstarbench_network
     restart: always
   user-memcached:
     deploy:
       placement:
         constraints:
-        - node.hostname == compose-others
+        - node.hostname == saturn1
     hostname: user-memcached
     image: memcached
+    networks:
+    - deathstarbench_network
     restart: always
   user-mention-service:
     deploy:
       placement:
         constraints:
-        - node.hostname == compose-others
+        - node.hostname == saturn1
     entrypoint: UserMentionService
     hostname: user-mention-service
     image: yg397/social-network-microservices:antipode
+    networks:
+    - deathstarbench_network
     restart: always
   user-mongodb:
     command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata"
     deploy:
       placement:
         constraints:
-        - node.hostname == compose-others
+        - node.hostname == saturn1
     hostname: user-mongodb
     image: mongo
+    networks:
+    - deathstarbench_network
     volumes:
     - target: /ramdata
       tmpfs:
@@ -344,18 +412,22 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == compose-others
+        - node.hostname == saturn1
     entrypoint: UserService
     hostname: user-service
     image: yg397/social-network-microservices:antipode
+    networks:
+    - deathstarbench_network
     restart: always
   user-timeline-mongodb:
     command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata"
     deploy:
       placement:
         constraints:
-        - node.hostname == user-timeline
+        - node.hostname == saturn1
     image: mongo
+    networks:
+    - deathstarbench_network
     volumes:
     - target: /ramdata
       tmpfs:
@@ -365,9 +437,11 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == user-timeline
+        - node.hostname == saturn1
     hostname: user-timeline-redis
     image: redis
+    networks:
+    - deathstarbench_network
     restart: always
   user-timeline-service:
     depends_on:
@@ -375,21 +449,25 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == user-timeline
+        - node.hostname == saturn1
     entrypoint: UserTimelineService
     hostname: user-timeline-service
     image: yg397/social-network-microservices:antipode
+    networks:
+    - deathstarbench_network
     restart: always
   write-home-timeline-rabbitmq:
     deploy:
       placement:
         constraints:
-        - node.hostname == home-timeline-eu
+        - node.hostname == saturn1
     environment:
       RABBITMQ_DEFAULT_VHOST: /
       RABBITMQ_ERLANG_COOKIE: WRITE-HOME-TIMELINE-RABBITMQ
     hostname: write-home-timeline-rabbitmq
     image: rabbitmq
+    networks:
+    - deathstarbench_network
     ports:
     - 15672:15672
     - 5672:5672
@@ -400,20 +478,24 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == home-timeline-eu
+        - node.hostname == saturn1
     entrypoint: WriteHomeTimelineService
     hostname: write-home-timeline-service
     image: yg397/social-network-microservices:antipode
+    networks:
+    - deathstarbench_network
     restart: always
   xtrace-server:
     deploy:
       placement:
         constraints:
-        - node.hostname == admin-tracing
+        - node.hostname == saturn1
     hostname: xtrace-server
     image: jonathanmace/xtrace-server:latest
     logging:
       driver: none
+    networks:
+    - deathstarbench_network
     ports:
     - 4080:4080
     - 5563:5563
