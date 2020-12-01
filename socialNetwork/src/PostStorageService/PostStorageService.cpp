@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
   bson_error_t error;
   bson_t *b = BCON_NEW ("ping", BCON_INT32 (1));
   if(!mongoc_client_command_simple(mongodb_client, "db", b, NULL, NULL, &error)){
-    LOG(fatal) << "Failed to ping mongodb instance";
+    LOG(fatal) << "Failed to ping mongodb instance: " << error.message;
     return EXIT_FAILURE;
   }
   // get latest server description
@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
   mongoc_client_pool_push(mongodb_client_pool, mongodb_client);
 
   // mongoc in US
-  mongodb_client_pool_us = init_mongodb_client_pool(config_json, "post-storage", "us", 1024);
+  mongodb_client_pool_us = (std::getenv("ZONE") == NULL) ? init_mongodb_client_pool(config_json, "post-storage", "us", 1024) : mongodb_client_pool;
   if (mongodb_client_pool_us == nullptr) {
     return EXIT_FAILURE;
   }

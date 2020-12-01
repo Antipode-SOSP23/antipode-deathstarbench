@@ -326,6 +326,11 @@ def _inventory_to_dict(filepath):
 
   return loaded_inventory
 
+def _wait_url_up(url):
+  import urllib.request
+  while urllib.request.urlopen("http://www.stackoverflow.com").getcode() != 200:
+    True
+
 #############################
 # BUILD
 #
@@ -800,7 +805,9 @@ def run__socialNetwork__gcp(args):
   inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'inventory.cfg')
 
   ansible_playbook['start-portainer.yml'] & FG
-  print(f"[INFO] Portainer link (u/pwd: admin/antipode): http://{inventory['manager']['external_ip']}:9000 ")
+  portainer_url = f"http://{inventory['manager']['external_ip']}:9000"
+  _wait_url_up(portainer_url)
+  print(f"[INFO] Portainer link (u/pwd: admin/antipode): {portainer_url}")
 
   # weird bug when starting DSB right after deploying it
   print("[INFO] Sleeping before deploying to avoid weird bugs ...!")

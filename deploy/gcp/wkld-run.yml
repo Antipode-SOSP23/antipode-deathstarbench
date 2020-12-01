@@ -7,6 +7,19 @@
     - app: socialNetwork
 
   tasks:
+    - name: Create '{{ app }}' folder
+      file:
+        path: "/code/{{ app }}"
+        state: directory
+
+    - name: Upload application '{{ app }}' folder
+      synchronize:
+        src: "../../{{ app }}/"
+        dest: "/code/{{ app }}"
+        use_ssh_args: yes
+        recursive: true
+        mode: push
+
     - name: Create deploy folder
       file:
         path: "/code/deploy/gcp/"

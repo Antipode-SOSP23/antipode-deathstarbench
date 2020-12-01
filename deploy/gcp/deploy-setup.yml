@@ -58,7 +58,7 @@
   gather_facts: no
 
   tasks:
-    - name: Create app folder
+    - name: Create '{{ app }}' folder
       file:
         path: "/code/{{ app }}"
         state: directory

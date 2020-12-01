@@ -854,6 +854,7 @@ void PostStorageHandler::_AntipodeMakeVisible(int64_t post_id,
     }
     auto collection = mongoc_client_get_collection(mongodb_client, "post", "post");
     if (!collection) {
+      mongoc_client_pool_push(_mongodb_client_pool_us, mongodb_client);
       LOG(warning) << "[ANTIPODE] Could not open mongo connection: collection";
       continue;
     }
