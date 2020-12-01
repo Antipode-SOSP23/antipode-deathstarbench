@@ -1316,7 +1316,7 @@ def gather__socialNetwork__gsd(args):
 
   with open(filepath, 'r') as f_conf:
     conf = yaml.load(f_conf, Loader=yaml.FullLoader)
-    return f"http://{conf['services']['jaeger']}:16686"
+    return f"http://{GSD_AVAILABLE_NODES[conf['services']['jaeger']]}:16686"
 
 def gather__socialNetwork__gcp(args):
   import yaml
