@@ -66,9 +66,9 @@ services:
     environment:
       RABBITMQ_ERLANG_COOKIE: "WRITE-HOME-TIMELINE-RABBITMQ"
       RABBITMQ_DEFAULT_VHOST: "/"
-    # ports:
-      # - 15672:15672
-      # - 5672:5672
+    ports:
+      - 15672:15672
+      - 5672:5672
     restart: always
     deploy:
       placement:

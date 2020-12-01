@@ -287,13 +287,15 @@ def _gcp_delete_instance(zone, name):
   import googleapiclient.discovery
   compute = googleapiclient.discovery.build('compute', 'v1')
 
-  ret = compute.instances().delete(
-      project=GCP_PROJECT_ID,
-      zone=zone,
-      instance=name
-    ).execute()
-
-  return ret['status'] == 'RUNNING'
+  try:
+    ret = compute.instances().delete(
+        project=GCP_PROJECT_ID,
+        zone=zone,
+        instance=name
+      ).execute()
+    return ret['status'] == 'RUNNING'
+  except googleapiclient.errors.HttpError as e:
+    pprint(e)
 
 def _gcp_get_instance(zone, name):
   import googleapiclient.discovery
@@ -622,15 +624,15 @@ def deploy__socialNetwork__gcp(args):
     # create the swarm manager node
     inventory['manager'] = {
       'hostname': f"manager.{GCP_PROJECT_ID}",
-      'zone': 'europe-west3-c',
+      'zone': 'us-central1-a',
       'external_ip': None,
       'internal_ip': None,
     }
     _gcp_create_instance(
-      zone='europe-west3-c',
       name='manager',
-      machine_type='g1-small',
-      hostname=f"manager.{GCP_PROJECT_ID}",
+      machine_type='e2-standard-2',
+      zone=inventory['manager']['zone'],
+      hostname=inventory['manager']['hostname'],
       firewall_tags=['portainer','swarm']
     )
 
@@ -649,7 +651,7 @@ def deploy__socialNetwork__gcp(args):
       _gcp_create_instance(
         zone=node_info['zone'],
         name=node_key,
-        machine_type='e2-standard-8',
+        machine_type=node_info['machine_type'],
         hostname=node_info['hostname'],
         firewall_tags=['swarm','nodes']
       )
@@ -1047,7 +1049,7 @@ def wkld__socialNetwork__gcp__run(args, hosts, exe_path, exe_args):
       _gcp_create_instance(
         zone=client_info['zone'],
         name=client_name,
-        machine_type='g1-small',
+        machine_type=client_info['machine_type'],
         hostname=client_info['hostname'],
         firewall_tags=[]
       )
