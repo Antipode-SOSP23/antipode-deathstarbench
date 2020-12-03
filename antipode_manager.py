@@ -811,9 +811,15 @@ def run__socialNetwork__gcp(args):
 
   # weird bug when starting DSB right after deploying it
   print("[INFO] Sleeping before deploying to avoid weird bugs ...!")
-  time.sleep(20)
+  time.sleep(30)
 
+  # start dsb services
   ansible_playbook['start-dsb.yml', '-e', 'app=socialNetwork'] & FG
+  # init social graph
+  print("[INFO] Sleeping before init with the social graph dataset ...")
+  time.sleep(30)
+  ansible_playbook['init-social-graph.yml', '-e', 'app=socialNetwork'] & FG
+
   print("[INFO] Run Complete!")
 
 
@@ -1132,9 +1138,9 @@ def wkld__socialNetwork__gcp__run(args, hosts, exe_path, exe_args):
     print(f"[SAVED] '{inventory_filepath}'")
 
     # Create script to run
-    conf_id = conf_filepath.stem
-    wkld_filename = f"{conf_id}__{datetime.now().strftime('%Y%m%d%H%M%S')}__$(hostname).out"
-    wkld_folderpath = f"/tmp/dsb-wkld-data/{conf_id}"
+    wkld_filename = f"$(hostname).out"
+    conf_path = f"{conf_filepath.stem}/{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    wkld_folderpath = f"/tmp/dsb-wkld-data/{conf_path}/"
     template = """
       #! /bin/bash
 
@@ -1170,7 +1176,7 @@ def wkld__socialNetwork__gcp__run(args, hosts, exe_path, exe_args):
   else:
     input("Press any key when workload is done ...")
 
-  ansible_playbook['wkld-gather.yml', '-i', 'clients_inventory.cfg', '-e', 'app=socialNetwork', '-e', f'conf_id={conf_id}' ] & FG
+  ansible_playbook['wkld-gather.yml', '-i', 'clients_inventory.cfg', '-e', 'app=socialNetwork', '-e', f'conf_path={conf_path}' ] & FG
 
 
 #############################
@@ -1297,6 +1303,10 @@ def gather(args):
 
       df = pd.DataFrame(traces)
       df = df.set_index('post_id')
+      # delete unnecessary columns
+      del df['poststorage_post_visible']
+      del df['wht_notification_ts']
+
       print(df.describe(percentiles=[.25, .5, .75, .90, .99]))
       print("")
       num_posts_before_notifications = len([n for n in df['post_notification_diff_ms'] if n >= 0])

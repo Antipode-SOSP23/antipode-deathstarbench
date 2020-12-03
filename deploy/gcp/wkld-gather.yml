@@ -10,7 +10,9 @@
     tasks:
       - name: Downloading data from remote node
         synchronize:
-          src: "/tmp/dsb-wkld-data/{{ conf_id }}"
-          dest: "../wkld-data"
+          src: "/tmp/dsb-wkld-data/{{ conf_path }}/"
+          dest: "../wkld-data/{{ conf_path }}"
           use_ssh_args: yes
           mode: pull
+          rsync_opts:
+            - "--chmod=F777"

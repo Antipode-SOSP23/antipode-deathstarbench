@@ -107,6 +107,8 @@ services:
 clients:
   - client01
   - client02
+  - client03
+  - client04
 
 nodes:
   social-graph:
@@ -164,6 +166,14 @@ nodes:
     machine_type: e2-small
   client02:
     hostname: client02.pluribus
+    zone: us-central1-a
+    machine_type: e2-small
+  client03:
+    hostname: client03.pluribus
+    zone: us-central1-a
+    machine_type: e2-small
+  client04:
+    hostname: client04.pluribus
     zone: us-central1-a
     machine_type: e2-small
 
