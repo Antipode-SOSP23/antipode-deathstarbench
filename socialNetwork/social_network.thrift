@@ -1,3 +1,7 @@
+# if you need to update the gen-cpp, run this in a container
+# $ docker run --rm -it -v "$(pwd)/socialNetwork/:/socialNetwork yg397/thrift-microservice-deps:antipode bash
+# thrift -r --gen cpp social_network.thrift
+
 namespace cpp social_network
 namespace py social_network
 namespace lua social_network
@@ -206,6 +210,11 @@ service PostStorageService {
   BaseRpcResponse StorePost(
     1: i64 req_id,
     2: Post post,
+    3: map<string, string> carrier
+  ) throws (1: ServiceException se)
+
+  BaseRpcResponse AntipodeHintReplica(
+    2: i64 post_id,
     3: map<string, string> carrier
   ) throws (1: ServiceException se)
 

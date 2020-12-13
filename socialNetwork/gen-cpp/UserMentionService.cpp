@@ -46,14 +46,14 @@ uint32_t UserMentionService_UploadUserMentions_args::read(::apache::thrift::prot
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             this->usernames.clear();
-            uint32_t _size339;
-            ::apache::thrift::protocol::TType _etype342;
-            xfer += iprot->readListBegin(_etype342, _size339);
-            this->usernames.resize(_size339);
-            uint32_t _i343;
-            for (_i343 = 0; _i343 < _size339; ++_i343)
+            uint32_t _size348;
+            ::apache::thrift::protocol::TType _etype351;
+            xfer += iprot->readListBegin(_etype351, _size348);
+            this->usernames.resize(_size348);
+            uint32_t _i352;
+            for (_i352 = 0; _i352 < _size348; ++_i352)
             {
-              xfer += iprot->readString(this->usernames[_i343]);
+              xfer += iprot->readString(this->usernames[_i352]);
             }
             xfer += iprot->readListEnd();
           }
@@ -66,17 +66,17 @@ uint32_t UserMentionService_UploadUserMentions_args::read(::apache::thrift::prot
         if (ftype == ::apache::thrift::protocol::T_MAP) {
           {
             this->carrier.clear();
-            uint32_t _size344;
-            ::apache::thrift::protocol::TType _ktype345;
-            ::apache::thrift::protocol::TType _vtype346;
-            xfer += iprot->readMapBegin(_ktype345, _vtype346, _size344);
-            uint32_t _i348;
-            for (_i348 = 0; _i348 < _size344; ++_i348)
+            uint32_t _size353;
+            ::apache::thrift::protocol::TType _ktype354;
+            ::apache::thrift::protocol::TType _vtype355;
+            xfer += iprot->readMapBegin(_ktype354, _vtype355, _size353);
+            uint32_t _i357;
+            for (_i357 = 0; _i357 < _size353; ++_i357)
             {
-              std::string _key349;
-              xfer += iprot->readString(_key349);
-              std::string& _val350 = this->carrier[_key349];
-              xfer += iprot->readString(_val350);
+              std::string _key358;
+              xfer += iprot->readString(_key358);
+              std::string& _val359 = this->carrier[_key358];
+              xfer += iprot->readString(_val359);
             }
             xfer += iprot->readMapEnd();
           }
@@ -109,10 +109,10 @@ uint32_t UserMentionService_UploadUserMentions_args::write(::apache::thrift::pro
   xfer += oprot->writeFieldBegin("usernames", ::apache::thrift::protocol::T_LIST, 2);
   {
     xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->usernames.size()));
-    std::vector<std::string> ::const_iterator _iter351;
-    for (_iter351 = this->usernames.begin(); _iter351 != this->usernames.end(); ++_iter351)
+    std::vector<std::string> ::const_iterator _iter360;
+    for (_iter360 = this->usernames.begin(); _iter360 != this->usernames.end(); ++_iter360)
     {
-      xfer += oprot->writeString((*_iter351));
+      xfer += oprot->writeString((*_iter360));
     }
     xfer += oprot->writeListEnd();
   }
@@ -121,11 +121,11 @@ uint32_t UserMentionService_UploadUserMentions_args::write(::apache::thrift::pro
   xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 3);
   {
     xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->carrier.size()));
-    std::map<std::string, std::string> ::const_iterator _iter352;
-    for (_iter352 = this->carrier.begin(); _iter352 != this->carrier.end(); ++_iter352)
+    std::map<std::string, std::string> ::const_iterator _iter361;
+    for (_iter361 = this->carrier.begin(); _iter361 != this->carrier.end(); ++_iter361)
     {
-      xfer += oprot->writeString(_iter352->first);
-      xfer += oprot->writeString(_iter352->second);
+      xfer += oprot->writeString(_iter361->first);
+      xfer += oprot->writeString(_iter361->second);
     }
     xfer += oprot->writeMapEnd();
   }
@@ -153,10 +153,10 @@ uint32_t UserMentionService_UploadUserMentions_pargs::write(::apache::thrift::pr
   xfer += oprot->writeFieldBegin("usernames", ::apache::thrift::protocol::T_LIST, 2);
   {
     xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRING, static_cast<uint32_t>((*(this->usernames)).size()));
-    std::vector<std::string> ::const_iterator _iter353;
-    for (_iter353 = (*(this->usernames)).begin(); _iter353 != (*(this->usernames)).end(); ++_iter353)
+    std::vector<std::string> ::const_iterator _iter362;
+    for (_iter362 = (*(this->usernames)).begin(); _iter362 != (*(this->usernames)).end(); ++_iter362)
     {
-      xfer += oprot->writeString((*_iter353));
+      xfer += oprot->writeString((*_iter362));
     }
     xfer += oprot->writeListEnd();
   }
@@ -165,11 +165,11 @@ uint32_t UserMentionService_UploadUserMentions_pargs::write(::apache::thrift::pr
   xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 3);
   {
     xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>((*(this->carrier)).size()));
-    std::map<std::string, std::string> ::const_iterator _iter354;
-    for (_iter354 = (*(this->carrier)).begin(); _iter354 != (*(this->carrier)).end(); ++_iter354)
+    std::map<std::string, std::string> ::const_iterator _iter363;
+    for (_iter363 = (*(this->carrier)).begin(); _iter363 != (*(this->carrier)).end(); ++_iter363)
     {
-      xfer += oprot->writeString(_iter354->first);
-      xfer += oprot->writeString(_iter354->second);
+      xfer += oprot->writeString(_iter363->first);
+      xfer += oprot->writeString(_iter363->second);
     }
     xfer += oprot->writeMapEnd();
   }

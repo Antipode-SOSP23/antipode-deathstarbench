@@ -70,17 +70,17 @@ uint32_t UserTimelineService_WriteUserTimeline_args::read(::apache::thrift::prot
         if (ftype == ::apache::thrift::protocol::T_MAP) {
           {
             this->carrier.clear();
-            uint32_t _size258;
-            ::apache::thrift::protocol::TType _ktype259;
-            ::apache::thrift::protocol::TType _vtype260;
-            xfer += iprot->readMapBegin(_ktype259, _vtype260, _size258);
-            uint32_t _i262;
-            for (_i262 = 0; _i262 < _size258; ++_i262)
+            uint32_t _size267;
+            ::apache::thrift::protocol::TType _ktype268;
+            ::apache::thrift::protocol::TType _vtype269;
+            xfer += iprot->readMapBegin(_ktype268, _vtype269, _size267);
+            uint32_t _i271;
+            for (_i271 = 0; _i271 < _size267; ++_i271)
             {
-              std::string _key263;
-              xfer += iprot->readString(_key263);
-              std::string& _val264 = this->carrier[_key263];
-              xfer += iprot->readString(_val264);
+              std::string _key272;
+              xfer += iprot->readString(_key272);
+              std::string& _val273 = this->carrier[_key272];
+              xfer += iprot->readString(_val273);
             }
             xfer += iprot->readMapEnd();
           }
@@ -125,11 +125,11 @@ uint32_t UserTimelineService_WriteUserTimeline_args::write(::apache::thrift::pro
   xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 5);
   {
     xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->carrier.size()));
-    std::map<std::string, std::string> ::const_iterator _iter265;
-    for (_iter265 = this->carrier.begin(); _iter265 != this->carrier.end(); ++_iter265)
+    std::map<std::string, std::string> ::const_iterator _iter274;
+    for (_iter274 = this->carrier.begin(); _iter274 != this->carrier.end(); ++_iter274)
     {
-      xfer += oprot->writeString(_iter265->first);
-      xfer += oprot->writeString(_iter265->second);
+      xfer += oprot->writeString(_iter274->first);
+      xfer += oprot->writeString(_iter274->second);
     }
     xfer += oprot->writeMapEnd();
   }
@@ -169,11 +169,11 @@ uint32_t UserTimelineService_WriteUserTimeline_pargs::write(::apache::thrift::pr
   xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 5);
   {
     xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>((*(this->carrier)).size()));
-    std::map<std::string, std::string> ::const_iterator _iter266;
-    for (_iter266 = (*(this->carrier)).begin(); _iter266 != (*(this->carrier)).end(); ++_iter266)
+    std::map<std::string, std::string> ::const_iterator _iter275;
+    for (_iter275 = (*(this->carrier)).begin(); _iter275 != (*(this->carrier)).end(); ++_iter275)
     {
-      xfer += oprot->writeString(_iter266->first);
-      xfer += oprot->writeString(_iter266->second);
+      xfer += oprot->writeString(_iter275->first);
+      xfer += oprot->writeString(_iter275->second);
     }
     xfer += oprot->writeMapEnd();
   }
@@ -374,17 +374,17 @@ uint32_t UserTimelineService_ReadUserTimeline_args::read(::apache::thrift::proto
         if (ftype == ::apache::thrift::protocol::T_MAP) {
           {
             this->carrier.clear();
-            uint32_t _size267;
-            ::apache::thrift::protocol::TType _ktype268;
-            ::apache::thrift::protocol::TType _vtype269;
-            xfer += iprot->readMapBegin(_ktype268, _vtype269, _size267);
-            uint32_t _i271;
-            for (_i271 = 0; _i271 < _size267; ++_i271)
+            uint32_t _size276;
+            ::apache::thrift::protocol::TType _ktype277;
+            ::apache::thrift::protocol::TType _vtype278;
+            xfer += iprot->readMapBegin(_ktype277, _vtype278, _size276);
+            uint32_t _i280;
+            for (_i280 = 0; _i280 < _size276; ++_i280)
             {
-              std::string _key272;
-              xfer += iprot->readString(_key272);
-              std::string& _val273 = this->carrier[_key272];
-              xfer += iprot->readString(_val273);
+              std::string _key281;
+              xfer += iprot->readString(_key281);
+              std::string& _val282 = this->carrier[_key281];
+              xfer += iprot->readString(_val282);
             }
             xfer += iprot->readMapEnd();
           }
@@ -429,11 +429,11 @@ uint32_t UserTimelineService_ReadUserTimeline_args::write(::apache::thrift::prot
   xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 5);
   {
     xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->carrier.size()));
-    std::map<std::string, std::string> ::const_iterator _iter274;
-    for (_iter274 = this->carrier.begin(); _iter274 != this->carrier.end(); ++_iter274)
+    std::map<std::string, std::string> ::const_iterator _iter283;
+    for (_iter283 = this->carrier.begin(); _iter283 != this->carrier.end(); ++_iter283)
     {
-      xfer += oprot->writeString(_iter274->first);
-      xfer += oprot->writeString(_iter274->second);
+      xfer += oprot->writeString(_iter283->first);
+      xfer += oprot->writeString(_iter283->second);
     }
     xfer += oprot->writeMapEnd();
   }
@@ -473,11 +473,11 @@ uint32_t UserTimelineService_ReadUserTimeline_pargs::write(::apache::thrift::pro
   xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 5);
   {
     xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>((*(this->carrier)).size()));
-    std::map<std::string, std::string> ::const_iterator _iter275;
-    for (_iter275 = (*(this->carrier)).begin(); _iter275 != (*(this->carrier)).end(); ++_iter275)
+    std::map<std::string, std::string> ::const_iterator _iter284;
+    for (_iter284 = (*(this->carrier)).begin(); _iter284 != (*(this->carrier)).end(); ++_iter284)
     {
-      xfer += oprot->writeString(_iter275->first);
-      xfer += oprot->writeString(_iter275->second);
+      xfer += oprot->writeString(_iter284->first);
+      xfer += oprot->writeString(_iter284->second);
     }
     xfer += oprot->writeMapEnd();
   }

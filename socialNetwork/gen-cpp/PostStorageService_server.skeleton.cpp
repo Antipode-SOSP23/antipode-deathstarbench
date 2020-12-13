@@ -25,6 +25,11 @@ class PostStorageServiceHandler : virtual public PostStorageServiceIf {
     printf("StorePost\n");
   }
 
+  void AntipodeHintReplica(BaseRpcResponse& _return, const int64_t post_id, const std::map<std::string, std::string> & carrier) {
+    // Your implementation goes here
+    printf("AntipodeHintReplica\n");
+  }
+
   void ReadPost(PostRpcResponse& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("ReadPost\n");
