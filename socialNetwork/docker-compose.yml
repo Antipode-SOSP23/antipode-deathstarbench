@@ -115,9 +115,11 @@ services:
   #----------------------------------------------------------
   # write post at replica EU
   #----------------------------------------------------------
-  post-storage-service:
+  post-storage-service-eu:
     image: yg397/social-network-microservices:antipode
-    hostname: post-storage-service
+    hostname: post-storage-service-eu
+    environment:
+      - ZONE=eu
     # ports:
     #   - 10002:9090
     restart: always
@@ -126,9 +128,9 @@ services:
       placement:
         constraints: [node.hostname == node04]
 
-  post-storage-memcached:
+  post-storage-memcached-eu:
     image: memcached
-    hostname: post-storage-memcached
+    hostname: post-storage-memcached-eu
     # ports:
       # - 11212:11211
     restart: always
@@ -136,9 +138,9 @@ services:
       placement:
         constraints: [node.hostname == node04]
 
-  post-storage-mongodb:
+  post-storage-mongodb-eu:
     image: mongo
-    hostname: post-storage-mongodb
+    hostname: post-storage-mongodb-eu
     # command: --replSet rs0 --oplogSize 128
     command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata  --replSet rs0 --oplogSize 128"
     # ports:
@@ -524,7 +526,7 @@ services:
     #   context: ./docker/mongodb-setup/post-storage/
     #   dockerfile: Dockerfile
     depends_on:
-      - post-storage-mongodb
+      - post-storage-mongodb-eu
       - post-storage-mongodb-us
     restart: 'no'
     deploy:

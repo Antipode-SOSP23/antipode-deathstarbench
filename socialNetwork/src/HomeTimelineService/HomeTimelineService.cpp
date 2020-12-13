@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
       redis_addr, redis_port, 0, 10000, 1000);
 
   ClientPool<ThriftClient<PostStorageServiceClient>>
-      post_storage_client_pool("post-storage-client", post_storage_addr,
+      post_storage_client_pool("post-storage-client-us", post_storage_addr,
                                post_storage_port, 0, 10000, 1000);
 
   TThreadedServer server (

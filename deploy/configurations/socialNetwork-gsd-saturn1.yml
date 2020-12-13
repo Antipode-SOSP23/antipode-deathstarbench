@@ -26,11 +26,11 @@ services:
   # write post at replica EU
   #----------------------------------------------------------
   # 4 cores
-  post-storage-service: saturn1
-  post-storage-memcached: saturn1
+  post-storage-service-eu: saturn1
+  post-storage-memcached-eu: saturn1
   #
   # 1 / 2 cores
-  post-storage-mongodb: saturn1
+  post-storage-mongodb-eu: saturn1
 
   #----------------------------------------------------------
   # read post at US replica

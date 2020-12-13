@@ -30,6 +30,8 @@ using json = nlohmann::json;
 using std::chrono::milliseconds;
 using std::chrono::duration_cast;
 using std::chrono::system_clock;
+using std::chrono::high_resolution_clock;
+
 
 class ComposePostHandler : public ComposePostServiceIf {
  public:
@@ -775,6 +777,7 @@ void ComposePostHandler::_UploadPostHelper(
   TextMapReader reader(carrier);
   std::map<std::string, std::string> writer_text_map(carrier);
   TextMapWriter writer(writer_text_map);
+
   try{
     auto post_storage_client_wrapper = _post_storage_client_pool->Pop();
     if (!post_storage_client_wrapper) {
@@ -864,6 +867,14 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
   TextMapReader reader(carrier);
   std::map<std::string, std::string> writer_text_map(carrier);
   TextMapWriter writer(writer_text_map);
+
+  // Initialize a span
+  auto parent_span = opentracing::Tracer::Global()->Extract(reader);
+  auto span = opentracing::Tracer::Global()->StartSpan(
+    "_UploadHomeTimelineHelper",
+    { opentracing::ChildOf(parent_span->get()) });
+  opentracing::Tracer::Global()->Inject(span->context(), writer);
+
   try {
     std::string user_mentions_id_str = "[";
     for (auto &i : user_mentions_id){
@@ -907,6 +918,13 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
     }
     auto rabbitmq_channel = rabbitmq_client_wrapper->GetChannel();
     auto msg = AmqpClient::BasicMessage::Create(msg_str);
+
+    // save ts when notification as placed on rabbitmq
+    high_resolution_clock::time_point wht_start_queue_ts = high_resolution_clock::now();
+    uint64_t ts = duration_cast<milliseconds>(wht_start_queue_ts.time_since_epoch()).count();
+    span->SetTag("wht_start_queue_ts", std::to_string(ts));
+    //
+
     rabbitmq_channel->BasicPublish("", "write-home-timeline", msg);
     _rabbitmq_client_pool->Push(rabbitmq_client_wrapper);
   } catch (...) {
@@ -914,6 +932,7 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
     // XTRACE("Failed to connect to home-timeline-rabbitmq");
     _rabbitmq_teptr = std::current_exception();
   }
+  span->Finish();
   baggage_promise.set_value(BRANCH_CURRENT_BAGGAGE());
   DELETE_CURRENT_BAGGAGE();
 }

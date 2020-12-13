@@ -3,7 +3,7 @@ rsconf = {
   members: [
     {
       _id: 0,
-      host: "post-storage-mongodb:27017",
+      host: "post-storage-mongodb-eu:27017",
       priority: 1000
     },
     {

@@ -17,9 +17,9 @@ home-timeline-service: node03
 #----------------------------------------------------------
 # write post at replica EU
 #----------------------------------------------------------
-post-storage-service: saturn1
-post-storage-memcached: saturn1
-post-storage-mongodb: saturn1
+post-storage-service-eu: saturn1
+post-storage-memcached-eu: saturn1
+post-storage-mongodb-eu: saturn1
 
 #----------------------------------------------------------
 # read post at US replica

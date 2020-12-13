@@ -5,7 +5,7 @@ echo "*********************************"
 
 sleep 60 | echo "Sleeping"
 
-mongo mongodb://post-storage-mongodb:27017 replicaSet.js
+mongo mongodb://post-storage-mongodb-eu:27017 replicaSet.js
 done=$?
 
 echo "*********************************"

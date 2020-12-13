@@ -12,11 +12,13 @@ memcached_pool_st *init_memcached_client_pool(
     uint32_t min_size,
     uint32_t max_size
 ) {
+  // read zone from env variables and set if needed
   std::string zone = "";
   if (std::getenv("ZONE") != NULL) {
     std::string zone_env_str(std::getenv("ZONE"));
     zone = "-" + zone_env_str;
   }
+
   std::string addr = config_json[service_name + "-memcached" + zone]["addr"];
   int port = config_json[service_name + "-memcached" + zone]["port"];
   std::string config_str = "--SERVER=" + addr + ":" + std::to_string(port);

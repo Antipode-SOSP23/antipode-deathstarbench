@@ -36,8 +36,8 @@ int main(int argc, char *argv[]) {
   int rabbitmq_port = config_json["write-home-timeline-rabbitmq"]["port"];
   std::string rabbitmq_addr = config_json["write-home-timeline-rabbitmq"]["addr"];
 
-  int post_storage_port = config_json["post-storage-service"]["port"];
-  std::string post_storage_addr = config_json["post-storage-service"]["addr"];
+  int post_storage_port = config_json["post-storage-service-eu"]["port"];
+  std::string post_storage_addr = config_json["post-storage-service-eu"]["addr"];
 
   int user_timeline_port = config_json["user-timeline-service"]["port"];
   std::string user_timeline_addr = config_json["user-timeline-service"]["addr"];
@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
                                             0, 10000, 1000);
 
   ClientPool<ThriftClient<PostStorageServiceClient>>
-      post_storage_client_pool("post-storage-client", post_storage_addr,
+      post_storage_client_pool("post-storage-client-eu", post_storage_addr,
                                post_storage_port, 0, 10000, 1000);
 
   ClientPool<ThriftClient<UserTimelineServiceClient>>

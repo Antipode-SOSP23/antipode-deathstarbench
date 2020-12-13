@@ -47,7 +47,25 @@ namespace social_network {
     bool MakeVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier) {
       LOG(debug) << "[ANTIPODE] Making '" << object_id << "' visible ..." ;
 
+      // Jaeger tracing
+      TextMapReader span_reader(carrier);
+      auto parent_span = opentracing::Tracer::Global()->Extract(span_reader);
+      auto span = opentracing::Tracer::Global()->StartSpan(
+          "MakeVisible",
+          {opentracing::ChildOf(parent_span->get())});
+      std::map<std::string, std::string> writer_text_map;
+      TextMapWriter writer(writer_text_map);
+      opentracing::Tracer::Global()->Inject(span->context(), writer);
+
+      // save ts when notification as placed on rabbitmq
+      high_resolution_clock::time_point make_visible_ts = high_resolution_clock::now();
+      uint64_t ts = duration_cast<milliseconds>(make_visible_ts.time_since_epoch()).count();
+      span->SetTag("make_visible_ts", std::to_string(ts));
+      //
+
       cache.insert(object_id);
+
+      span->Finish();
       return true;
     }
 
@@ -76,14 +94,20 @@ namespace social_network {
         cacheit = cache.find(object_id);
         if (cacheit != cache.end()){
           // add metrics to span to read later
-          high_resolution_clock::time_point end_ts = high_resolution_clock::now();
-          duration<double, std::milli> timespent = end_ts - start_ts;
-          span->SetTag("antipode_isvisible_duration", std::to_string(timespent.count()));
           span->SetTag("antipode_isvisible_attempts", std::to_string(attempts));
+
+          high_resolution_clock::time_point is_visible_ts = high_resolution_clock::now();
+          uint64_t ts = duration_cast<milliseconds>(is_visible_ts.time_since_epoch()).count();
+          span->SetTag("is_visible_ts", std::to_string(ts));
+
+          duration<double, std::milli> timespent = is_visible_ts - start_ts;
+          span->SetTag("antipode_isvisible_duration", std::to_string(timespent.count()));
+          span->Finish();
 
           return true;
         }
       }
+      span->Finish();
       return false;
     }
   };

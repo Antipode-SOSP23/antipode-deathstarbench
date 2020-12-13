@@ -17,9 +17,9 @@ home-timeline-service: node03
 #----------------------------------------------------------
 # write post at replica EU
 #----------------------------------------------------------
-post-storage-service: node04
-post-storage-memcached: node04
-post-storage-mongodb: node04
+post-storage-service-eu: node04
+post-storage-memcached-eu: node04
+post-storage-mongodb-eu: node04
 
 #----------------------------------------------------------
 # read post at US replica

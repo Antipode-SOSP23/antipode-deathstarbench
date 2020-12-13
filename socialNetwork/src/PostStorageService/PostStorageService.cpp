@@ -36,8 +36,11 @@ void sigintHandler(int sig) {
 
 int main(int argc, char *argv[]) {
   signal(SIGINT, sigintHandler);
+  std::string zone = (std::getenv("ZONE") == NULL) ? "eu" : std::getenv("ZONE");
+  std::string service_name = "post-storage-service-" + zone;
+
   init_logger();
-  SetUpTracer("config/jaeger-config.yml", "post-storage-service");
+  SetUpTracer("config/jaeger-config.yml", service_name);
 
   json config_json;
   if (load_config_file("config/service-config.json", &config_json) != 0) {
@@ -47,8 +50,7 @@ int main(int argc, char *argv[]) {
   memcached_client_pool =
       init_memcached_client_pool(config_json, "post-storage", 32, 1024);
 
-  int port = config_json["post-storage-service"]["port"];
-  std::string zone = (std::getenv("ZONE") == NULL) ? "" : std::getenv("ZONE");
+  int port = config_json[service_name]["port"];
 
   mongodb_client_pool = init_mongodb_client_pool(config_json, "post-storage", zone, 1024);
   if (memcached_client_pool == nullptr || mongodb_client_pool == nullptr) {
@@ -94,7 +96,7 @@ int main(int argc, char *argv[]) {
   mongoc_client_pool_push(mongodb_client_pool, mongodb_client);
 
   // mongoc in US
-  mongodb_client_pool_us = (std::getenv("ZONE") == NULL) ? init_mongodb_client_pool(config_json, "post-storage", "us", 1024) : mongodb_client_pool;
+  mongodb_client_pool_us = (zone == "") ? init_mongodb_client_pool(config_json, "post-storage", "us", 1024) : mongodb_client_pool;
   if (mongodb_client_pool_us == nullptr) {
     return EXIT_FAILURE;
   }
@@ -127,6 +129,6 @@ int main(int argc, char *argv[]) {
       std::make_shared<TBinaryProtocolFactory>()
   );
 
-  std::cout << "Starting the post-storage-service server..." << std::endl;
+  std::cout << "Starting the " << service_name << " server..." << std::endl;
   server.serve();
 }

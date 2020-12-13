@@ -20,9 +20,9 @@ services:
   #----------------------------------------------------------
   # write post at replica EU
   #----------------------------------------------------------
-  post-storage-service: node01
-  post-storage-memcached: node01
-  post-storage-mongodb: node01
+  post-storage-service-eu: node01
+  post-storage-memcached-eu: node01
+  post-storage-mongodb-eu: node01
 
   #----------------------------------------------------------
   # read post at US replica

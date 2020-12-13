@@ -39,8 +39,8 @@ int main(int argc, char *argv[]) {
       config_json["user-timeline-redis"]["addr"];
   int redis_port = config_json["user-timeline-redis"]["port"];
 
-  int post_storage_port = config_json["post-storage-service"]["port"];
-  std::string post_storage_addr = config_json["post-storage-service"]["addr"];
+  int post_storage_port = config_json["post-storage-service-eu"]["port"];
+  std::string post_storage_addr = config_json["post-storage-service-eu"]["addr"];
 
   auto mongodb_client_pool = init_mongodb_client_pool(
       config_json, "user-timeline", "", 10000);
@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
   }
 
   ClientPool<ThriftClient<PostStorageServiceClient>>
-      post_storage_client_pool("post-storage-client", post_storage_addr,
+      post_storage_client_pool("post-storage-client-eu", post_storage_addr,
                                post_storage_port, 0, 10000, 1000);
 
   mongoc_client_t *mongodb_client = mongoc_client_pool_pop(mongodb_client_pool);

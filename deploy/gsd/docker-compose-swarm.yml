@@ -186,12 +186,12 @@ services:
     - ./nginx-web-server/conf/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
     - ./nginx-web-server/jaeger-config.json:/usr/local/openresty/nginx/jaeger-config.json
     - ./gen-lua:/gen-lua
-  post-storage-memcached:
+  post-storage-memcached-eu:
     deploy:
       placement:
         constraints:
         - node.hostname == saturn1
-    hostname: post-storage-memcached
+    hostname: post-storage-memcached-eu
     image: memcached
     networks:
     - deathstarbench_network
@@ -206,14 +206,14 @@ services:
     networks:
     - deathstarbench_network
     restart: always
-  post-storage-mongodb:
+  post-storage-mongodb-eu:
     command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata  --replSet
       rs0 --oplogSize 128"
     deploy:
       placement:
         constraints:
         - node.hostname == saturn1
-    hostname: post-storage-mongodb
+    hostname: post-storage-mongodb-eu
     image: mongo
     networks:
     - deathstarbench_network
@@ -224,7 +224,7 @@ services:
       type: tmpfs
   post-storage-mongodb-setup:
     depends_on:
-    - post-storage-mongodb
+    - post-storage-mongodb-eu
     - post-storage-mongodb-us
     deploy:
       placement:
@@ -254,13 +254,13 @@ services:
       tmpfs:
         size: 3000000000
       type: tmpfs
-  post-storage-service:
+  post-storage-service-eu:
     deploy:
       placement:
         constraints:
         - node.hostname == saturn1
     entrypoint: PostStorageService
-    hostname: post-storage-service
+    hostname: post-storage-service-eu
     image: yg397/social-network-microservices:antipode
     networks:
     - deathstarbench_network

@@ -44,24 +44,24 @@
     "addr": "user-timeline-redis",
     "port": 6379
   },
-  "post-storage-service": {
-    "addr": "post-storage-service",
+  "post-storage-service-eu": {
+    "addr": "post-storage-service-eu",
     "port": 9090
   },
   "post-storage-service-us": {
     "addr": "post-storage-service-us",
     "port": 9090
   },
-  "post-storage-mongodb": {
-    "addr": "post-storage-mongodb",
+  "post-storage-mongodb-eu": {
+    "addr": "post-storage-mongodb-eu",
     "port": 27017
   },
   "post-storage-mongodb-us": {
     "addr": "post-storage-mongodb-us",
     "port": 27017
   },
-  "post-storage-memcached": {
-    "addr": "post-storage-memcached",
+  "post-storage-memcached-eu": {
+    "addr": "post-storage-memcached-eu",
     "port": 11211
   },
   "post-storage-memcached-us": {
