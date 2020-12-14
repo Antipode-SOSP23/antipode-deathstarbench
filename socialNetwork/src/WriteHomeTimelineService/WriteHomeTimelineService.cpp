@@ -38,6 +38,8 @@ void sigintHandler(int sig) {
 
 void OnReceivedWorker(const AMQP::Message &msg) {
   high_resolution_clock::time_point start_worker_ts = high_resolution_clock::now();
+  uint64_t ts = duration_cast<milliseconds>(start_worker_ts.time_since_epoch()).count();
+
   try {
     json msg_json = json::parse(std::string(msg.body(), msg.bodySize()));
 
@@ -66,6 +68,9 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     std::map<std::string, std::string> writer_text_map;
     TextMapWriter writer(writer_text_map);
     opentracing::Tracer::Global()->Inject(span->context(), writer);
+
+    // eval
+    span->SetTag("wth_start_worker_ts", std::to_string(ts));
 
     // Extract information from rabbitmq messages
     int64_t user_id = msg_json["user_id"];
@@ -167,11 +172,8 @@ void OnReceivedWorker(const AMQP::Message &msg) {
 
     // add metrics to span to read later
     high_resolution_clock::time_point end_worker_ts = high_resolution_clock::now();
-    duration<double, std::milli> worker_timespent = end_worker_ts - start_worker_ts;
-
-    span->SetTag("wht_worker_duration", std::to_string(worker_timespent.count()));
-    uint64_t ts = duration_cast<milliseconds>(end_worker_ts.time_since_epoch()).count();
-    span->SetTag("wht_notification_ts", std::to_string(ts));
+    ts = duration_cast<milliseconds>(end_worker_ts.time_since_epoch()).count();
+    span->SetTag("wth_end_worker_ts", std::to_string(ts));
 
   } catch (...) {
     LOG(error) << "OnReveived worker error";

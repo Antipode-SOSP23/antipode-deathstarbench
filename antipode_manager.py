@@ -176,6 +176,9 @@ GCP_CREDENTIALS_FILE = ROOT_PATH / 'deploy' / 'gcp' / 'pluribus.json'
 GCP_PROJECT_ID = 'pluribus'
 GCP_MACHINE_IMAGE_LINK = f"https://www.googleapis.com/compute/v1/projects/{GCP_PROJECT_ID}/global/images/antipode"
 
+# GATHER variables
+PERCENTILES_TO_PRINT = [.25, .5, .75, .90, .99]
+
 
 #############################
 # HELPER
@@ -420,6 +423,7 @@ def build__socialNetwork__gcp(args):
   #     - docker pull mongo:latest
   #     - docker pull mrvautin/adminmongo:latest
   #     - docker pull rabbitmq:latest
+  #     - docker pull rabbitmq:management
   #     - docker pull redis:latest
   #     - docker pull portainer/agent:latest
   #     - docker pull portainer/portainer-ce:latest
@@ -517,9 +521,9 @@ def deploy__socialNetwork__gsd(args):
         print("[ERROR] Found unknown nodes in GSD cluster: " + ', '.join(unknonwn_nodes))
         exit()
   if args['latest']:
-    filepath = _last_configuration('socialNetwork', 'gsd')
+    filepath = args['configuration_path']
   if args['file']:
-    filepath = ROOT_PATH / args['file'].name
+    filepath = args['configuration_path']
 
   # Update docker-compose.yml
   deploy_nodes = {}
@@ -630,9 +634,9 @@ def deploy__socialNetwork__gcp(args):
     with open(filepath, 'w') as f_conf:
       yaml.dump(written_conf, f_conf)
   if args['latest']:
-    filepath = _last_configuration('socialNetwork', 'gcp')
+    filepath = args['configuration_path']
   if args['file']:
-    filepath = ROOT_PATH / args['file'].name
+    filepath = args['configuration_path']
 
 
   with open(filepath, 'r') as f_conf:
@@ -782,11 +786,7 @@ def run__socialNetwork__local(args):
 def run__socialNetwork__gsd(args):
   from plumbum.cmd import ansible_playbook
 
-  filepath = None
-  if args['latest']:
-    filepath = _last_configuration('socialNetwork', 'gsd')
-  if args['file']:
-    filepath = ROOT_PATH / args['file'].name
+  filepath = args['configuration_path']
   if filepath is None:
     print('[ERROR] Deploy file is required')
     exit(-1)
@@ -815,11 +815,7 @@ def run__socialNetwork__gcp(args):
   _force_docker()
   from plumbum.cmd import ansible_playbook
 
-  filepath = None
-  if args['latest']:
-    filepath = _last_configuration('socialNetwork', 'gsd')
-  if args['file']:
-    filepath = ROOT_PATH / args['file'].name
+  filepath = args['configuration_path']
   if filepath is None:
     print('[ERROR] Deploy file is required')
     exit(-1)
@@ -971,11 +967,7 @@ def wkld__socialNetwork__gsd__hosts(args):
   # eu - nginx-thrift: node23
   # us - nginx-thrift-us: node24§
 
-  if args['latest']:
-    filepath = _last_configuration('socialNetwork', 'gsd')
-  if args['file']:
-    filepath = ROOT_PATH / args['file'].name
-
+  filepath = args['configuration_path']
   with open(filepath, 'r') as f_conf:
     conf = yaml.load(f_conf, Loader=yaml.FullLoader)
     return {
@@ -986,11 +978,7 @@ def wkld__socialNetwork__gsd__hosts(args):
 def wkld__socialNetwork__gcp__hosts(args):
   import yaml
 
-  if args['latest']:
-    filepath = _last_configuration('socialNetwork', 'gcp')
-  if args['file']:
-    filepath = ROOT_PATH / args['file'].name
-
+  filepath = args['configuration_path']
   with open(filepath, 'r') as f_conf:
     conf = yaml.load(f_conf, Loader=yaml.FullLoader)
     inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'inventory.cfg')
@@ -1018,10 +1006,7 @@ def wkld__socialNetwork__gsd__run(args, hosts, exe_path, exe_args):
   app_dir = ROOT_PATH / args['app']
   os.chdir(ROOT_PATH / 'deploy')
 
-  if args['latest']:
-    conf_filepath = Path(_last_configuration('socialNetwork', 'gsd'))
-  if args['file']:
-    conf_filepath = ROOT_PATH / args['file'].name
+  conf_filepath = args['configuration_path']
 
   # Create inventory for clients
   template = """
@@ -1088,10 +1073,7 @@ def wkld__socialNetwork__gcp__run(args, hosts, exe_path, exe_args):
   import textwrap
   import yaml
 
-  if args['latest']:
-    conf_filepath = Path(_last_configuration('socialNetwork', 'gcp'))
-  if args['file']:
-    conf_filepath = ROOT_PATH / args['file'].name
+  conf_filepath = args['configuration_path']
 
   with open(conf_filepath, 'r') as f_conf:
     conf = yaml.load(f_conf, Loader=yaml.FullLoader)
@@ -1212,7 +1194,18 @@ def _fetch_span_tag(tags, tag_to_search):
 def gather(args):
   import pandas as pd
   import requests
+  from plumbum.cmd import sudo
+
   pd.set_option('display.float_format', lambda x: '%.3f' % x)
+
+  wkld_data_path = ROOT_PATH / 'deploy' / 'wkld-data' / Path(args['configuration_path']).stem
+  # get latest conf directory
+  wkld_data_path = max(wkld_data_path.iterdir())
+
+  # force chmod of that dir
+  sudo['chmod', 777, wkld_data_path] & FG
+
+  os.chdir(wkld_data_path)
 
   try:
     # get host for each zone
@@ -1221,90 +1214,111 @@ def gather(args):
     limit = int(input(f"Visit {jaeger_host}/dependencies to check number of flowing requests: "))
     traces = []
 
+    # curl -X GET "jaeger:16686/api/traces?service=write-home-timeline-service&prettyPrint=true
+    params = (
+      ('service', 'antipode-oracle'),
+      ('limit', limit),
+      ('lookback', '1h'),
+      # ('prettyPrint', 'true'),
+    )
+    response = requests.get(f'{jaeger_host}/api/traces', params=params)
+
+    # error if we do not get a 200 OK code
+    if response.status_code != 200 :
+      print("[ERROR] Could not fetch traces from Jaeger")
+      exit(-1)
+
+    # error if we do not retreive all traces
+    if len(traces) == limit:
+      print(f"[WARN] Fetched the same amount of traces as the limit ({limit}). Increase the limit to fetch all traces.")
+
+    # read returned traces
+    content = response.json()
+    with open('jaeger.json', 'w') as f:
+      print(content, file=f)
+
     if args['antipode_ts']:
-      # curl -X GET "jaeger:16686/api/traces?service=write-home-timeline-service&prettyPrint=true
-      params = (
-        ('service', 'antipode-oracle'),
-        ('limit', limit),
-        ('lookback', '1h'),
-        # ('prettyPrint', 'true'),
-      )
-      response = requests.get(f'{jaeger_host}/api/traces', params=params)
-
-      # error if we do not get a 200 OK code
-      if response.status_code != 200 :
-        print("[ERROR] Could not fetch traces from Jaeger")
-        exit(-1)
-
-      # error if we do not retreive all traces
-      if len(traces) == limit:
-        print(f"[WARN] Fetched the same amount of traces as the limit ({limit}). Increase the limit to fetch all traces.")
-
-      # read returned traces
-      content = response.json()
-
       # pick only the traces with the desired info
       for trace in content['data']:
         trace_info = {
           # 'trace_id': trace['spans'][0]['traceID'],
-          'post_id': -1,
-          'antipode_isvisible_duration': -1,
-          'antipode_isvisible_attempts': -1,
-          'wht_antipode_duration': -1,
-          'wht_worker_duration': -1,
-          'wht_worker_per_antipode': -1,
+          'post_id': None,
+          # 'antipode_isvisible_duration': -1,
+          # 'antipode_isvisible_attempts': -1,
+          'wht_start_queue_ts': None,
+          'wth_start_worker_ts': None,
+          'wth_end_worker_ts': None,
+          'wht_antipode_duration': None,
         }
 
         # search trace info in different spans
         for s in trace['spans']:
           if s['operationName'] == '_ComposeAndUpload':
-            trace_info['post_id'] = int(_fetch_span_tag(s['tags'], 'composepost_id'))
+            trace_info['post_id'] = float(_fetch_span_tag(s['tags'], 'composepost_id'))
 
-          if s['operationName'] == 'IsVisible':
-            trace_info['antipode_isvisible_duration'] = float(_fetch_span_tag(s['tags'], 'antipode_isvisible_duration'))
-            trace_info['antipode_isvisible_attempts'] = int(_fetch_span_tag(s['tags'], 'antipode_isvisible_attempts'))
+
+          if s['operationName'] == '_UploadHomeTimelineHelper':
+            # compute the time spent in the queue
+            trace_info['wht_start_queue_ts'] = float(_fetch_span_tag(s['tags'], 'wht_start_queue_ts'))
+
+          # these values are captured by wht_antipode_duration
+          # if s['operationName'] == 'IsVisible':
+            # trace_info['antipode_isvisible_duration'] = float(_fetch_span_tag(s['tags'], 'antipode_isvisible_duration'))
+            # trace_info['antipode_isvisible_attempts'] = int(_fetch_span_tag(s['tags'], 'antipode_isvisible_attempts'))
 
           if s['operationName'] == 'FanoutHomeTimelines':
+            # duration spent in antipode
             trace_info['wht_antipode_duration'] = float(_fetch_span_tag(s['tags'], 'wht_antipode_duration'))
-            trace_info['wht_worker_duration'] = float(_fetch_span_tag(s['tags'], 'wht_worker_duration'))
+            # compute the time spent in the queue
+            trace_info['wth_start_worker_ts'] = float(_fetch_span_tag(s['tags'], 'wth_start_worker_ts'))
+            # total time spent in antipode operations while in WHT
+            trace_info['wth_end_worker_ts'] = float(_fetch_span_tag(s['tags'], 'wth_end_worker_ts'))
 
-        # percentage of time spent in antipode
-        trace_info['wht_worker_per_antipode'] = trace_info['wht_antipode_duration'] / trace_info['wht_worker_duration']
+        # skip if we still have -1 values
+        if any(v is None for v in trace_info.values()):
+          print(f"[INFO] trace missing information: {trace_info}")
+          continue
+
+        # total time of worker
+        diff = datetime.fromtimestamp(trace_info['wth_end_worker_ts']/1000.0) - datetime.fromtimestamp(trace_info['wth_start_worker_ts']/1000.0)
+        trace_info['wht_worker_duration'] = float(diff.total_seconds() * 1000)
+
+        try:
+          trace_info['wht_worker_per_antipode'] = trace_info['wht_antipode_duration'] / trace_info['wht_worker_duration']
+        except ZeroDivisionError:
+          trace_info['wht_worker_per_antipode'] = 1
+
+        # computes time spent queued in rabbitmq
+        diff = datetime.fromtimestamp(trace_info['wth_start_worker_ts']/1000.0) - datetime.fromtimestamp(trace_info['wht_start_queue_ts']/1000.0)
+        trace_info['wht_queue_duration'] = float(diff.total_seconds() * 1000)
+
+        # queue + worker time
+        diff = datetime.fromtimestamp(trace_info['wth_end_worker_ts']/1000.0) - datetime.fromtimestamp(trace_info['wht_start_queue_ts']/1000.0)
+        trace_info['wht_total_duration'] = float(diff.total_seconds() * 1000)
+
         traces.append(trace_info)
 
       df = pd.DataFrame(traces)
-      df = df.set_index('post_id')
-      print(df.describe(percentiles=[.25, .5, .75, .90, .99]))
+      del df['post_id']
+      del df['wht_start_queue_ts']
+      del df['wth_start_worker_ts']
+      del df['wth_end_worker_ts']
+
+      # print to file and to output
+      with open('antipode_ts.out', 'w') as f:
+        print(df.describe(percentiles=PERCENTILES_TO_PRINT), file=f)
+      # --
+      print(df.describe(percentiles=PERCENTILES_TO_PRINT))
 
     elif args['visibility_latency']:
-      # curl -X GET "jaeger:16686/api/traces?service=write-home-timeline-service&prettyPrint=true
-      params = (
-        ('service', 'post-storage-service'),
-        ('limit', limit),
-        ('lookback', '1h'),
-        # ('prettyPrint', 'true'),
-      )
-      response = requests.get(f'{jaeger_host}/api/traces', params=params)
-
-      # error if we do not get a 200 OK code
-      if response.status_code != 200 :
-        print("[ERROR] Could not fetch traces from Jaeger")
-        exit(-1)
-
-      # error if we do not retreive all traces
-      if len(traces) == limit:
-        print(f"[WARN] Fetched the same amount of traces as the limit ({limit}). Increase the limit to fetch all traces.")
-
-      # read returned traces
-      content = response.json()
-
       # pick only the traces with the desired info
       for trace in content['data']:
         trace_info = {
           # 'trace_id': trace['spans'][0]['traceID'],
           'post_id': -1,
-          'poststorage_post_visible': -1,
-          'wht_notification_ts': -1,
+          'poststorage_post_written_ts': -1,
+          'poststorage_post_replicated_ts': -1,
+          'wth_end_worker_ts': -1,
           'post_notification_diff_ms': -1,
         }
 
@@ -1314,27 +1328,35 @@ def gather(args):
             trace_info['post_id'] = int(_fetch_span_tag(s['tags'], 'composepost_id'))
 
           if s['operationName'] == 'FanoutHomeTimelines':
-            trace_info['wht_notification_ts'] = int(_fetch_span_tag(s['tags'], 'wht_notification_ts'))
+            trace_info['wth_end_worker_ts'] = int(_fetch_span_tag(s['tags'], 'wth_end_worker_ts'))
 
           if s['operationName'] == 'StorePost':
-            trace_info['poststorage_post_visible'] = int(_fetch_span_tag(s['tags'], 'poststorage_post_visible'))
+            trace_info['poststorage_post_written_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_post_written_ts'))
+
+          if s['operationName'] == 'AntipodeHintReplica':
+            trace_info['poststorage_post_replicated_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_post_replicated_ts'))
 
         # computes the different in ms from post to notification
-        diff = datetime.fromtimestamp(trace_info['poststorage_post_visible']/1000.0) - datetime.fromtimestamp(trace_info['wht_notification_ts']/1000.0)
+        diff = datetime.fromtimestamp(trace_info['poststorage_post_replicated_ts']/1000.0) - datetime.fromtimestamp(trace_info['wth_end_worker_ts']/1000.0)
         trace_info['post_notification_diff_ms'] = float(diff.total_seconds() * 1000)
 
+        diff = datetime.fromtimestamp(trace_info['poststorage_post_replicated_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_post_written_ts']/1000.0)
+        trace_info['replication_duration_ms'] = float(diff.total_seconds() * 1000)
+
         traces.append(trace_info)
+
 
       df = pd.DataFrame(traces)
       df = df.set_index('post_id')
       # delete unnecessary columns
-      del df['poststorage_post_visible']
-      del df['wht_notification_ts']
+      del df['poststorage_post_written_ts']
+      del df['poststorage_post_replicated_ts']
+      del df['wth_end_worker_ts']
 
-      print(df.describe(percentiles=[.25, .5, .75, .90, .99]))
+      print(df.describe(percentiles=PERCENTILES_TO_PRINT))
       print("")
-      num_posts_before_notifications = len([n for n in df['post_notification_diff_ms'] if n >= 0])
-      num_notifications_before_posts = len([n for n in df['post_notification_diff_ms'] if n < 0])
+      num_posts_before_notifications = len([n for n in df['post_notification_diff_ms'] if n < 0])
+      num_notifications_before_posts = len([n for n in df['post_notification_diff_ms'] if n >= 0])
       print(f"% posts ready before notifications: {num_posts_before_notifications/float(len(df))}")
       print(f"% notifications ready before posts: {num_notifications_before_posts/float(len(df))}")
 
@@ -1348,13 +1370,7 @@ def gather__socialNetwork__local(args):
 def gather__socialNetwork__gsd(args):
   import yaml
 
-  filepath = None
-
-  if args['latest']:
-    filepath = _last_configuration('socialNetwork', 'gsd')
-  if args['file']:
-    filepath = ROOT_PATH / args['file'].name
-
+  filepath = args['configuration_path']
   with open(filepath, 'r') as f_conf:
     conf = yaml.load(f_conf, Loader=yaml.FullLoader)
     return f"http://{GSD_AVAILABLE_NODES[conf['services']['jaeger']]}:16686"
@@ -1362,12 +1378,7 @@ def gather__socialNetwork__gsd(args):
 def gather__socialNetwork__gcp(args):
   import yaml
 
-  filepath = None
-  if args['latest']:
-    filepath = _last_configuration('socialNetwork', 'gcp')
-  if args['file']:
-    filepath = ROOT_PATH / args['file'].name
-
+  filepath = args['configuration_path']
   with open(filepath, 'r') as f_conf:
     conf = yaml.load(f_conf, Loader=yaml.FullLoader)
     inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'inventory.cfg')
