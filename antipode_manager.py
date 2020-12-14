@@ -1454,5 +1454,12 @@ if __name__ == "__main__":
   # if Path.cwd().name != args['app']:
   #   os.chdir(Path.cwd().joinpath(args['app']))
 
+  deploy_type = _deploy_type(args)
+  args['configuration_path'] = None
+  if 'latest' in args and args['latest']:
+    args['configuration_path'] = _last_configuration('socialNetwork', deploy_type)
+  if 'file' in args and args['file']:
+    args['configuration_path'] = ROOT_PATH / args['file'].name
+
   # call parser method dynamically
   getattr(sys.modules[__name__], command)(args)
