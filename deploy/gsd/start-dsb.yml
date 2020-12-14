@@ -35,12 +35,3 @@
       retries: 6
       delay: 30
       until: (cmd_res.stdout | int) == 1
-
-    - name: Init social graph
-      # task sleeps to make sure everything is initialized
-      shell: >
-            sleep 60 ;
-            cd /home/jfloff/nas_inesc/antipode/antipode-deathstarbench ;
-            ./antipode_manager.py {{ app }} --gsd wkld -l -E init-social-graph -r 1
-      register: out
-      failed_when: "not(out.rc == 0) or 'fail' in out.stderr"

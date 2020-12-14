@@ -782,6 +782,15 @@ def run__socialNetwork__local(args):
 def run__socialNetwork__gsd(args):
   from plumbum.cmd import ansible_playbook
 
+  filepath = None
+  if args['latest']:
+    filepath = _last_configuration('socialNetwork', 'gsd')
+  if args['file']:
+    filepath = ROOT_PATH / args['file'].name
+  if filepath is None:
+    print('[ERROR] Deploy file is required')
+    exit(-1)
+
   # change path to playbooks folder
   os.chdir(ROOT_PATH / 'deploy' / 'gsd')
 
@@ -794,11 +803,26 @@ def run__socialNetwork__gsd(args):
   time.sleep(20)
 
   ansible_playbook['start-dsb.yml', '-e', 'app=socialNetwork'] & FG
+
+  # init social graph
+  print("[INFO] Sleeping before init with the social graph dataset ...")
+  time.sleep(30)
+  ansible_playbook['init-social-graph.yml', '-e', 'app=socialNetwork', '-e', f"configuration={filepath}"] & FG
+
   print("[INFO] Run Complete!")
 
 def run__socialNetwork__gcp(args):
   _force_docker()
   from plumbum.cmd import ansible_playbook
+
+  filepath = None
+  if args['latest']:
+    filepath = _last_configuration('socialNetwork', 'gsd')
+  if args['file']:
+    filepath = ROOT_PATH / args['file'].name
+  if filepath is None:
+    print('[ERROR] Deploy file is required')
+    exit(-1)
 
   # change path to playbooks folder
   os.chdir(ROOT_PATH / 'deploy' / 'gcp')
@@ -818,7 +842,7 @@ def run__socialNetwork__gcp(args):
   # init social graph
   print("[INFO] Sleeping before init with the social graph dataset ...")
   time.sleep(30)
-  ansible_playbook['init-social-graph.yml', '-e', 'app=socialNetwork'] & FG
+  ansible_playbook['init-social-graph.yml', '-e', 'app=socialNetwork', '-e', f"configuration={filepath}"] & FG
 
   print("[INFO] Run Complete!")
 
@@ -1380,6 +1404,10 @@ if __name__ == "__main__":
   run_parser = subparsers.add_parser('run', help='Run application')
   run_parser.add_argument('-d', '--detached', action='store_true', help="detached")
   run_parser.add_argument('--build', action='store_true', help="build")
+  # deploy file group
+  deploy_file_group = run_parser.add_mutually_exclusive_group(required=False)
+  deploy_file_group.add_argument('-l', '--latest', action='store_true', help="Use last used deploy file")
+  deploy_file_group.add_argument('-f', '--file', type=argparse.FileType('r', encoding='UTF-8'), help="Use specific file")
 
   # deploy application
   deploy_parser = subparsers.add_parser('deploy', help='Deploy application')

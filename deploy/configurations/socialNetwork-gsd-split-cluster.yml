@@ -1,74 +1,75 @@
-#----------------------------------------------------------
-# Write notifications at EU replica
-#----------------------------------------------------------
-social-graph-service: saturn1
-social-graph-mongodb: saturn1
-social-graph-redis: saturn1
-write-home-timeline-service: saturn1
-write-home-timeline-rabbitmq: saturn1
-home-timeline-redis: saturn1
+services:
+  #----------------------------------------------------------
+  # Write notifications at EU replica
+  #----------------------------------------------------------
+  social-graph-service: saturn1
+  social-graph-mongodb: saturn1
+  social-graph-redis: saturn1
+  write-home-timeline-service: saturn1
+  write-home-timeline-rabbitmq: saturn1
+  home-timeline-redis: saturn1
 
-#----------------------------------------------------------
-# read notifications at US replica
-#----------------------------------------------------------
-home-timeline-redis-us: node03
-home-timeline-service: node03
+  #----------------------------------------------------------
+  # read notifications at US replica
+  #----------------------------------------------------------
+  home-timeline-redis-us: node03
+  home-timeline-service: node03
 
-#----------------------------------------------------------
-# write post at replica EU
-#----------------------------------------------------------
-post-storage-service-eu: saturn1
-post-storage-memcached-eu: saturn1
-post-storage-mongodb-eu: saturn1
+  #----------------------------------------------------------
+  # write post at replica EU
+  #----------------------------------------------------------
+  post-storage-service-eu: saturn1
+  post-storage-memcached-eu: saturn1
+  post-storage-mongodb-eu: saturn1
 
-#----------------------------------------------------------
-# read post at US replica
-#----------------------------------------------------------
-post-storage-service-us: node06
-post-storage-memcached-us: node06
-post-storage-mongodb-us: node06
+  #----------------------------------------------------------
+  # read post at US replica
+  #----------------------------------------------------------
+  post-storage-service-us: node06
+  post-storage-memcached-us: node06
+  post-storage-mongodb-us: node06
 
-#----------------------------------------------------------
-# compose posts EU
-#----------------------------------------------------------
-compose-post-redis: saturn1
-compose-post-service: saturn1
-user-timeline-service: saturn1
-user-timeline-redis: saturn1
-user-timeline-mongodb: saturn1
-url-shorten-service: saturn1
-url-shorten-memcached: saturn1
-url-shorten-mongodb: saturn1
-user-service: saturn1
-user-memcached: saturn1
-user-mongodb: saturn1
-media-service: saturn1
-media-memcached: saturn1
-media-mongodb: saturn1
-media-frontend: saturn1
-text-service: saturn1
-unique-id-service: saturn1
-user-mention-service: saturn1
+  #----------------------------------------------------------
+  # compose posts EU
+  #----------------------------------------------------------
+  compose-post-redis: saturn1
+  compose-post-service: saturn1
+  user-timeline-service: saturn1
+  user-timeline-redis: saturn1
+  user-timeline-mongodb: saturn1
+  url-shorten-service: saturn1
+  url-shorten-memcached: saturn1
+  url-shorten-mongodb: saturn1
+  user-service: saturn1
+  user-memcached: saturn1
+  user-mongodb: saturn1
+  media-service: saturn1
+  media-memcached: saturn1
+  media-mongodb: saturn1
+  media-frontend: saturn1
+  text-service: saturn1
+  unique-id-service: saturn1
+  user-mention-service: saturn1
 
-#----------------------------------------------------------
-# Coordinator
-#----------------------------------------------------------
-antipode-oracle: node22
+  #----------------------------------------------------------
+  # Coordinator
+  #----------------------------------------------------------
+  antipode-oracle: node22
 
-#----------------------------------------------------------
-# Frontend EU
-#----------------------------------------------------------
-nginx-thrift: saturn1
+  #----------------------------------------------------------
+  # Frontend EU
+  #----------------------------------------------------------
+  nginx-thrift: saturn1
 
-#----------------------------------------------------------
-# Frontend US
-#----------------------------------------------------------
-nginx-thrift-us: node24
+  #----------------------------------------------------------
+  # Frontend US
+  #----------------------------------------------------------
+  nginx-thrift-us: node24
 
-#----------------------------------------------------------
-# Admin tasks
-#----------------------------------------------------------
-jaeger: node25
-xtrace-server: node25
-mongodb-admin: node25
-post-storage-mongodb-setup: node25
+  #----------------------------------------------------------
+  # Admin tasks
+  #----------------------------------------------------------
+  jaeger: node25
+  xtrace-server: node25
+  mongodb-admin: node25
+  post-storage-mongodb-setup: node25

@@ -1,77 +1,78 @@
-#----------------------------------------------------------
-# Write notifications at EU replica
-#----------------------------------------------------------
-social-graph-service: node02
-social-graph-mongodb: node02
-social-graph-redis: node02
-write-home-timeline-service: node02
-write-home-timeline-rabbitmq: node02
-home-timeline-redis: node02
+services:
+  #----------------------------------------------------------
+  # Write notifications at EU replica
+  #----------------------------------------------------------
+  social-graph-service: node02
+  social-graph-mongodb: node02
+  social-graph-redis: node02
+  write-home-timeline-service: node02
+  write-home-timeline-rabbitmq: node02
+  home-timeline-redis: node02
 
-#----------------------------------------------------------
-# read notifications at US replica
-#----------------------------------------------------------
-home-timeline-redis-us: node03
-home-timeline-service: node03
+  #----------------------------------------------------------
+  # read notifications at US replica
+  #----------------------------------------------------------
+  home-timeline-redis-us: node03
+  home-timeline-service: node03
 
-#----------------------------------------------------------
-# write post at replica EU
-#----------------------------------------------------------
-post-storage-service-eu: node04
-post-storage-memcached-eu: node04
-post-storage-mongodb-eu: node04
+  #----------------------------------------------------------
+  # write post at replica EU
+  #----------------------------------------------------------
+  post-storage-service-eu: node04
+  post-storage-memcached-eu: node04
+  post-storage-mongodb-eu: node04
 
-#----------------------------------------------------------
-# read post at US replica
-#----------------------------------------------------------
-post-storage-service-us: node06
-post-storage-memcached-us: node06
-post-storage-mongodb-us: node06
+  #----------------------------------------------------------
+  # read post at US replica
+  #----------------------------------------------------------
+  post-storage-service-us: node06
+  post-storage-memcached-us: node06
+  post-storage-mongodb-us: node06
 
-#----------------------------------------------------------
-# compose posts EU
-#----------------------------------------------------------
-compose-post-redis: node11
-compose-post-service: node11
-#
-url-shorten-service: node09
-url-shorten-memcached: node09
-url-shorten-mongodb: node09
-user-service: node09
-user-memcached: node09
-user-mongodb: node09
-media-service: node09
-media-memcached: node09
-media-mongodb: node09
-media-frontend: node09
-user-mention-service: node09
-#
-text-service: node07
-unique-id-service: node07
-#
-user-timeline-service: node08
-user-timeline-redis: node08
-user-timeline-mongodb: node08
+  #----------------------------------------------------------
+  # compose posts EU
+  #----------------------------------------------------------
+  compose-post-redis: node11
+  compose-post-service: node11
+  #
+  url-shorten-service: node09
+  url-shorten-memcached: node09
+  url-shorten-mongodb: node09
+  user-service: node09
+  user-memcached: node09
+  user-mongodb: node09
+  media-service: node09
+  media-memcached: node09
+  media-mongodb: node09
+  media-frontend: node09
+  user-mention-service: node09
+  #
+  text-service: node07
+  unique-id-service: node07
+  #
+  user-timeline-service: node08
+  user-timeline-redis: node08
+  user-timeline-mongodb: node08
 
-#----------------------------------------------------------
-# Coordinator
-#----------------------------------------------------------
-antipode-oracle: node22
+  #----------------------------------------------------------
+  # Coordinator
+  #----------------------------------------------------------
+  antipode-oracle: node22
 
-#----------------------------------------------------------
-# Frontend EU
-#----------------------------------------------------------
-nginx-thrift: node23
+  #----------------------------------------------------------
+  # Frontend EU
+  #----------------------------------------------------------
+  nginx-thrift: node23
 
-#----------------------------------------------------------
-# Frontend US
-#----------------------------------------------------------
-nginx-thrift-us: node24
+  #----------------------------------------------------------
+  # Frontend US
+  #----------------------------------------------------------
+  nginx-thrift-us: node24
 
-#----------------------------------------------------------
-# Admin tasks
-#----------------------------------------------------------
-jaeger: node25
-xtrace-server: node25
-mongodb-admin: node25
-post-storage-mongodb-setup: node25
+  #----------------------------------------------------------
+  # Admin tasks
+  #----------------------------------------------------------
+  jaeger: node25
+  xtrace-server: node25
+  mongodb-admin: node25
+  post-storage-mongodb-setup: node25

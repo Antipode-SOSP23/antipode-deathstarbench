@@ -260,6 +260,8 @@ services:
         constraints:
         - node.hostname == saturn1
     entrypoint: PostStorageService
+    environment:
+    - ZONE=eu
     hostname: post-storage-service-eu
     image: yg397/social-network-microservices:antipode
     networks:
