@@ -409,134 +409,6 @@ uint32_t PostStorageService_AntipodeHintReplica_pargs::write(::apache::thrift::p
 }
 
 
-PostStorageService_AntipodeHintReplica_result::~PostStorageService_AntipodeHintReplica_result() throw() {
-}
-
-
-uint32_t PostStorageService_AntipodeHintReplica_result::read(::apache::thrift::protocol::TProtocol* iprot) {
-
-  ::apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
-  uint32_t xfer = 0;
-  std::string fname;
-  ::apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using ::apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == ::apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 0:
-        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-          xfer += this->success.read(iprot);
-          this->__isset.success = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 1:
-        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-          xfer += this->se.read(iprot);
-          this->__isset.se = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-uint32_t PostStorageService_AntipodeHintReplica_result::write(::apache::thrift::protocol::TProtocol* oprot) const {
-
-  uint32_t xfer = 0;
-
-  xfer += oprot->writeStructBegin("PostStorageService_AntipodeHintReplica_result");
-
-  if (this->__isset.success) {
-    xfer += oprot->writeFieldBegin("success", ::apache::thrift::protocol::T_STRUCT, 0);
-    xfer += this->success.write(oprot);
-    xfer += oprot->writeFieldEnd();
-  } else if (this->__isset.se) {
-    xfer += oprot->writeFieldBegin("se", ::apache::thrift::protocol::T_STRUCT, 1);
-    xfer += this->se.write(oprot);
-    xfer += oprot->writeFieldEnd();
-  }
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-
-PostStorageService_AntipodeHintReplica_presult::~PostStorageService_AntipodeHintReplica_presult() throw() {
-}
-
-
-uint32_t PostStorageService_AntipodeHintReplica_presult::read(::apache::thrift::protocol::TProtocol* iprot) {
-
-  ::apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
-  uint32_t xfer = 0;
-  std::string fname;
-  ::apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using ::apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == ::apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 0:
-        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-          xfer += (*(this->success)).read(iprot);
-          this->__isset.success = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 1:
-        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
-          xfer += this->se.read(iprot);
-          this->__isset.se = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-
 PostStorageService_ReadPost_args::~PostStorageService_ReadPost_args() throw() {
 }
 
@@ -1171,16 +1043,15 @@ void PostStorageServiceClient::recv_StorePost(BaseRpcResponse& _return)
   throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "StorePost failed: unknown result");
 }
 
-void PostStorageServiceClient::AntipodeHintReplica(BaseRpcResponse& _return, const int64_t post_id, const std::map<std::string, std::string> & carrier)
+void PostStorageServiceClient::AntipodeHintReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier)
 {
   send_AntipodeHintReplica(post_id, carrier);
-  recv_AntipodeHintReplica(_return);
 }
 
 void PostStorageServiceClient::send_AntipodeHintReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier)
 {
   int32_t cseqid = 0;
-  oprot_->writeMessageBegin("AntipodeHintReplica", ::apache::thrift::protocol::T_CALL, cseqid);
+  oprot_->writeMessageBegin("AntipodeHintReplica", ::apache::thrift::protocol::T_ONEWAY, cseqid);
 
   PostStorageService_AntipodeHintReplica_pargs args;
   args.post_id = &post_id;
@@ -1190,47 +1061,6 @@ void PostStorageServiceClient::send_AntipodeHintReplica(const int64_t post_id, c
   oprot_->writeMessageEnd();
   oprot_->getTransport()->writeEnd();
   oprot_->getTransport()->flush();
-}
-
-void PostStorageServiceClient::recv_AntipodeHintReplica(BaseRpcResponse& _return)
-{
-
-  int32_t rseqid = 0;
-  std::string fname;
-  ::apache::thrift::protocol::TMessageType mtype;
-
-  iprot_->readMessageBegin(fname, mtype, rseqid);
-  if (mtype == ::apache::thrift::protocol::T_EXCEPTION) {
-    ::apache::thrift::TApplicationException x;
-    x.read(iprot_);
-    iprot_->readMessageEnd();
-    iprot_->getTransport()->readEnd();
-    throw x;
-  }
-  if (mtype != ::apache::thrift::protocol::T_REPLY) {
-    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
-    iprot_->readMessageEnd();
-    iprot_->getTransport()->readEnd();
-  }
-  if (fname.compare("AntipodeHintReplica") != 0) {
-    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
-    iprot_->readMessageEnd();
-    iprot_->getTransport()->readEnd();
-  }
-  PostStorageService_AntipodeHintReplica_presult result;
-  result.success = &_return;
-  result.read(iprot_);
-  iprot_->readMessageEnd();
-  iprot_->getTransport()->readEnd();
-
-  if (result.__isset.success) {
-    // _return pointer has now been filled
-    return;
-  }
-  if (result.__isset.se) {
-    throw result.se;
-  }
-  throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "AntipodeHintReplica failed: unknown result");
 }
 
 void PostStorageServiceClient::ReadPost(PostRpcResponse& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier)
@@ -1435,7 +1265,7 @@ void PostStorageServiceProcessor::process_StorePost(int32_t seqid, ::apache::thr
   }
 }
 
-void PostStorageServiceProcessor::process_AntipodeHintReplica(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+void PostStorageServiceProcessor::process_AntipodeHintReplica(int32_t, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol*, void* callContext)
 {
   void* ctx = NULL;
   if (this->eventHandler_.get() != NULL) {
@@ -1456,40 +1286,20 @@ void PostStorageServiceProcessor::process_AntipodeHintReplica(int32_t seqid, ::a
     this->eventHandler_->postRead(ctx, "PostStorageService.AntipodeHintReplica", bytes);
   }
 
-  PostStorageService_AntipodeHintReplica_result result;
   try {
-    iface_->AntipodeHintReplica(result.success, args.post_id, args.carrier);
-    result.__isset.success = true;
-  } catch (ServiceException &se) {
-    result.se = se;
-    result.__isset.se = true;
-  } catch (const std::exception& e) {
+    iface_->AntipodeHintReplica(args.post_id, args.carrier);
+  } catch (const std::exception&) {
     if (this->eventHandler_.get() != NULL) {
       this->eventHandler_->handlerError(ctx, "PostStorageService.AntipodeHintReplica");
     }
-
-    ::apache::thrift::TApplicationException x(e.what());
-    oprot->writeMessageBegin("AntipodeHintReplica", ::apache::thrift::protocol::T_EXCEPTION, seqid);
-    x.write(oprot);
-    oprot->writeMessageEnd();
-    oprot->getTransport()->writeEnd();
-    oprot->getTransport()->flush();
     return;
   }
 
   if (this->eventHandler_.get() != NULL) {
-    this->eventHandler_->preWrite(ctx, "PostStorageService.AntipodeHintReplica");
+    this->eventHandler_->asyncComplete(ctx, "PostStorageService.AntipodeHintReplica");
   }
 
-  oprot->writeMessageBegin("AntipodeHintReplica", ::apache::thrift::protocol::T_REPLY, seqid);
-  result.write(oprot);
-  oprot->writeMessageEnd();
-  bytes = oprot->getTransport()->writeEnd();
-  oprot->getTransport()->flush();
-
-  if (this->eventHandler_.get() != NULL) {
-    this->eventHandler_->postWrite(ctx, "PostStorageService.AntipodeHintReplica", bytes);
-  }
+  return;
 }
 
 void PostStorageServiceProcessor::process_ReadPost(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
@@ -1703,17 +1513,16 @@ void PostStorageServiceConcurrentClient::recv_StorePost(BaseRpcResponse& _return
   } // end while(true)
 }
 
-void PostStorageServiceConcurrentClient::AntipodeHintReplica(BaseRpcResponse& _return, const int64_t post_id, const std::map<std::string, std::string> & carrier)
+void PostStorageServiceConcurrentClient::AntipodeHintReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier)
 {
-  int32_t seqid = send_AntipodeHintReplica(post_id, carrier);
-  recv_AntipodeHintReplica(_return, seqid);
+  send_AntipodeHintReplica(post_id, carrier);
 }
 
-int32_t PostStorageServiceConcurrentClient::send_AntipodeHintReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier)
+void PostStorageServiceConcurrentClient::send_AntipodeHintReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier)
 {
-  int32_t cseqid = this->sync_.generateSeqId();
+  int32_t cseqid = 0;
   ::apache::thrift::async::TConcurrentSendSentry sentry(&this->sync_);
-  oprot_->writeMessageBegin("AntipodeHintReplica", ::apache::thrift::protocol::T_CALL, cseqid);
+  oprot_->writeMessageBegin("AntipodeHintReplica", ::apache::thrift::protocol::T_ONEWAY, cseqid);
 
   PostStorageService_AntipodeHintReplica_pargs args;
   args.post_id = &post_id;
@@ -1725,71 +1534,6 @@ int32_t PostStorageServiceConcurrentClient::send_AntipodeHintReplica(const int64
   oprot_->getTransport()->flush();
 
   sentry.commit();
-  return cseqid;
-}
-
-void PostStorageServiceConcurrentClient::recv_AntipodeHintReplica(BaseRpcResponse& _return, const int32_t seqid)
-{
-
-  int32_t rseqid = 0;
-  std::string fname;
-  ::apache::thrift::protocol::TMessageType mtype;
-
-  // the read mutex gets dropped and reacquired as part of waitForWork()
-  // The destructor of this sentry wakes up other clients
-  ::apache::thrift::async::TConcurrentRecvSentry sentry(&this->sync_, seqid);
-
-  while(true) {
-    if(!this->sync_.getPending(fname, mtype, rseqid)) {
-      iprot_->readMessageBegin(fname, mtype, rseqid);
-    }
-    if(seqid == rseqid) {
-      if (mtype == ::apache::thrift::protocol::T_EXCEPTION) {
-        ::apache::thrift::TApplicationException x;
-        x.read(iprot_);
-        iprot_->readMessageEnd();
-        iprot_->getTransport()->readEnd();
-        sentry.commit();
-        throw x;
-      }
-      if (mtype != ::apache::thrift::protocol::T_REPLY) {
-        iprot_->skip(::apache::thrift::protocol::T_STRUCT);
-        iprot_->readMessageEnd();
-        iprot_->getTransport()->readEnd();
-      }
-      if (fname.compare("AntipodeHintReplica") != 0) {
-        iprot_->skip(::apache::thrift::protocol::T_STRUCT);
-        iprot_->readMessageEnd();
-        iprot_->getTransport()->readEnd();
-
-        // in a bad state, don't commit
-        using ::apache::thrift::protocol::TProtocolException;
-        throw TProtocolException(TProtocolException::INVALID_DATA);
-      }
-      PostStorageService_AntipodeHintReplica_presult result;
-      result.success = &_return;
-      result.read(iprot_);
-      iprot_->readMessageEnd();
-      iprot_->getTransport()->readEnd();
-
-      if (result.__isset.success) {
-        // _return pointer has now been filled
-        sentry.commit();
-        return;
-      }
-      if (result.__isset.se) {
-        sentry.commit();
-        throw result.se;
-      }
-      // in a bad state, don't commit
-      throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "AntipodeHintReplica failed: unknown result");
-    }
-    // seqid != rseqid
-    this->sync_.updatePending(fname, mtype, rseqid);
-
-    // this will temporarily unlock the readMutex, and let other clients get work done
-    this->sync_.waitForWork(seqid);
-  } // end while(true)
 }
 
 void PostStorageServiceConcurrentClient::ReadPost(PostRpcResponse& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier)

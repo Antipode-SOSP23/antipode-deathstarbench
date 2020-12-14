@@ -35,12 +35,15 @@ class PostStorageHandler : public PostStorageServiceIf {
   PostStorageHandler(
       memcached_pool_st *,
       mongoc_client_pool_t *,
-      mongoc_client_pool_t *,
-      ClientPool<ThriftClient<AntipodeOracleClient>> *);
+      ClientPool<ThriftClient<AntipodeOracleClient>> *,
+      ClientPool<ThriftClient<PostStorageServiceClient>> *,
+      ClientPool<ThriftClient<PostStorageServiceClient>> *);
   ~PostStorageHandler() override = default;
 
   void StorePost(BaseRpcResponse& response, int64_t req_id, const Post &post,
       const std::map<std::string, std::string> &carrier) override;
+
+  void AntipodeHintReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier) override;
 
   void ReadPost(PostRpcResponse& response, int64_t req_id, int64_t post_id,
                  const std::map<std::string, std::string> &carrier) override;
@@ -52,30 +55,33 @@ class PostStorageHandler : public PostStorageServiceIf {
  private:
   memcached_pool_st *_memcached_client_pool;
   mongoc_client_pool_t *_mongodb_client_pool;
-  mongoc_client_pool_t *_mongodb_client_pool_us;
   ClientPool<ThriftClient<AntipodeOracleClient>> *_antipode_oracle_client_pool;
+  ClientPool<ThriftClient<PostStorageServiceClient>> *_post_storage_client_eu_pool;
+  ClientPool<ThriftClient<PostStorageServiceClient>> *_post_storage_client_us_pool;
 
-  void _StorePostAsync(BaseRpcResponse& response, int64_t req_id, const Post &post,
-      const std::map<std::string, std::string> &carrier);
-  void _AntipodeMakeVisible(int64_t post_id, std::map<std::string, std::string> writer_text_map);
+  std::exception_ptr _post_storage_teptr;
+
+  void _AntipodeHintReplicas(int64_t post_id, std::map<std::string, std::string> writer_text_map);
 };
 
 PostStorageHandler::PostStorageHandler(
     memcached_pool_st *memcached_client_pool,
     mongoc_client_pool_t *mongodb_client_pool,
-    mongoc_client_pool_t *mongodb_client_pool_us,
-    ClientPool<social_network::ThriftClient<AntipodeOracleClient>> *antipode_oracle_client_pool) {
+    ClientPool<social_network::ThriftClient<AntipodeOracleClient>> *antipode_oracle_client_pool,
+    ClientPool<social_network::ThriftClient<PostStorageServiceClient>> *post_storage_client_eu_pool,
+    ClientPool<social_network::ThriftClient<PostStorageServiceClient>> *post_storage_client_us_pool) {
   _memcached_client_pool = memcached_client_pool;
   _mongodb_client_pool = mongodb_client_pool;
-  _mongodb_client_pool_us = mongodb_client_pool_us;
   _antipode_oracle_client_pool = antipode_oracle_client_pool;
+  _post_storage_client_eu_pool = post_storage_client_eu_pool;
+  _post_storage_client_us_pool = post_storage_client_us_pool;
 }
 
 // Launch the pool with as much threads as cores
 int num_threads = std::thread::hardware_concurrency();
 boost::asio::thread_pool pool(num_threads);
 
-void PostStorageHandler::_StorePostAsync(
+void PostStorageHandler::StorePost(
     BaseRpcResponse &response,
     int64_t req_id, const social_network::Post &post,
     const std::map<std::string, std::string> &carrier) {
@@ -206,7 +212,7 @@ void PostStorageHandler::_StorePostAsync(
 
   if (!inserted) {
     LOG(error) << "Error: Failed to insert post to MongoDB: "
-               << error.message;
+                << error.message;
     ServiceException se;
     se.errorCode = ErrorCode::SE_MONGODB_ERROR;
     se.message = error.message;
@@ -224,13 +230,14 @@ void PostStorageHandler::_StorePostAsync(
   // eval
   high_resolution_clock::time_point end_ts = high_resolution_clock::now();
   uint64_t ts = duration_cast<milliseconds>(end_ts.time_since_epoch()).count();
-  span->SetTag("poststorage_post_visible", std::to_string(ts));
+  span->SetTag("poststorage_post_written_ts", std::to_string(ts));
 
   //----------
   // ANTIPODE
   //----------
-  boost::asio::post(pool, std::bind(&PostStorageHandler::_AntipodeMakeVisible, this, post.post_id, writer_text_map));
-  // _AntipodeMakeVisible(post.post_id, writer_text_map);
+  // boost::asio::post(pool, std::bind(&PostStorageHandler::_AntipodeHintReplicas, this, post.post_id, writer_text_map));
+  _AntipodeHintReplicas(post.post_id, writer_text_map);
+
   //----------
   // ANTIPODE
   //----------
@@ -241,23 +248,78 @@ void PostStorageHandler::_StorePostAsync(
   DELETE_CURRENT_BAGGAGE();
 }
 
-void PostStorageHandler::StorePost(
-    BaseRpcResponse &response,
-    int64_t req_id, const social_network::Post &post,
-    const std::map<std::string, std::string> &carrier) {
+void PostStorageHandler::AntipodeHintReplica(
+    const int64_t post_id,
+    const std::map<std::string, std::string> & carrier) {
+  //
+  // This method is called by another PostStorage replica
+  LOG(debug) << "[ANTIPODE] Start Hint Replica on zone '" << std::getenv("ZONE") << "' for post_id: " << post_id ;
 
-  //----------
-  // ANTIPODE
-  //----------
+  // Initialize a span
+  TextMapReader reader(carrier);
+  std::map<std::string, std::string> writer_text_map;
+  TextMapWriter writer(writer_text_map);
+  auto parent_span = opentracing::Tracer::Global()->Extract(reader);
+  auto span = opentracing::Tracer::Global()->StartSpan(
+      "AntipodeHintReplica",
+      { opentracing::ChildOf(parent_span->get()) });
+  opentracing::Tracer::Global()->Inject(span->context(), writer);
 
-  // By using a threadpool we can return an OK to the caller, while on the threadpool we
-  // force an error by sleeping the thread
-  boost::asio::post(pool, std::bind(&PostStorageHandler::_StorePostAsync, this, response, req_id, post, carrier));
+  // sleep while post is not ready at US replica
+  bool read_post = false;
+  while(!read_post) {
+    mongoc_client_t *mongodb_client = mongoc_client_pool_pop(_mongodb_client_pool);
+    if (!mongodb_client) {
+      LOG(warning) << "[ANTIPODE] Could not open mongo connection: client";
+      continue;
+    }
+    auto collection = mongoc_client_get_collection(mongodb_client, "post", "post");
+    if (!collection) {
+      mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
+      LOG(warning) << "[ANTIPODE] Could not open mongo connection: collection";
+      continue;
+    }
 
-  //----------
-  // ANTIPODE
-  //----------
-}
+    bson_t *query = bson_new();
+    BSON_APPEND_INT64(query, "post_id", post_id);
+    mongoc_cursor_t *cursor = mongoc_collection_find_with_opts(
+        collection, query, nullptr, nullptr);
+    const bson_t *doc;
+    read_post = mongoc_cursor_next(cursor, &doc);
+
+    LOG(debug) << "[ANTIPODE] Was post #" << post_id << " found at " << std::getenv("ZONE") << " replica? " << read_post;
+
+    bson_destroy(query);
+    mongoc_cursor_destroy(cursor);
+    mongoc_collection_destroy(collection);
+    mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
+  }
+
+  // eval
+  high_resolution_clock::time_point end_ts = high_resolution_clock::now();
+  uint64_t ts = duration_cast<milliseconds>(end_ts.time_since_epoch()).count();
+  span->SetTag("poststorage_post_replicated_ts", std::to_string(ts));
+
+  auto antipode_orable_client_wrapper = _antipode_oracle_client_pool->Pop();
+  if (!antipode_orable_client_wrapper) {
+    ServiceException se;
+    se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
+    se.message = "[ANTIPODE] Failed to connect to antipode-oracle";
+    throw se;
+  }
+
+  auto antipode_oracle_client = antipode_orable_client_wrapper->GetClient();
+  bool antipode_oracle_response;
+  try {
+    antipode_oracle_response = antipode_oracle_client->MakeVisible(post_id, writer_text_map);
+  } catch (...) {
+    LOG(error) << "[ANTIPODE] Failed to write post visibility to Oracle";
+    _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
+    throw;
+  }
+  _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
+  LOG(debug) << "[ANTIPODE] Post successfuly marked as visible in Oracle with response: " << antipode_oracle_response;
+};
 
 void PostStorageHandler::ReadPost(
     PostRpcResponse& response,
@@ -836,67 +898,59 @@ void PostStorageHandler::ReadPosts(
   DELETE_CURRENT_BAGGAGE();
 }
 
-void PostStorageHandler::_AntipodeMakeVisible(int64_t post_id,
-    std::map<std::string, std::string> writer_text_map)
-{
-  LOG(debug) << "[ANTIPODE] Start MakeVisible for post_id: " << post_id;
+void PostStorageHandler::_AntipodeHintReplicas(int64_t post_id,
+    std::map<std::string, std::string> writer_text_map) {
+  // all existing zones
+  std::string zones[2] = { "eu", "us" };
+  // spans
+  TextMapWriter writer(writer_text_map);
 
-  // sleep while post is not ready at US replica
-  // bool read_post_at_us = true;
-  bool read_post_at_us = false;
-  while(!read_post_at_us) {
-    Post _return;
+  for (std::string zone : zones) {
+    if (zone != std::getenv("ZONE")) {
+      LOG(debug) << "[ANTIPODE] Hinting Replica on zone '" << zone << "' from zone '" << std::getenv("ZONE") << "' for post_id: " << post_id ;
 
-    mongoc_client_t *mongodb_client = mongoc_client_pool_pop(_mongodb_client_pool_us);
-    if (!mongodb_client) {
-      LOG(warning) << "[ANTIPODE] Could not open mongo connection: client";
-      continue;
+      ThriftClient<PostStorageServiceClient> * post_storage_client_wrapper;
+      try{
+        // pop correct client
+        if(zone == "eu") {
+          post_storage_client_wrapper = _post_storage_client_eu_pool->Pop();
+        } else if (zone == "us") {
+          post_storage_client_wrapper = _post_storage_client_us_pool->Pop();
+        }
+
+        if (!post_storage_client_wrapper) {
+          ServiceException se;
+          se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
+          se.message = "Failed to connect to post-storage-service-" + zone;
+          throw se;
+        }
+        auto post_storage_client = post_storage_client_wrapper->GetClient();
+        try {
+          post_storage_client->AntipodeHintReplica(post_id, writer_text_map);
+        } catch (...) {
+          LOG(error) << "Failed to store post to post-storage-service-" + zone;
+          // pop correct client
+          if(zone == "eu") {
+            _post_storage_client_eu_pool->Push(post_storage_client_wrapper);
+          } else if (zone == "us") {
+            _post_storage_client_us_pool->Push(post_storage_client_wrapper);
+          }
+          throw;
+        }
+
+        // pop correct client
+        if(zone == "eu") {
+          _post_storage_client_eu_pool->Push(post_storage_client_wrapper);
+        } else if (zone == "us") {
+          _post_storage_client_us_pool->Push(post_storage_client_wrapper);
+        }
+      } catch (...) {
+        LOG(error) << "Failed to connect to post-storage-service-" + zone;
+        // XTRACE("Failed to connect to post-storage-service");
+        _post_storage_teptr = std::current_exception();
+      }
     }
-    auto collection = mongoc_client_get_collection(mongodb_client, "post", "post");
-    if (!collection) {
-      mongoc_client_pool_push(_mongodb_client_pool_us, mongodb_client);
-      LOG(warning) << "[ANTIPODE] Could not open mongo connection: collection";
-      continue;
-    }
-
-    bson_t *query = bson_new();
-    BSON_APPEND_INT64(query, "post_id", post_id);
-    mongoc_cursor_t *cursor = mongoc_collection_find_with_opts(
-        collection, query, nullptr, nullptr);
-    const bson_t *doc;
-    read_post_at_us = mongoc_cursor_next(cursor, &doc);
-
-    // sleep if not found
-    // LOG(debug) << "[ANTIPODE] Was post #" << post_id << " found at US replica? " << read_post_at_us;
-    if (!read_post_at_us) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-
-    bson_destroy(query);
-    mongoc_cursor_destroy(cursor);
-    mongoc_collection_destroy(collection);
-    mongoc_client_pool_push(_mongodb_client_pool_us, mongodb_client);
   }
-
-  auto antipode_orable_client_wrapper = _antipode_oracle_client_pool->Pop();
-  if (!antipode_orable_client_wrapper) {
-    ServiceException se;
-    se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
-    se.message = "[ANTIPODE] Failed to connect to antipode-oracle";
-    throw se;
-  }
-
-  auto antipode_oracle_client = antipode_orable_client_wrapper->GetClient();
-  bool antipode_oracle_response;
-  try {
-    antipode_oracle_response = antipode_oracle_client->MakeVisible(post_id, writer_text_map);
-  } catch (...) {
-    LOG(error) << "[ANTIPODE] Failed to write post visibility to Oracle";
-    _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
-    throw;
-  }
-  _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
-  LOG(debug) << "[ANTIPODE] Post successfuly marked as visible in Oracle with response: " << antipode_oracle_response;
 }
 
 } // namespace social_network

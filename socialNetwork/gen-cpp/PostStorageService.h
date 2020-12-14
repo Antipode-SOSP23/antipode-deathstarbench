@@ -22,7 +22,7 @@ class PostStorageServiceIf {
  public:
   virtual ~PostStorageServiceIf() {}
   virtual void StorePost(BaseRpcResponse& _return, const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier) = 0;
-  virtual void AntipodeHintReplica(BaseRpcResponse& _return, const int64_t post_id, const std::map<std::string, std::string> & carrier) = 0;
+  virtual void AntipodeHintReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier) = 0;
   virtual void ReadPost(PostRpcResponse& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier) = 0;
   virtual void ReadPosts(PostListRpcResponse& _return, const int64_t req_id, const std::vector<int64_t> & post_ids, const std::map<std::string, std::string> & carrier) = 0;
 };
@@ -57,7 +57,7 @@ class PostStorageServiceNull : virtual public PostStorageServiceIf {
   void StorePost(BaseRpcResponse& /* _return */, const int64_t /* req_id */, const Post& /* post */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
-  void AntipodeHintReplica(BaseRpcResponse& /* _return */, const int64_t /* post_id */, const std::map<std::string, std::string> & /* carrier */) {
+  void AntipodeHintReplica(const int64_t /* post_id */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
   void ReadPost(PostRpcResponse& /* _return */, const int64_t /* req_id */, const int64_t /* post_id */, const std::map<std::string, std::string> & /* carrier */) {
@@ -247,69 +247,6 @@ class PostStorageService_AntipodeHintReplica_pargs {
   const std::map<std::string, std::string> * carrier;
 
   uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
-
-};
-
-typedef struct _PostStorageService_AntipodeHintReplica_result__isset {
-  _PostStorageService_AntipodeHintReplica_result__isset() : success(false), se(false) {}
-  bool success :1;
-  bool se :1;
-} _PostStorageService_AntipodeHintReplica_result__isset;
-
-class PostStorageService_AntipodeHintReplica_result {
- public:
-
-  PostStorageService_AntipodeHintReplica_result(const PostStorageService_AntipodeHintReplica_result&);
-  PostStorageService_AntipodeHintReplica_result& operator=(const PostStorageService_AntipodeHintReplica_result&);
-  PostStorageService_AntipodeHintReplica_result() {
-  }
-
-  virtual ~PostStorageService_AntipodeHintReplica_result() throw();
-  BaseRpcResponse success;
-  ServiceException se;
-
-  _PostStorageService_AntipodeHintReplica_result__isset __isset;
-
-  void __set_success(const BaseRpcResponse& val);
-
-  void __set_se(const ServiceException& val);
-
-  bool operator == (const PostStorageService_AntipodeHintReplica_result & rhs) const
-  {
-    if (!(success == rhs.success))
-      return false;
-    if (!(se == rhs.se))
-      return false;
-    return true;
-  }
-  bool operator != (const PostStorageService_AntipodeHintReplica_result &rhs) const {
-    return !(*this == rhs);
-  }
-
-  bool operator < (const PostStorageService_AntipodeHintReplica_result & ) const;
-
-  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
-  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
-
-};
-
-typedef struct _PostStorageService_AntipodeHintReplica_presult__isset {
-  _PostStorageService_AntipodeHintReplica_presult__isset() : success(false), se(false) {}
-  bool success :1;
-  bool se :1;
-} _PostStorageService_AntipodeHintReplica_presult__isset;
-
-class PostStorageService_AntipodeHintReplica_presult {
- public:
-
-
-  virtual ~PostStorageService_AntipodeHintReplica_presult() throw();
-  BaseRpcResponse* success;
-  ServiceException se;
-
-  _PostStorageService_AntipodeHintReplica_presult__isset __isset;
-
-  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
 
 };
 
@@ -593,9 +530,8 @@ class PostStorageServiceClient : virtual public PostStorageServiceIf {
   void StorePost(BaseRpcResponse& _return, const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier);
   void send_StorePost(const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier);
   void recv_StorePost(BaseRpcResponse& _return);
-  void AntipodeHintReplica(BaseRpcResponse& _return, const int64_t post_id, const std::map<std::string, std::string> & carrier);
+  void AntipodeHintReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier);
   void send_AntipodeHintReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier);
-  void recv_AntipodeHintReplica(BaseRpcResponse& _return);
   void ReadPost(PostRpcResponse& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier);
   void send_ReadPost(const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier);
   void recv_ReadPost(PostRpcResponse& _return);
@@ -666,14 +602,13 @@ class PostStorageServiceMultiface : virtual public PostStorageServiceIf {
     return;
   }
 
-  void AntipodeHintReplica(BaseRpcResponse& _return, const int64_t post_id, const std::map<std::string, std::string> & carrier) {
+  void AntipodeHintReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
-      ifaces_[i]->AntipodeHintReplica(_return, post_id, carrier);
+      ifaces_[i]->AntipodeHintReplica(post_id, carrier);
     }
-    ifaces_[i]->AntipodeHintReplica(_return, post_id, carrier);
-    return;
+    ifaces_[i]->AntipodeHintReplica(post_id, carrier);
   }
 
   void ReadPost(PostRpcResponse& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier) {
@@ -729,9 +664,8 @@ class PostStorageServiceConcurrentClient : virtual public PostStorageServiceIf {
   void StorePost(BaseRpcResponse& _return, const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier);
   int32_t send_StorePost(const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier);
   void recv_StorePost(BaseRpcResponse& _return, const int32_t seqid);
-  void AntipodeHintReplica(BaseRpcResponse& _return, const int64_t post_id, const std::map<std::string, std::string> & carrier);
-  int32_t send_AntipodeHintReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier);
-  void recv_AntipodeHintReplica(BaseRpcResponse& _return, const int32_t seqid);
+  void AntipodeHintReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier);
+  void send_AntipodeHintReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier);
   void ReadPost(PostRpcResponse& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier);
   int32_t send_ReadPost(const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier);
   void recv_ReadPost(PostRpcResponse& _return, const int32_t seqid);

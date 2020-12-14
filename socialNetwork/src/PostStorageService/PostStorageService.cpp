@@ -19,7 +19,6 @@ using json = nlohmann::json;
 
 static memcached_pool_st* memcached_client_pool;
 static mongoc_client_pool_t* mongodb_client_pool;
-static mongoc_client_pool_t* mongodb_client_pool_us;
 
 void sigintHandler(int sig) {
   if (memcached_client_pool != nullptr) {
@@ -27,9 +26,6 @@ void sigintHandler(int sig) {
   }
   if (mongodb_client_pool != nullptr) {
     mongoc_client_pool_destroy(mongodb_client_pool);
-  }
-  if (mongodb_client_pool_us != nullptr) {
-    mongoc_client_pool_destroy(mongodb_client_pool_us);
   }
   exit(EXIT_SUCCESS);
 }
@@ -95,35 +91,35 @@ int main(int argc, char *argv[]) {
   }
   mongoc_client_pool_push(mongodb_client_pool, mongodb_client);
 
-  // mongoc in US
-  mongodb_client_pool_us = (zone == "") ? init_mongodb_client_pool(config_json, "post-storage", "us", 1024) : mongodb_client_pool;
-  if (mongodb_client_pool_us == nullptr) {
-    return EXIT_FAILURE;
-  }
-
-  mongoc_client_t *mongodb_client_us = mongoc_client_pool_pop(mongodb_client_pool_us);
-  if (!mongodb_client_us) {
-    LOG(fatal) << "Failed to pop mongoc client";
-    return EXIT_FAILURE;
-  }
-
-  mongoc_client_pool_push(mongodb_client_pool_us, mongodb_client_us);
-  //
-
   int antipode_oracle_port = config_json["antipode-oracle"]["port"];
   std::string antipode_oracle_addr = config_json["antipode-oracle"]["addr"];
+
+  int post_storage_eu_port = config_json["post-storage-service-eu"]["port"];
+  std::string post_storage_eu_addr = config_json["post-storage-service-eu"]["addr"];
+
+  int post_storage_us_port = config_json["post-storage-service-us"]["port"];
+  std::string post_storage_us_addr = config_json["post-storage-service-us"]["addr"];
 
   ClientPool<ThriftClient<AntipodeOracleClient>>
       antipode_oracle_client_pool("antipode-oracle", antipode_oracle_addr,
                                 antipode_oracle_port, 0, 10000, 1000);
+
+  ClientPool<ThriftClient<PostStorageServiceClient>>
+      post_storage_client_eu_pool("post-storage-client-eu", post_storage_eu_addr,
+                               post_storage_eu_port, 0, 10000, 1000);
+
+  ClientPool<ThriftClient<PostStorageServiceClient>>
+      post_storage_client_us_pool("post-storage-client-us", post_storage_us_addr,
+                               post_storage_us_port, 0, 10000, 1000);
 
   TThreadedServer server (
       std::make_shared<PostStorageServiceProcessor>(
           std::make_shared<PostStorageHandler>(
               memcached_client_pool,
               mongodb_client_pool,
-              mongodb_client_pool_us,
-              &antipode_oracle_client_pool)),
+              &antipode_oracle_client_pool,
+              &post_storage_client_eu_pool,
+              &post_storage_client_us_pool)),
       std::make_shared<TServerSocket>("0.0.0.0", port),
       std::make_shared<TFramedTransportFactory>(),
       std::make_shared<TBinaryProtocolFactory>()
