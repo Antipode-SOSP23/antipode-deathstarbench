@@ -467,12 +467,13 @@ services:
       RABBITMQ_DEFAULT_VHOST: /
       RABBITMQ_ERLANG_COOKIE: WRITE-HOME-TIMELINE-RABBITMQ
     hostname: write-home-timeline-rabbitmq
-    image: rabbitmq
+    image: rabbitmq:management
     networks:
     - deathstarbench_network
     ports:
     - 15672:15672
     - 5672:5672
+    - 5673:5673
     restart: always
   write-home-timeline-service:
     depends_on:

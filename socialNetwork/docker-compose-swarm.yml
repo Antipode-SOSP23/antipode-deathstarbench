@@ -7,7 +7,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == antipode-oracle
     entrypoint: /usr/local/bin/AntipodeOracle
     hostname: antipode-oracle
     image: yg397/social-network-microservices:antipode
@@ -18,7 +18,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == compose-post
     hostname: compose-post-redis
     image: redis
     networks:
@@ -30,7 +30,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == compose-post
     entrypoint: ComposePostService
     hostname: compose-post-service
     image: yg397/social-network-microservices:antipode
@@ -42,7 +42,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == home-timeline-eu
     hostname: home-timeline-redis
     image: redis
     networks:
@@ -53,7 +53,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == home-timeline-us
     hostname: home-timeline-redis-us
     image: redis
     links:
@@ -65,7 +65,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == home-timeline-us
     entrypoint: HomeTimelineService
     hostname: home-timeline-service
     image: yg397/social-network-microservices:antipode
@@ -76,7 +76,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == admin-tracing
     environment:
     - COLLECTOR_ZIPKIN_HTTP_PORT=9411
     hostname: jaeger
@@ -90,7 +90,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == compose-others
     hostname: media-frontend
     image: yg397/media-frontend:xenial
     networks:
@@ -105,7 +105,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == compose-others
     hostname: media-memcached
     image: memcached
     networks:
@@ -116,7 +116,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == compose-others
     hostname: media-mongodb
     image: mongo
     networks:
@@ -130,7 +130,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == compose-others
     entrypoint: MediaService
     hostname: media-service
     image: yg397/social-network-microservices:antipode
@@ -141,7 +141,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == admin-tracing
     environment:
     - HOST=0.0.0.0
     image: mrvautin/adminmongo
@@ -154,7 +154,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == frontend-eu
     hostname: nginx-thrift
     image: yg397/openresty-thrift:latest
     networks:
@@ -172,7 +172,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == frontend-us
     hostname: nginx-thrift
     image: yg397/openresty-thrift:latest
     networks:
@@ -190,7 +190,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == post-storage-eu
     hostname: post-storage-memcached-eu
     image: memcached
     networks:
@@ -200,7 +200,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == post-storage-us
     hostname: post-storage-memcached-us
     image: memcached
     networks:
@@ -212,7 +212,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == post-storage-eu
     hostname: post-storage-mongodb-eu
     image: mongo
     networks:
@@ -229,7 +229,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == admin-tracing
       restart_policy:
         condition: on-failure
         delay: 1s
@@ -244,7 +244,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == post-storage-us
     hostname: post-storage-mongodb-us
     image: mongo
     networks:
@@ -258,7 +258,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == post-storage-eu
     entrypoint: PostStorageService
     environment:
     - ZONE=eu
@@ -271,7 +271,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == post-storage-us
     entrypoint: PostStorageService
     environment:
     - ZONE=us
@@ -285,7 +285,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == social-graph
     hostname: social-graph-mongodb
     image: mongo
     networks:
@@ -299,7 +299,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == social-graph
     hostname: social-graph-redis
     image: redis
     networks:
@@ -309,7 +309,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == social-graph
     entrypoint: SocialGraphService
     hostname: social-graph-service
     image: yg397/social-network-microservices:antipode
@@ -320,7 +320,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == compose-post
     entrypoint: TextService
     hostname: text-service
     image: yg397/social-network-microservices:antipode
@@ -331,7 +331,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == compose-post
     entrypoint: UniqueIdService
     hostname: unique-id-service
     image: yg397/social-network-microservices:antipode
@@ -342,7 +342,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == compose-others
     hostname: url-shorten-memcached
     image: memcached
     networks:
@@ -353,7 +353,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == compose-others
     hostname: url-shorten-mongodb
     image: mongo
     networks:
@@ -367,7 +367,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == compose-others
     entrypoint: UrlShortenService
     hostname: url-shorten-service
     image: yg397/social-network-microservices:antipode
@@ -378,7 +378,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == compose-others
     hostname: user-memcached
     image: memcached
     networks:
@@ -388,7 +388,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == compose-others
     entrypoint: UserMentionService
     hostname: user-mention-service
     image: yg397/social-network-microservices:antipode
@@ -400,7 +400,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == compose-others
     hostname: user-mongodb
     image: mongo
     networks:
@@ -414,7 +414,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == compose-others
     entrypoint: UserService
     hostname: user-service
     image: yg397/social-network-microservices:antipode
@@ -426,7 +426,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == user-timeline
     image: mongo
     networks:
     - deathstarbench_network
@@ -439,7 +439,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == user-timeline
     hostname: user-timeline-redis
     image: redis
     networks:
@@ -451,7 +451,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == user-timeline
     entrypoint: UserTimelineService
     hostname: user-timeline-service
     image: yg397/social-network-microservices:antipode
@@ -462,17 +462,18 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == home-timeline-eu
     environment:
       RABBITMQ_DEFAULT_VHOST: /
       RABBITMQ_ERLANG_COOKIE: WRITE-HOME-TIMELINE-RABBITMQ
     hostname: write-home-timeline-rabbitmq
-    image: rabbitmq
+    image: rabbitmq:management
     networks:
     - deathstarbench_network
     ports:
     - 15672:15672
     - 5672:5672
+    - 5673:5673
     restart: always
   write-home-timeline-service:
     depends_on:
@@ -480,7 +481,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == home-timeline-eu
     entrypoint: WriteHomeTimelineService
     hostname: write-home-timeline-service
     image: yg397/social-network-microservices:antipode
@@ -491,7 +492,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == saturn1
+        - node.hostname == admin-tracing
     hostname: xtrace-server
     image: jonathanmace/xtrace-server:latest
     logging:

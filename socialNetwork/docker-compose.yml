@@ -61,7 +61,7 @@ services:
         constraints: [node.hostname == node02]
 
   write-home-timeline-rabbitmq:
-    image: rabbitmq
+    image: rabbitmq:management
     hostname: write-home-timeline-rabbitmq
     environment:
       RABBITMQ_ERLANG_COOKIE: "WRITE-HOME-TIMELINE-RABBITMQ"
@@ -69,6 +69,7 @@ services:
     ports:
       - 15672:15672
       - 5672:5672
+      - 5673:5673
     restart: always
     deploy:
       placement:

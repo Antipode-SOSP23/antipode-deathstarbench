@@ -8,6 +8,7 @@ apps:
         - mongo:latest
         - mrvautin/adminmongo:latest
         - rabbitmq:latest
+        - rabbitmq:management
         - redis:latest
         - portainer/agent:latest
         - portainer/portainer-ce:latest
