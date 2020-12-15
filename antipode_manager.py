@@ -1234,7 +1234,8 @@ def gather(args):
 
     # curl -X GET "jaeger:16686/api/traces?service=write-home-timeline-service&prettyPrint=true
     params = (
-      ('service', 'antipode-oracle'),
+      # ('service', 'antipode-oracle'),
+      ('service', 'compose-post-service'),
       ('limit', limit),
       ('lookback', '1h'),
       # ('prettyPrint', 'true'),

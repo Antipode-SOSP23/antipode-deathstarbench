@@ -834,7 +834,7 @@ void ComposePostHandler::_UploadUserTimelineHelper(
     try {
       writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
       BaseRpcResponse response;
-      // Antipode Team:
+      // ANTIPODE
       // MongoDB outputs "Slow Query"
       user_timeline_client->WriteUserTimeline(response, req_id, post_id, user_id,
                                               timestamp, writer_text_map);

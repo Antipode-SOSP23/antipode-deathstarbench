@@ -83,6 +83,9 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     // ANTIPODE
     //----------
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
+
+    //
+
     LOG(debug) << "[ANTIPODE] Start IsVisible for post_id: " << post_id;
     auto antipode_orable_client_wrapper = _antipode_oracle_client_pool->Pop();
     if (!antipode_orable_client_wrapper) {
@@ -102,12 +105,13 @@ void OnReceivedWorker(const AMQP::Message &msg) {
       throw;
     }
     _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
+    LOG(debug) << "[ANTIPODE] Finished IsVisible for post_id: " << post_id;
+
+    //
 
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     duration<double, std::milli> time_span = t2 - t1;
     span->SetTag("wht_antipode_duration", std::to_string(time_span.count()));
-    LOG(debug) << "[ANTIPODE] Finished IsVisible for post_id: " << post_id;
-
     //----------
     // ANTIPODE
     //----------
