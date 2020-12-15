@@ -1237,6 +1237,7 @@ def gather(args):
     with open('jaeger.json', 'w') as f:
       print(content, file=f)
 
+    missing_info = 0
     if args['antipode_ts']:
       # pick only the traces with the desired info
       for trace in content['data']:
@@ -1276,7 +1277,8 @@ def gather(args):
 
         # skip if we still have -1 values
         if any(v is None for v in trace_info.values()):
-          print(f"[INFO] trace missing information: {trace_info}")
+          missing_info += 1
+          # print(f"[INFO] trace missing information: {trace_info}")
           continue
 
         # total time of worker
@@ -1306,8 +1308,12 @@ def gather(args):
 
       # print to file and to output
       with open('antipode_ts.out', 'w') as f:
+        print(f"{missing_info} messages missing information", file=f)
+        print("", file=f)
         print(df.describe(percentiles=PERCENTILES_TO_PRINT), file=f)
       # --
+      print(f"{missing_info} messages missing information")
+      print("")
       print(df.describe(percentiles=PERCENTILES_TO_PRINT))
 
     elif args['visibility_latency']:
@@ -1315,11 +1321,10 @@ def gather(args):
       for trace in content['data']:
         trace_info = {
           # 'trace_id': trace['spans'][0]['traceID'],
-          'post_id': -1,
-          'poststorage_post_written_ts': -1,
-          'poststorage_post_replicated_ts': -1,
-          'wth_end_worker_ts': -1,
-          'post_notification_diff_ms': -1,
+          'post_id': None,
+          'poststorage_post_written_ts': None,
+          'poststorage_post_replicated_ts': None,
+          'wth_end_worker_ts': None,
         }
 
         # search trace info in different spans
@@ -1335,6 +1340,12 @@ def gather(args):
 
           if s['operationName'] == 'AntipodeHintReplica':
             trace_info['poststorage_post_replicated_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_post_replicated_ts'))
+
+        # skip if we still have -1 values
+        if any(v is None for v in trace_info.values()):
+          # print(f"[INFO] trace missing information: {trace_info}")
+          missing_info += 1
+          continue
 
         # computes the different in ms from post to notification
         diff = datetime.fromtimestamp(trace_info['poststorage_post_replicated_ts']/1000.0) - datetime.fromtimestamp(trace_info['wth_end_worker_ts']/1000.0)
@@ -1353,10 +1364,22 @@ def gather(args):
       del df['poststorage_post_replicated_ts']
       del df['wth_end_worker_ts']
 
-      print(df.describe(percentiles=PERCENTILES_TO_PRINT))
-      print("")
       num_posts_before_notifications = len([n for n in df['post_notification_diff_ms'] if n < 0])
       num_notifications_before_posts = len([n for n in df['post_notification_diff_ms'] if n >= 0])
+
+      # print to file and to output
+      with open('vl.out', 'w') as f:
+        print(f"{missing_info} messages missing information", file=f)
+        print("", file=f)
+        print(df.describe(percentiles=PERCENTILES_TO_PRINT), file=f)
+        print("", file=f)
+        print(f"% posts ready before notifications: {num_posts_before_notifications/float(len(df))}", file=f)
+        print(f"% notifications ready before posts: {num_notifications_before_posts/float(len(df))}", file=f)
+      # --
+      print(f"{missing_info} messages missing information")
+      print("")
+      print(df.describe(percentiles=PERCENTILES_TO_PRINT))
+      print("")
       print(f"% posts ready before notifications: {num_posts_before_notifications/float(len(df))}")
       print(f"% notifications ready before posts: {num_notifications_before_posts/float(len(df))}")
 
