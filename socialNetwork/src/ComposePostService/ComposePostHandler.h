@@ -913,6 +913,7 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
       ServiceException se;
       se.errorCode = ErrorCode::SE_RABBITMQ_CONN_ERROR;
       se.message = "Failed to connect to home-timeline-rabbitmq";
+      LOG(error) << "Failed to connect to home-timeline-rabbitmq";
       // XTRACE("Failed to connect to home-timeline-rabbitmq");
       throw se;
     }
@@ -923,9 +924,9 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
     high_resolution_clock::time_point wht_start_queue_ts = high_resolution_clock::now();
     uint64_t ts = duration_cast<milliseconds>(wht_start_queue_ts.time_since_epoch()).count();
     span->SetTag("wht_start_queue_ts", std::to_string(ts));
-    //
 
-    rabbitmq_channel->BasicPublish("", "write-home-timeline", msg);
+    rabbitmq_channel->BasicPublish("", "write-home-timeline", msg, true);
+
     _rabbitmq_client_pool->Push(rabbitmq_client_wrapper);
   } catch (...) {
     LOG(error) << "Failed to connected to home-timeline-rabbitmq";
