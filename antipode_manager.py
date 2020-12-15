@@ -814,11 +814,29 @@ def run__socialNetwork__gsd(args):
 def run__socialNetwork__gcp(args):
   _force_docker()
   from plumbum.cmd import ansible_playbook
+  import yaml
 
   filepath = args['configuration_path']
   if filepath is None:
     print('[ERROR] Deploy file is required')
     exit(-1)
+
+  if args['info']:
+    with open(filepath, 'r') as f_conf:
+      conf = yaml.load(f_conf, Loader=yaml.FullLoader)
+      inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'inventory.cfg')
+
+      jaeger_public_ip = inventory[conf['services']['jaeger']]['external_ip']
+      rabbitmq_public_ip = inventory[conf['services']['write-home-timeline-rabbitmq']]['external_ip']
+      portainer_public_ip = inventory['manager']['external_ip']
+
+      print(f"Jaeger:    http://{jaeger_public_ip}:16686")
+      print(f"RabbitMQ:  http://{rabbitmq_public_ip}:15672")
+      print("\tuser: guest / pwd: guest")
+      print(f"Portainer: http://{portainer_public_ip}:9000")
+      print("\tuser: admin / pwd: antipode")
+
+    return
 
   # change path to playbooks folder
   os.chdir(ROOT_PATH / 'deploy' / 'gcp')
@@ -1438,6 +1456,7 @@ if __name__ == "__main__":
   run_parser = subparsers.add_parser('run', help='Run application')
   run_parser.add_argument('-d', '--detached', action='store_true', help="detached")
   run_parser.add_argument('--build', action='store_true', help="build")
+  run_parser.add_argument('--info', action='store_true', help="build")
   # deploy file group
   deploy_file_group = run_parser.add_mutually_exclusive_group(required=False)
   deploy_file_group.add_argument('-l', '--latest', action='store_true', help="Use last used deploy file")
