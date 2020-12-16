@@ -1212,13 +1212,26 @@ def _fetch_span_tag(tags, tag_to_search):
 def gather(args):
   import pandas as pd
   import requests
-  from plumbum.cmd import sudo
+  from plumbum.cmd import sudo, hostname
 
   pd.set_option('display.float_format', lambda x: '%.3f' % x)
 
-  wkld_data_path = ROOT_PATH / 'deploy' / 'wkld-data' / Path(args['configuration_path']).stem
+  # no default configuration use deploy type
+  configuration = _deploy_type(args)
+  if args['configuration_path']:
+    configuration = Path(args['configuration_path']).stem
+
+  # create folder if needed
+  wkld_data_parent_path = ROOT_PATH / 'deploy' / 'wkld-data' / configuration
+  os.makedirs(wkld_data_parent_path, exist_ok=True)
+
   # get latest conf directory
-  wkld_data_path = max(wkld_data_path.iterdir())
+  if os.listdir(wkld_data_parent_path):
+    wkld_data_path = max(wkld_data_parent_path.iterdir())
+  else:
+    # create folder with current timestamp if none exist
+    wkld_data_path = wkld_data_parent_path / time.strftime('%Y%m%d%H%M%S')
+    os.makedirs(wkld_data_path)
 
   # force chmod of that dir
   sudo['chmod', 777, wkld_data_path] & FG
@@ -1407,7 +1420,11 @@ def gather(args):
     pass
 
 def gather__socialNetwork__local(args):
-  return 'http://localhost:16686'
+  from plumbum import FG, BG
+  from plumbum.cmd import sudo, hostname
+
+  public_ip = hostname['-I']().split()[1]
+  return f'http://{public_ip}:16686'
 
 def gather__socialNetwork__gsd(args):
   import yaml
