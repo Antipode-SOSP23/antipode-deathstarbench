@@ -20,7 +20,9 @@
 #include <xtrace/xtrace.h>
 #include <xtrace/baggage.h>
 
-#define NUM_WORKERS 4
+// #define NUM_WORKERS 4
+// #define NUM_WORKERS 16
+#define NUM_WORKERS 32
 
 using namespace social_network;
 // for clock usage
