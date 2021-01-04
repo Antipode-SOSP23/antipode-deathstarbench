@@ -93,6 +93,7 @@ namespace social_network {
 
         cacheit = cache.find(object_id);
         if (cacheit != cache.end()){
+        // if(true) {
           // add metrics to span to read later
           span->SetTag("antipode_isvisible_attempts", std::to_string(attempts));
 

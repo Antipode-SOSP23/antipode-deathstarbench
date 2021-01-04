@@ -145,7 +145,7 @@ nodes:
     machine_type: e2-standard-4
   antipode-oracle:
     hostname: antipode-oracle.pluribus
-    zone: us-central1-a
+    zone: europe-west3-c
     machine_type: e2-standard-4
   frontend-eu:
     hostname: frontend-eu.pluribus
