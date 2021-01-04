@@ -25,90 +25,58 @@ def _fetch_span_tag(tags, tag_to_search):
 
 
 # replace with argparse
-dataset_folder = ROOT_PATH / 'deploy' / 'wkld-data' / 'socialNetwork-gcp-colocated' / '20201215113248'
+exp_ts = '20201222131205'
+# exp_ts = '20201217183942'
+dataset_folder = ROOT_PATH / 'deploy' / 'wkld-data' / 'socialNetwork-gcp-colocated' / exp_ts
 
 os.chdir(dataset_folder)
 
-with open('jaeger.json', 'r') as json_file:
-  traces = []
+ats_df = pd.read_csv('ats_single.csv', sep=';')
+ats_df = ats_df.set_index('ts')
 
-  data = json_file.read()
-  content = ast.literal_eval(data)
+vl_df = pd.read_csv('vl_single.csv', sep=';')
+vl_df = vl_df.set_index('ts')
 
-  for trace in content['data']:
-    trace_info = {
-      'ts': None,
-      # 'trace_id': trace['spans'][0]['traceID'],
-      'post_id': None,
-      # 'antipode_isvisible_duration': -1,
-      # 'antipode_isvisible_attempts': -1,
-      'wht_start_queue_ts': None,
-      'wth_start_worker_ts': None,
-      'wth_end_worker_ts': None,
-      'wht_antipode_duration': None,
-    }
+df = ats_df.merge(vl_df, left_on='ts', right_on='ts')
+df = df.sort_values(by=['ts'])
 
-    # search trace info in different spans
-    for s in trace['spans']:
-      if s['operationName'] == '_ComposeAndUpload':
-        trace_info['post_id'] = float(_fetch_span_tag(s['tags'], 'composepost_id'))
-        trace_info['ts'] = datetime.fromtimestamp(s['startTime']/1000000.0)
+ats_df=df.copy()
+vl_df=df.copy()
 
-      if s['operationName'] == '_UploadHomeTimelineHelper':
-        # compute the time spent in the queue
-        trace_info['wht_start_queue_ts'] = float(_fetch_span_tag(s['tags'], 'wht_start_queue_ts'))
+# row of max queue duration
+print(df.iloc[df['wht_queue_duration'].argmax()])
 
-      # these values are captured by wht_antipode_duration
-      # if s['operationName'] == 'IsVisible':
-        # trace_info['antipode_isvisible_duration'] = float(_fetch_span_tag(s['tags'], 'antipode_isvisible_duration'))
-        # trace_info['antipode_isvisible_attempts'] = int(_fetch_span_tag(s['tags'], 'antipode_isvisible_attempts'))
+#
+# del df['wht_antipode_duration']
+# del df['wht_worker_duration']
+del ats_df['wht_worker_per_antipode']
+# del df['wht_queue_duration']
+del ats_df['wht_total_duration']
+#
+del ats_df['post_notification_diff_ms']
+del ats_df['replication_duration_ms']
+del ats_df['mongodb_replication_duration_ms']
+del ats_df['antipode_isvisible_duration_ms']
 
-      if s['operationName'] == 'FanoutHomeTimelines':
-        # duration spent in antipode
-        trace_info['wht_antipode_duration'] = float(_fetch_span_tag(s['tags'], 'wht_antipode_duration'))
-        # compute the time spent in the queue
-        trace_info['wth_start_worker_ts'] = float(_fetch_span_tag(s['tags'], 'wth_start_worker_ts'))
-        # total time spent in antipode operations while in WHT
-        trace_info['wth_end_worker_ts'] = float(_fetch_span_tag(s['tags'], 'wth_end_worker_ts'))
+axs = ats_df.plot.line()
 
-    # skip if we still have -1 values
-    if any(v is None for v in trace_info.values()):
-      # print(f"[INFO] trace missing information: {trace_info}")
-      continue
+fig = axs.get_figure()
+fig.savefig("plot_ats.png")
 
-    # total time of worker
-    diff = datetime.fromtimestamp(trace_info['wth_end_worker_ts']/1000.0) - datetime.fromtimestamp(trace_info['wth_start_worker_ts']/1000.0)
-    trace_info['wht_worker_duration'] = float(diff.total_seconds() * 1000)
+#
+#
+del vl_df['wht_antipode_duration']
+del vl_df['wht_worker_duration']
+del vl_df['wht_worker_per_antipode']
+del vl_df['wht_queue_duration']
+del vl_df['wht_total_duration']
+#
+del vl_df['post_notification_diff_ms']
+# del vl_df['replication_duration_ms']
+# del vl_df['mongodb_replication_duration_ms']
+# del vl_df['antipode_isvisible_duration_ms']
 
-    try:
-      trace_info['wht_worker_per_antipode'] = trace_info['wht_antipode_duration'] / trace_info['wht_worker_duration']
-    except ZeroDivisionError:
-      trace_info['wht_worker_per_antipode'] = 1
+axs = vl_df.plot.line()
 
-    # computes time spent queued in rabbitmq
-    diff = datetime.fromtimestamp(trace_info['wth_start_worker_ts']/1000.0) - datetime.fromtimestamp(trace_info['wht_start_queue_ts']/1000.0)
-    trace_info['wht_queue_duration'] = float(diff.total_seconds() * 1000)
-
-    # queue + worker time
-    diff = datetime.fromtimestamp(trace_info['wth_end_worker_ts']/1000.0) - datetime.fromtimestamp(trace_info['wht_start_queue_ts']/1000.0)
-    trace_info['wht_total_duration'] = float(diff.total_seconds() * 1000)
-
-    traces.append(trace_info)
-
-  df = pd.DataFrame(traces)
-  del df['post_id']
-  del df['wht_start_queue_ts']
-  del df['wth_start_worker_ts']
-  del df['wth_end_worker_ts']
-  del df['wht_worker_per_antipode']
-  #
-  del df['wht_total_duration']
-
-  df = df.set_index('ts')
-  axs = df.plot.line()
-
-  fig = axs.get_figure()
-  fig.savefig("plot.png")
-
-  # --
-  print(df.describe(percentiles=PERCENTILES_TO_PRINT))
+fig = axs.get_figure()
+fig.savefig("plot_vl.png")

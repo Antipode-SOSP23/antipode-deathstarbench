@@ -1214,7 +1214,9 @@ def gather(args):
   import requests
   from plumbum.cmd import sudo, hostname
 
-  pd.set_option('display.float_format', lambda x: '%.3f' % x)
+  # pd.set_option('display.float_format', lambda x: '%.3f' % x)
+  pd.set_option('display.html.table_schema', True)
+  pd.set_option('display.precision', 5)
 
   # no default configuration use deploy type
   configuration = _deploy_type(args)
@@ -1266,14 +1268,12 @@ def gather(args):
 
     # read returned traces
     content = response.json()
-    with open('jaeger.json', 'w') as f:
-      print(content, file=f)
-
     missing_info = 0
     if args['antipode_ts']:
       # pick only the traces with the desired info
       for trace in content['data']:
         trace_info = {
+          'ts': None,
           # 'trace_id': trace['spans'][0]['traceID'],
           'post_id': None,
           # 'antipode_isvisible_duration': -1,
@@ -1288,6 +1288,7 @@ def gather(args):
         for s in trace['spans']:
           if s['operationName'] == '_ComposeAndUpload':
             trace_info['post_id'] = float(_fetch_span_tag(s['tags'], 'composepost_id'))
+            trace_info['ts'] = datetime.fromtimestamp(s['startTime']/1000000.0)
 
 
           if s['operationName'] == '_UploadHomeTimelineHelper':
@@ -1333,10 +1334,13 @@ def gather(args):
         traces.append(trace_info)
 
       df = pd.DataFrame(traces)
+      df = df.set_index('ts')
       del df['post_id']
       del df['wht_start_queue_ts']
       del df['wth_start_worker_ts']
       del df['wth_end_worker_ts']
+
+      df.to_csv('ats_single.csv', sep=';', mode='w')
 
       # print to file and to output
       with open('antipode_ts.out', 'w') as f:
@@ -1354,8 +1358,11 @@ def gather(args):
         trace_info = {
           # 'trace_id': trace['spans'][0]['traceID'],
           'post_id': None,
+          'ts': None,
           'poststorage_post_written_ts': None,
+          'poststorage_hint_replicate_start_ts': None,
           'poststorage_post_replicated_ts': None,
+          'poststorage_hint_replicate_end_ts': None,
           'wth_end_worker_ts': None,
         }
 
@@ -1363,6 +1370,7 @@ def gather(args):
         for s in trace['spans']:
           if s['operationName'] == '_ComposeAndUpload':
             trace_info['post_id'] = int(_fetch_span_tag(s['tags'], 'composepost_id'))
+            trace_info['ts'] = datetime.fromtimestamp(s['startTime']/1000000.0)
 
           if s['operationName'] == 'FanoutHomeTimelines':
             trace_info['wth_end_worker_ts'] = int(_fetch_span_tag(s['tags'], 'wth_end_worker_ts'))
@@ -1371,7 +1379,9 @@ def gather(args):
             trace_info['poststorage_post_written_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_post_written_ts'))
 
           if s['operationName'] == 'AntipodeHintReplica':
+            trace_info['poststorage_hint_replicate_start_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_hint_replicate_start_ts'))
             trace_info['poststorage_post_replicated_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_post_replicated_ts'))
+            trace_info['poststorage_hint_replicate_end_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_hint_replicate_end_ts'))
 
         # skip if we still have -1 values
         if any(v is None for v in trace_info.values()):
@@ -1386,15 +1396,26 @@ def gather(args):
         diff = datetime.fromtimestamp(trace_info['poststorage_post_replicated_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_post_written_ts']/1000.0)
         trace_info['replication_duration_ms'] = float(diff.total_seconds() * 1000)
 
+        diff = datetime.fromtimestamp(trace_info['poststorage_post_replicated_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_hint_replicate_start_ts']/1000.0)
+        trace_info['mongodb_replication_duration_ms'] = float(diff.total_seconds() * 1000)
+
+        diff = datetime.fromtimestamp(trace_info['poststorage_hint_replicate_end_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_post_replicated_ts']/1000.0)
+        trace_info['antipode_isvisible_duration_ms'] = float(diff.total_seconds() * 1000)
+
         traces.append(trace_info)
 
 
       df = pd.DataFrame(traces)
-      df = df.set_index('post_id')
+      df = df.set_index('ts')
       # delete unnecessary columns
+      del df['post_id']
       del df['poststorage_post_written_ts']
       del df['poststorage_post_replicated_ts']
+      del df['poststorage_hint_replicate_start_ts']
+      del df['poststorage_hint_replicate_end_ts']
       del df['wth_end_worker_ts']
+
+      df.to_csv('vl_single.csv', sep=';', mode='w')
 
       num_posts_before_notifications = len([n for n in df['post_notification_diff_ms'] if n < 0])
       num_notifications_before_posts = len([n for n in df['post_notification_diff_ms'] if n >= 0])

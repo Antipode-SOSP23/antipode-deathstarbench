@@ -265,8 +265,13 @@ void PostStorageHandler::AntipodeHintReplica(
       { opentracing::ChildOf(parent_span->get()) });
   opentracing::Tracer::Global()->Inject(span->context(), writer);
 
+  high_resolution_clock::time_point start_antipode_ts = high_resolution_clock::now();
+  uint64_t ts = duration_cast<milliseconds>(start_antipode_ts.time_since_epoch()).count();
+  span->SetTag("poststorage_hint_replicate_start_ts", std::to_string(ts));
+
   // sleep while post is not ready at US replica
   bool read_post = false;
+  // bool read_post = true;
   while(!read_post) {
     mongoc_client_t *mongodb_client = mongoc_client_pool_pop(_mongodb_client_pool);
     if (!mongodb_client) {
@@ -296,8 +301,8 @@ void PostStorageHandler::AntipodeHintReplica(
   }
 
   // eval
-  high_resolution_clock::time_point end_ts = high_resolution_clock::now();
-  uint64_t ts = duration_cast<milliseconds>(end_ts.time_since_epoch()).count();
+  high_resolution_clock::time_point replicated_ts = high_resolution_clock::now();
+  ts = duration_cast<milliseconds>(replicated_ts.time_since_epoch()).count();
   span->SetTag("poststorage_post_replicated_ts", std::to_string(ts));
 
   auto antipode_orable_client_wrapper = _antipode_oracle_client_pool->Pop();
@@ -318,6 +323,11 @@ void PostStorageHandler::AntipodeHintReplica(
     throw;
   }
   _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
+
+  high_resolution_clock::time_point end_antipode_ts = high_resolution_clock::now();
+  ts = duration_cast<milliseconds>(end_antipode_ts.time_since_epoch()).count();
+  span->SetTag("poststorage_hint_replicate_end_ts", std::to_string(ts));
+  span->Finish();
   LOG(debug) << "[ANTIPODE] Post successfuly marked as visible in Oracle with response: " << antipode_oracle_response;
 };
 
