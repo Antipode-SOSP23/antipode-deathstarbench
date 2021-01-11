@@ -4,6 +4,7 @@ add_executable(
     ${THRIFT_GEN_CPP_DIR}/SocialGraphService.cpp
     ${THRIFT_GEN_CPP_DIR}/social_network_types.cpp
     ${THRIFT_GEN_CPP_DIR}/AntipodeOracle.cpp
+    ${THRIFT_GEN_CPP_DIR}/WriteHomeTimelineService.cpp
 )
 
 target_include_directories(
@@ -21,6 +22,7 @@ target_link_libraries(
     ${CMAKE_THREAD_LIBS_INIT}
     ${Boost_LIBRARIES}
     nlohmann_json::nlohmann_json
+    Boost::system
     Boost::log
     Boost::log_setup
     OpenSSL::SSL
@@ -29,8 +31,10 @@ target_link_libraries(
     ${LIBEVENT_LIBRARIES}
     /usr/local/lib/libcpp_redis.a
     /usr/local/lib/libtacopie.a
+    jaegertracing
     xtrace
     protobuf
+    tbb
 )
 
 install(TARGETS WriteHomeTimelineService DESTINATION ./)

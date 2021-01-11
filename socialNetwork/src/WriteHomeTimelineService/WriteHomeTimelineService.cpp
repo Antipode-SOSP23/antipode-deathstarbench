@@ -20,10 +20,21 @@
 #include <xtrace/xtrace.h>
 #include <xtrace/baggage.h>
 
+// for thrift
+#include <thrift/server/TThreadedServer.h>
+#include <thrift/protocol/TBinaryProtocol.h>
+#include <thrift/transport/TServerSocket.h>
+#include <thrift/transport/TBufferTransports.h>
+#include "WriteHomeTimelineService.h"
+
 // #define NUM_WORKERS 4
 // #define NUM_WORKERS 16
 #define NUM_WORKERS 32
 
+using apache::thrift::server::TThreadedServer;
+using apache::thrift::transport::TServerSocket;
+using apache::thrift::transport::TFramedTransportFactory;
+using apache::thrift::protocol::TBinaryProtocolFactory;
 using namespace social_network;
 // for clock usage
 using namespace std::chrono;
@@ -36,6 +47,49 @@ static ClientPool<ThriftClient<AntipodeOracleClient>> *_antipode_oracle_client_p
 
 void sigintHandler(int sig) {
   exit(EXIT_SUCCESS);
+}
+
+bool IsVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier) {
+  LOG(debug) << "[ANTIPODE][DISTRIBUTED] Checking '" << object_id << "' for visibility ..." ;
+
+  // Jaeger tracing
+  TextMapReader span_reader(carrier);
+  auto parent_span = opentracing::Tracer::Global()->Extract(span_reader);
+  auto span = opentracing::Tracer::Global()->StartSpan(
+      "IsVisible",
+      {opentracing::ChildOf(parent_span->get())});
+  std::map<std::string, std::string> writer_text_map;
+  TextMapWriter writer(writer_text_map);
+  opentracing::Tracer::Global()->Inject(span->context(), writer);
+
+  // evaluation
+  high_resolution_clock::time_point start_ts = high_resolution_clock::now();
+  int attempts = 0;
+
+  // perform operation
+  tbb::concurrent_unordered_set<int64_t, tbb::tbb_hash<int64_t>, std::equal_to<int>>::iterator cacheit;
+  while(true){
+    attempts++;
+
+    cacheit = cache.find(object_id);
+    if (cacheit != cache.end()){
+    // if(true) {
+      // add metrics to span to read later
+      span->SetTag("antipode_isvisible_attempts", std::to_string(attempts));
+
+      high_resolution_clock::time_point is_visible_ts = high_resolution_clock::now();
+      uint64_t ts = duration_cast<milliseconds>(is_visible_ts.time_since_epoch()).count();
+      span->SetTag("is_visible_ts", std::to_string(ts));
+
+      duration<double, std::milli> timespent = is_visible_ts - start_ts;
+      span->SetTag("antipode_isvisible_duration", std::to_string(timespent.count()));
+      span->Finish();
+
+      return true;
+    }
+  }
+  span->Finish();
+  return false;
 }
 
 void OnReceivedWorker(const AMQP::Message &msg) {
@@ -86,30 +140,40 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     //----------
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
 
-    //
+    //----------
+    // CENTRALIZED
+    //----------
+    // LOG(debug) << "[ANTIPODE][CENTRALIZED] Start IsVisible for post_id: " << post_id;
+    // auto antipode_orable_client_wrapper = _antipode_oracle_client_pool->Pop();
+    // if (!antipode_orable_client_wrapper) {
+    //   ServiceException se;
+    //   se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
+    //   se.message = "[ANTIPODE][CENTRALIZED] Failed to connect to antipode-oracle";
+    //   throw se;
+    // }
+    // auto antipode_oracle_client = antipode_orable_client_wrapper->GetClient();
+    // // loop oracle calls until its visible
+    // bool antipode_oracle_response = false;
+    // try {
+    //   antipode_oracle_response = antipode_oracle_client->IsVisible(post_id, writer_text_map);
+    //   LOG(debug) << "[ANTIPODE][CENTRALIZED] Finished IsVisible for post_id: " << post_id;
+    // } catch (...) {
+    //   LOG(error) << "[ANTIPODE][CENTRALIZED] Failed to check post visibility in Oracle";
+    //   _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
+    //   throw;
+    // }
+    // _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
+    //----------
+    // CENTRALIZED
+    //----------
 
-    LOG(debug) << "[ANTIPODE] Start IsVisible for post_id: " << post_id;
-    auto antipode_orable_client_wrapper = _antipode_oracle_client_pool->Pop();
-    if (!antipode_orable_client_wrapper) {
-      ServiceException se;
-      se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
-      se.message = "[ANTIPODE] Failed to connect to antipode-oracle";
-      throw se;
-    }
-    auto antipode_oracle_client = antipode_orable_client_wrapper->GetClient();
-    // loop oracle calls until its visible
-    bool antipode_oracle_response = false;
-    try {
-      antipode_oracle_response = antipode_oracle_client->IsVisible(post_id, writer_text_map);
-    } catch (...) {
-      LOG(error) << "[ANTIPODE] Failed to check post visibility in Oracle";
-      _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
-      throw;
-    }
-    _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
-    LOG(debug) << "[ANTIPODE] Finished IsVisible for post_id: " << post_id;
-
-    //
+    //----------
+    // DISTRIBUTED
+    //----------
+    IsVisible(post_id, writer_text_map);
+    //----------
+    // DISTRIBUTED
+    //----------
 
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     duration<double, std::milli> time_span = t2 - t1;
@@ -191,7 +255,7 @@ void OnReceivedWorker(const AMQP::Message &msg) {
 void HeartbeatSend(AmqpLibeventHandler &handler,
     AMQP::TcpConnection &connection, int interval){
   while(handler.GetIsRunning()){
-    LOG(debug) << "Heartbeat sent";
+    // LOG(debug) << "Heartbeat sent";
     connection.heartbeat();
     sleep(interval);
   }
@@ -225,6 +289,19 @@ void WorkerThread(std::string &addr, int port) {
   handler.Start();
   LOG(debug) << "Closing connection.";
   connection.close();
+}
+
+// The function we want to execute on the new thread.
+void serveThriftServer(int port) {
+  // for thrift
+  TThreadedServer server(
+      std::make_shared<WriteHomeTimelineServiceProcessor>(std::make_shared<WriteHomeTimelineServiceHandler>()),
+      std::make_shared<TServerSocket>("0.0.0.0", port),
+      std::make_shared<TFramedTransportFactory>(),
+      std::make_shared<TBinaryProtocolFactory>()
+  );
+  LOG(debug) << "Starting the write-home-timeline-service server...";
+  server.serve();
 }
 
 int main(int argc, char *argv[]) {
@@ -276,6 +353,11 @@ int main(int argc, char *argv[]) {
     thread_ptr = std::make_unique<std::thread>(
         WorkerThread, std::ref(rabbitmq_addr), rabbitmq_port);
   }
+
+  // Constructs the new thread and runs it. Does not block execution.
+  std::thread tserver_thread(serveThriftServer, port);
+  // serveThriftServer(port);
+
   for (auto &thread_ptr : threads_ptr) {
     thread_ptr->join();
     if (_teptr) {
@@ -289,7 +371,8 @@ int main(int argc, char *argv[]) {
     }
   }
 
-
+  // wait for server to finish
+  tserver_thread.join();
 
   return 0;
 }

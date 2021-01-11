@@ -17,6 +17,7 @@
 
 #include "../../gen-cpp/PostStorageService.h"
 #include "../../gen-cpp/AntipodeOracle.h"
+#include "../../gen-cpp/WriteHomeTimelineService.h"
 #include "../ClientPool.h"
 #include "../logger.h"
 #include "../tracing.h"
@@ -36,6 +37,7 @@ class PostStorageHandler : public PostStorageServiceIf {
       memcached_pool_st *,
       mongoc_client_pool_t *,
       ClientPool<ThriftClient<AntipodeOracleClient>> *,
+      ClientPool<ThriftClient<WriteHomeTimelineServiceClient>> *,
       ClientPool<ThriftClient<PostStorageServiceClient>> *,
       ClientPool<ThriftClient<PostStorageServiceClient>> *);
   ~PostStorageHandler() override = default;
@@ -56,6 +58,7 @@ class PostStorageHandler : public PostStorageServiceIf {
   memcached_pool_st *_memcached_client_pool;
   mongoc_client_pool_t *_mongodb_client_pool;
   ClientPool<ThriftClient<AntipodeOracleClient>> *_antipode_oracle_client_pool;
+  ClientPool<ThriftClient<WriteHomeTimelineServiceClient>> *_write_home_timeline_client_pool;
   ClientPool<ThriftClient<PostStorageServiceClient>> *_post_storage_client_eu_pool;
   ClientPool<ThriftClient<PostStorageServiceClient>> *_post_storage_client_us_pool;
 
@@ -68,11 +71,13 @@ PostStorageHandler::PostStorageHandler(
     memcached_pool_st *memcached_client_pool,
     mongoc_client_pool_t *mongodb_client_pool,
     ClientPool<social_network::ThriftClient<AntipodeOracleClient>> *antipode_oracle_client_pool,
+    ClientPool<social_network::ThriftClient<WriteHomeTimelineServiceClient>> *write_home_timeline_client_pool,
     ClientPool<social_network::ThriftClient<PostStorageServiceClient>> *post_storage_client_eu_pool,
     ClientPool<social_network::ThriftClient<PostStorageServiceClient>> *post_storage_client_us_pool) {
   _memcached_client_pool = memcached_client_pool;
   _mongodb_client_pool = mongodb_client_pool;
   _antipode_oracle_client_pool = antipode_oracle_client_pool;
+  _write_home_timeline_client_pool = write_home_timeline_client_pool;
   _post_storage_client_eu_pool = post_storage_client_eu_pool;
   _post_storage_client_us_pool = post_storage_client_us_pool;
 }
@@ -248,6 +253,9 @@ void PostStorageHandler::StorePost(
   DELETE_CURRENT_BAGGAGE();
 }
 
+//----------
+// ANTIPODE
+//----------
 void PostStorageHandler::AntipodeHintReplica(
     const int64_t post_id,
     const std::map<std::string, std::string> & carrier) {
@@ -305,31 +313,69 @@ void PostStorageHandler::AntipodeHintReplica(
   ts = duration_cast<milliseconds>(replicated_ts.time_since_epoch()).count();
   span->SetTag("poststorage_post_replicated_ts", std::to_string(ts));
 
-  auto antipode_orable_client_wrapper = _antipode_oracle_client_pool->Pop();
-  if (!antipode_orable_client_wrapper) {
+  //----------
+  // CENTRALIZED
+  //----------
+  // LOG(debug) << "[ANTIPODE][CENTRALIZED] Hinting replica";
+  // auto antipode_oracle_client_wrapper = _antipode_oracle_client_pool->Pop();
+  // if (!antipode_oracle_client_wrapper) {
+  //   ServiceException se;
+  //   se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
+  //   se.message = "[ANTIPODE][CENTRALIZED] Failed to connect to antipode-oracle";
+  //   throw se;
+  // }
+
+  // auto antipode_oracle_client = antipode_oracle_client_wrapper->GetClient();
+  // bool antipode_oracle_response;
+  // try {
+  //   antipode_oracle_response = antipode_oracle_client->MakeVisible(post_id, writer_text_map);
+  //   LOG(debug) << "[ANTIPODE][CENTRALIZED] Post successfuly marked as visible in Oracle with response: " << antipode_oracle_response;
+  // } catch (...) {
+  //   LOG(error) << "[ANTIPODE][CENTRALIZED] Failed to write post visibility to Oracle";
+  //   _antipode_oracle_client_pool->Push(antipode_oracle_client_wrapper);
+  //   throw;
+  // }
+  // _antipode_oracle_client_pool->Push(antipode_oracle_client_wrapper);
+  //----------
+  // CENTRALIZED
+  //----------
+  //----------
+  // DISTRIBUTED
+  //----------
+  LOG(debug) << "[ANTIPODE][DISTRIBUTED] Hinting replica";
+
+  auto write_home_timeline_client_wrapper = _write_home_timeline_client_pool->Pop();
+  if (!write_home_timeline_client_wrapper) {
     ServiceException se;
     se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
-    se.message = "[ANTIPODE] Failed to connect to antipode-oracle";
+    se.message = "[ANTIPODE][DISTRIBUTED] Failed to connect to write-home-timeline-service";
     throw se;
   }
 
-  auto antipode_oracle_client = antipode_orable_client_wrapper->GetClient();
-  bool antipode_oracle_response;
+  auto write_home_timeline_client = write_home_timeline_client_wrapper->GetClient();
+  bool write_home_timeline_client_response;
   try {
-    antipode_oracle_response = antipode_oracle_client->MakeVisible(post_id, writer_text_map);
+    write_home_timeline_client_response = write_home_timeline_client->MakeVisible(post_id, writer_text_map);
+    LOG(debug) << "[ANTIPODE][DISTRIBUTED] Post successfuly marked as visible in replica: " << write_home_timeline_client_response;
   } catch (...) {
-    LOG(error) << "[ANTIPODE] Failed to write post visibility to Oracle";
-    _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
+    LOG(error) << "[ANTIPODE][DISTRIBUTED] Failed to write post visibility to write-home-timeline-service";
+    _write_home_timeline_client_pool->Push(write_home_timeline_client_wrapper);
     throw;
   }
-  _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
+  _write_home_timeline_client_pool->Push(write_home_timeline_client_wrapper);
+  //----------
+  // DISTRIBUTED
+  //----------
 
   high_resolution_clock::time_point end_antipode_ts = high_resolution_clock::now();
   ts = duration_cast<milliseconds>(end_antipode_ts.time_since_epoch()).count();
   span->SetTag("poststorage_hint_replicate_end_ts", std::to_string(ts));
   span->Finish();
-  LOG(debug) << "[ANTIPODE] Post successfuly marked as visible in Oracle with response: " << antipode_oracle_response;
 };
+
+//----------
+// ANTIPODE
+//----------
 
 void PostStorageHandler::ReadPost(
     PostRpcResponse& response,

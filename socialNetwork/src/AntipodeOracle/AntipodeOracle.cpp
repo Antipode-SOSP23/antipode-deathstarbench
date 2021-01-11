@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
         std::make_shared<TBinaryProtocolFactory>()
     );
 
-    std::cout << "Starting the antipode-oracle server..." << std::endl;
+    std::cout << "[ANTIPODE][CENTRALIZED] Starting the antipode-oracle server..." << std::endl;
     server.serve();
   } else exit(EXIT_FAILURE);
 }

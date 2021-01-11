@@ -6,7 +6,15 @@
 --
 
 
-require 'Thrift'
+local Thrift = require 'Thrift'
+local TType = Thrift[1]
+local TMessageType = Thrift[2]
+local __TObject = Thrift[3]
+local TApplicationException = Thrift[5]
+local __TClient = Thrift[6]
+local __TProcessor = Thrift[7]
+local ttype = Thrift[8]
+local ttable_size = Thrift[10]
 require 'social_network_ttypes'
 
 WriteHomeTimelineServiceClient = __TObject.new(__TClient, {
@@ -117,7 +125,7 @@ function MakeVisible_args:read(iprot)
     elseif fid == 2 then
       if ftype == TType.MAP then
         self.carrier = {}
-        local _ktype363, _vtype364, _size362 = iprot:readMapBegin() 
+        local _ktype363, _vtype364, _size362 = iprot:readMapBegin()
         for _i=1,_size362 do
           local _key366 = iprot:readString()
           local _val367 = iprot:readString()

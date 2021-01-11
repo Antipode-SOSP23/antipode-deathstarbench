@@ -94,6 +94,9 @@ int main(int argc, char *argv[]) {
   int antipode_oracle_port = config_json["antipode-oracle"]["port"];
   std::string antipode_oracle_addr = config_json["antipode-oracle"]["addr"];
 
+  int write_home_timeline_service_port = config_json["write-home-timeline-service"]["port"];
+  std::string write_home_timeline_service_addr = config_json["write-home-timeline-service"]["addr"];
+
   int post_storage_eu_port = config_json["post-storage-service-eu"]["port"];
   std::string post_storage_eu_addr = config_json["post-storage-service-eu"]["addr"];
 
@@ -103,6 +106,10 @@ int main(int argc, char *argv[]) {
   ClientPool<ThriftClient<AntipodeOracleClient>>
       antipode_oracle_client_pool("antipode-oracle", antipode_oracle_addr,
                                 antipode_oracle_port, 0, 10000, 1000);
+
+  ClientPool<ThriftClient<WriteHomeTimelineServiceClient>>
+      write_home_timeline_service_client_pool("write-home-timeline-service", write_home_timeline_service_addr,
+                                write_home_timeline_service_port, 0, 10000, 1000);
 
   ClientPool<ThriftClient<PostStorageServiceClient>>
       post_storage_client_eu_pool("post-storage-client-eu", post_storage_eu_addr,
@@ -118,6 +125,7 @@ int main(int argc, char *argv[]) {
               memcached_client_pool,
               mongodb_client_pool,
               &antipode_oracle_client_pool,
+              &write_home_timeline_service_client_pool,
               &post_storage_client_eu_pool,
               &post_storage_client_us_pool)),
       std::make_shared<TServerSocket>("0.0.0.0", port),
