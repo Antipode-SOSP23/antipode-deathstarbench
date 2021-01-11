@@ -349,3 +349,10 @@ service AntipodeOracle {
       2: map<string, string> carrier
   ) throws (1: ServiceException se)
 }
+
+service WriteHomeTimelineService {
+  bool MakeVisible(
+      1: i64 object_id
+      2: map<string, string> carrier
+  ) throws (1: ServiceException se)
+}
