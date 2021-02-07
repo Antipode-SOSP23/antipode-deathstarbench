@@ -718,6 +718,9 @@ def deploy__socialNetwork__gcp(args):
           inventory[node_key]['external_ip'] = None
           inventory[node_key]['internal_ip'] = None
 
+    # observed some errors while running hence we sleep to avoid those
+    time.sleep(20)
+
     # now build the inventory
     # if you want to get a new google_compute_engine key:
     #   1) go to https://console.cloud.google.com/compute/instances
@@ -1136,6 +1139,9 @@ def wkld__socialNetwork__gcp__run(args, hosts, exe_path, exe_args):
         except KeyError:
           inventory[node_key]['external_ip'] = None
           inventory[node_key]['internal_ip'] = None
+
+    # we faced some connections bugs from time to time, we sleep to wait a bit more for the machines to be ready
+    time.sleep(20)
     print("[INFO] GCP Nodes ready!")
 
     # now build the inventory
@@ -1360,10 +1366,13 @@ def gather(args):
           'post_id': None,
           'ts': None,
           'poststorage_post_written_ts': None,
+          'poststorage_hint_replicas_end_ts': None,
           'poststorage_hint_replicate_start_ts': None,
           'poststorage_post_replicated_ts': None,
           'poststorage_hint_replicate_end_ts': None,
           'wth_end_worker_ts': None,
+          'poststorage_hint_replicate_step_1': None,
+          'poststorage_hint_replicate_step_2': None,
         }
 
         # search trace info in different spans
@@ -1377,6 +1386,11 @@ def gather(args):
 
           if s['operationName'] == 'StorePost':
             trace_info['poststorage_post_written_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_post_written_ts'))
+            trace_info['poststorage_hint_replicas_end_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_hint_replicas_end_ts'))
+
+          if s['operationName'] == '_HintReplicas':
+            trace_info['poststorage_hint_replicate_step_1'] = int(_fetch_span_tag(s['tags'], 'poststorage_hint_replicate_step_1'))
+            trace_info['poststorage_hint_replicate_step_2'] = int(_fetch_span_tag(s['tags'], 'poststorage_hint_replicate_step_2'))
 
           if s['operationName'] == 'AntipodeHintReplica':
             trace_info['poststorage_hint_replicate_start_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_hint_replicate_start_ts'))
@@ -1396,11 +1410,21 @@ def gather(args):
         diff = datetime.fromtimestamp(trace_info['poststorage_post_replicated_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_post_written_ts']/1000.0)
         trace_info['replication_duration_ms'] = float(diff.total_seconds() * 1000)
 
+        diff = datetime.fromtimestamp(trace_info['poststorage_hint_replicas_end_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_post_written_ts']/1000.0)
+        trace_info['hint_replicas_duration_ms'] = float(diff.total_seconds() * 1000)
+
+        diff = datetime.fromtimestamp(trace_info['poststorage_hint_replicate_start_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_post_written_ts']/1000.0)
+        trace_info['until_hint_duration_ms'] = float(diff.total_seconds() * 1000)
+
         diff = datetime.fromtimestamp(trace_info['poststorage_post_replicated_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_hint_replicate_start_ts']/1000.0)
         trace_info['mongodb_replication_duration_ms'] = float(diff.total_seconds() * 1000)
 
-        diff = datetime.fromtimestamp(trace_info['poststorage_hint_replicate_end_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_post_replicated_ts']/1000.0)
-        trace_info['antipode_isvisible_duration_ms'] = float(diff.total_seconds() * 1000)
+        # diff = datetime.fromtimestamp(trace_info['poststorage_hint_replicate_end_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_post_replicated_ts']/1000.0)
+        # trace_info['antipode_isvisible_duration_ms'] = float(diff.total_seconds() * 1000)
+
+        # debug
+        diff = datetime.fromtimestamp(trace_info['poststorage_hint_replicate_step_2']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_hint_replicate_step_1']/1000.0)
+        trace_info['poststorage_hint_replicate_step_1_2'] = float(diff.total_seconds() * 1000)
 
         traces.append(trace_info)
 
@@ -1410,9 +1434,12 @@ def gather(args):
       # delete unnecessary columns
       del df['post_id']
       del df['poststorage_post_written_ts']
+      del df['poststorage_hint_replicas_end_ts']
       del df['poststorage_post_replicated_ts']
       del df['poststorage_hint_replicate_start_ts']
       del df['poststorage_hint_replicate_end_ts']
+      del df['poststorage_hint_replicate_step_1']
+      del df['poststorage_hint_replicate_step_2']
       del df['wth_end_worker_ts']
 
       df.to_csv('vl_single.csv', sep=';', mode='w')

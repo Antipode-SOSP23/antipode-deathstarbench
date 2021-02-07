@@ -25,58 +25,71 @@ def _fetch_span_tag(tags, tag_to_search):
 
 
 # replace with argparse
-exp_ts = '20201222131205'
-# exp_ts = '20201217183942'
-dataset_folder = ROOT_PATH / 'deploy' / 'wkld-data' / 'socialNetwork-gcp-colocated' / exp_ts
+exp_tss = [
+  #
+  # DISTRIBUTED
+  #
+  # -- 1 Client  // 75 req/s
+  '20210126023656',
+  # -- 1 Client  // 150 req/s
+  '20210126102219',
+  # -- 1 Client  // 150 req/s  // standard-8 Hint Pool
+  '20210126153004',
+  # -- 2 Clients // 75  req/s
+  '20210126113934',
+  #
+  # CENTRALIZED
+  #
+  # -- 1 Client  // 75 req/s
+  '20210126131746',
+  # -- 1 Client  // 150 req/s
+  '20210126123424'
+]
 
-os.chdir(dataset_folder)
+for exp_ts in exp_tss:
+  dataset_folder = ROOT_PATH / 'deploy' / 'wkld-data' / 'socialNetwork-gcp-colocated' / exp_ts
 
-ats_df = pd.read_csv('ats_single.csv', sep=';')
-ats_df = ats_df.set_index('ts')
+  os.chdir(dataset_folder)
 
-vl_df = pd.read_csv('vl_single.csv', sep=';')
-vl_df = vl_df.set_index('ts')
+  ats_df = pd.read_csv('ats_single.csv', sep=';')
+  ats_df = ats_df.set_index('ts')
 
-df = ats_df.merge(vl_df, left_on='ts', right_on='ts')
-df = df.sort_values(by=['ts'])
+  vl_df = pd.read_csv('vl_single.csv', sep=';')
+  vl_df = vl_df.set_index('ts')
 
-ats_df=df.copy()
-vl_df=df.copy()
+  df = ats_df.merge(vl_df, left_on='ts', right_on='ts')
+  df = df.sort_values(by=['ts'])
 
-# row of max queue duration
-print(df.iloc[df['wht_queue_duration'].argmax()])
+  # row of max queue duration
+  print(df.iloc[df['wht_queue_duration'].argmax()])
 
-#
-# del df['wht_antipode_duration']
-# del df['wht_worker_duration']
-del ats_df['wht_worker_per_antipode']
-# del df['wht_queue_duration']
-del ats_df['wht_total_duration']
-#
-del ats_df['post_notification_diff_ms']
-del ats_df['replication_duration_ms']
-del ats_df['mongodb_replication_duration_ms']
-del ats_df['antipode_isvisible_duration_ms']
+  #
+  del df['wht_worker_per_antipode']
+  del df['wht_total_duration']
+  del df['post_notification_diff_ms']
+  del df['poststorage_hint_replicate_step_1_2']
+  del df['hint_replicas_duration_ms']
+  # del df['until_hint_duration_ms']
 
-axs = ats_df.plot.line()
+  axs = df.plot.line(subplots=True, figsize=(5,10))
 
-fig = axs.get_figure()
-fig.savefig("plot_ats.png")
+  axs[0].set_xticklabels([])
 
-#
-#
-del vl_df['wht_antipode_duration']
-del vl_df['wht_worker_duration']
-del vl_df['wht_worker_per_antipode']
-del vl_df['wht_queue_duration']
-del vl_df['wht_total_duration']
-#
-del vl_df['post_notification_diff_ms']
-# del vl_df['replication_duration_ms']
-# del vl_df['mongodb_replication_duration_ms']
-# del vl_df['antipode_isvisible_duration_ms']
+  fig = axs[0].get_figure()
+  fig.savefig(f"plot_debug.png")
 
-axs = vl_df.plot.line()
 
-fig = axs.get_figure()
-fig.savefig("plot_vl.png")
+
+
+# distributed
+
+# 20210126023656 -- 1 Client  // 75 req/s
+# 20210126102219 -- 1 Client  // 150 req/s
+
+# 20210126113934 -- 2 Clients // 75  req/s
+
+# centralized
+
+# 20210126131746 -- 1 Client  // 75 req/s
+# 20210126123424 -- 1 Client  // 150 req/s
+#  -- 2 Clients // 75  req/s
