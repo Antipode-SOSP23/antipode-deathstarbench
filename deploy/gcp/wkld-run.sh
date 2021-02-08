@@ -1,7 +1,7 @@
 
 #! /bin/bash
 
-export HOST_EU=http://35.222.251.185:8080
-export HOST_US=http://34.107.51.75:8082
-mkdir -p /tmp/dsb-wkld-data/socialNetwork-gcp-colocated/20201222131205/
-docker run --rm -it --network=host -e HOST_EU=http://35.222.251.185:8080 -e HOST_US=http://34.107.51.75:8082 -v /code/socialNetwork/wrk2/scripts:/scripts wrk2:antipode ./wrk --connections 4 --duration 300s --threads 2 --latency --script /scripts/social-network/compose-post.lua http://35.222.251.185:8080/wrk2-api/post/compose --rate 75 | tee /tmp/dsb-wkld-data/socialNetwork-gcp-colocated/20201222131205//$(hostname).out
+export HOST_EU=http://35.224.108.61:8080
+export HOST_US=http://35.246.247.200:8082
+mkdir -p /tmp/dsb-wkld-data/socialNetwork-gcp-colocated/20210126161249/
+docker run --rm -it --network=host -e HOST_EU=http://35.224.108.61:8080 -e HOST_US=http://35.246.247.200:8082 -v /code/socialNetwork/wrk2/scripts:/scripts wrk2:antipode ./wrk --connections 4 --duration 300s --threads 2 --latency --script /scripts/social-network/compose-post.lua http://35.224.108.61:8080/wrk2-api/post/compose --rate 150 | tee /tmp/dsb-wkld-data/socialNetwork-gcp-colocated/20210126161249//$(hostname).out

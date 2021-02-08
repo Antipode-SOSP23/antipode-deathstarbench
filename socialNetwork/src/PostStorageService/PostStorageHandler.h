@@ -64,7 +64,7 @@ class PostStorageHandler : public PostStorageServiceIf {
 
   std::exception_ptr _post_storage_teptr;
 
-  void _AntipodeHintReplicas(int64_t post_id, std::map<std::string, std::string> writer_text_map);
+  void _AntipodeHintReplicas(int64_t post_id, const std::map<std::string, std::string> &carrier);
 };
 
 PostStorageHandler::PostStorageHandler(
@@ -83,7 +83,7 @@ PostStorageHandler::PostStorageHandler(
 }
 
 // Launch the pool with as much threads as cores
-int num_threads = std::thread::hardware_concurrency();
+int num_threads = std::thread::hardware_concurrency() * 8;
 boost::asio::thread_pool pool(num_threads);
 
 void PostStorageHandler::StorePost(
@@ -233,15 +233,22 @@ void PostStorageHandler::StorePost(
   mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
 
   // eval
-  high_resolution_clock::time_point end_ts = high_resolution_clock::now();
-  uint64_t ts = duration_cast<milliseconds>(end_ts.time_since_epoch()).count();
-  span->SetTag("poststorage_post_written_ts", std::to_string(ts));
+  high_resolution_clock::time_point ts;
+  uint64_t ts_int;
+
+  ts = high_resolution_clock::now();
+  ts_int = duration_cast<milliseconds>(ts.time_since_epoch()).count();
+  span->SetTag("poststorage_post_written_ts", std::to_string(ts_int));
 
   //----------
   // ANTIPODE
   //----------
-  // boost::asio::post(pool, std::bind(&PostStorageHandler::_AntipodeHintReplicas, this, post.post_id, writer_text_map));
-  _AntipodeHintReplicas(post.post_id, writer_text_map);
+  boost::asio::post(pool, std::bind(&PostStorageHandler::_AntipodeHintReplicas, this, post.post_id, writer_text_map));
+  // _AntipodeHintReplicas(post.post_id, carrier);
+
+  ts = high_resolution_clock::now();
+  ts_int = duration_cast<milliseconds>(ts.time_since_epoch()).count();
+  span->SetTag("poststorage_hint_replicas_end_ts", std::to_string(ts_int));
 
   //----------
   // ANTIPODE
@@ -955,11 +962,23 @@ void PostStorageHandler::ReadPosts(
 }
 
 void PostStorageHandler::_AntipodeHintReplicas(int64_t post_id,
-    std::map<std::string, std::string> writer_text_map) {
+    const std::map<std::string, std::string> &carrier) {
+
   // all existing zones
   std::string zones[2] = { "eu", "us" };
   // spans
+  TextMapReader reader(carrier);
+  std::map<std::string, std::string> writer_text_map;
   TextMapWriter writer(writer_text_map);
+  auto parent_span = opentracing::Tracer::Global()->Extract(reader);
+  auto span = opentracing::Tracer::Global()->StartSpan(
+      "_HintReplicas",
+      { opentracing::ChildOf(parent_span->get()) });
+  opentracing::Tracer::Global()->Inject(span->context(), writer);
+
+
+  high_resolution_clock::time_point ts;
+  uint64_t ts_int;
 
   for (std::string zone : zones) {
     if (zone != std::getenv("ZONE")) {
@@ -967,6 +986,10 @@ void PostStorageHandler::_AntipodeHintReplicas(int64_t post_id,
 
       ThriftClient<PostStorageServiceClient> * post_storage_client_wrapper;
       try{
+        ts = high_resolution_clock::now();
+        ts_int = duration_cast<milliseconds>(ts.time_since_epoch()).count();
+        span->SetTag("poststorage_hint_replicate_step_1", std::to_string(ts_int));
+
         // pop correct client
         if(zone == "eu") {
           post_storage_client_wrapper = _post_storage_client_eu_pool->Pop();
@@ -1005,8 +1028,15 @@ void PostStorageHandler::_AntipodeHintReplicas(int64_t post_id,
         // XTRACE("Failed to connect to post-storage-service");
         _post_storage_teptr = std::current_exception();
       }
+
+      ts = high_resolution_clock::now();
+      ts_int = duration_cast<milliseconds>(ts.time_since_epoch()).count();
+      span->SetTag("poststorage_hint_replicate_step_2", std::to_string(ts_int));
+
     }
   }
+
+  span->Finish();
 }
 
 } // namespace social_network
