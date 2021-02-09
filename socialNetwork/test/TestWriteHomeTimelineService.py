@@ -2,7 +2,7 @@
 import pika
 import json
 
-credentials = pika.PlainCredentials('guest', 'guest')
+credentials = pika.PlainCredentials('admin', 'admin')
 connection = pika.BlockingConnection(
   pika.ConnectionParameters(host='ath-8.ece.cornell.edu', credentials=credentials))
 channel = connection.channel()

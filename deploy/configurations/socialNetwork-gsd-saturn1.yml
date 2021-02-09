@@ -12,7 +12,7 @@ services:
   #
   # 5 cores
   write-home-timeline-service: saturn1
-  write-home-timeline-rabbitmq: saturn1
+  write-home-timeline-rabbitmq-eu: saturn1
   home-timeline-redis: saturn1
 
   #----------------------------------------------------------

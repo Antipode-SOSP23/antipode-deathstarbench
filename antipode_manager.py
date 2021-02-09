@@ -77,7 +77,7 @@ SOCIAL_NETWORK_DEFAULT_SERVICES = {
     'social-graph-mongodb': 'HOSTNAME',
     'social-graph-redis': 'HOSTNAME',
     'write-home-timeline-service': 'HOSTNAME',
-    'write-home-timeline-rabbitmq': 'HOSTNAME',
+    'write-home-timeline-rabbitmq-eu': 'HOSTNAME',
     'home-timeline-redis': 'HOSTNAME',
     'home-timeline-redis-us': 'HOSTNAME',
     'home-timeline-service': 'HOSTNAME',
@@ -830,12 +830,12 @@ def run__socialNetwork__gcp(args):
       inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'inventory.cfg')
 
       jaeger_public_ip = inventory[conf['services']['jaeger']]['external_ip']
-      rabbitmq_public_ip = inventory[conf['services']['write-home-timeline-rabbitmq']]['external_ip']
+      rabbitmq_public_ip = inventory[conf['services']['write-home-timeline-rabbitmq-eu']]['external_ip']
       portainer_public_ip = inventory['manager']['external_ip']
 
       print(f"Jaeger:    http://{jaeger_public_ip}:16686")
       print(f"RabbitMQ:  http://{rabbitmq_public_ip}:15672")
-      print("\tuser: guest / pwd: guest")
+      print("\tuser: admin / pwd: admin")
       print(f"Portainer: http://{portainer_public_ip}:9000")
       print("\tuser: admin / pwd: antipode")
 

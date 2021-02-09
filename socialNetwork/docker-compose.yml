@@ -55,22 +55,45 @@ services:
     restart: always
     entrypoint: WriteHomeTimelineService
     depends_on:
-      - write-home-timeline-rabbitmq
+      - write-home-timeline-rabbitmq-eu
+    volumes:
+      - ./rabbit1-definitions.json:/etc/rabbitmq/definitions.json:ro
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
     deploy:
       placement:
         constraints: [node.hostname == node02]
 
-  write-home-timeline-rabbitmq:
+  write-home-timeline-rabbitmq-eu:
     image: rabbitmq:management
-    hostname: write-home-timeline-rabbitmq
+    hostname: write-home-timeline-rabbitmq-eu
     environment:
       RABBITMQ_ERLANG_COOKIE: "WRITE-HOME-TIMELINE-RABBITMQ"
       RABBITMQ_DEFAULT_VHOST: "/"
     ports:
       - 15672:15672
       - 5672:5672
-      - 5673:5673
     restart: always
+    volumes:
+      - ./config/rabbitmq/write-home-timeline-rabbitmq-eu-definitions.json:/etc/rabbitmq/definitions.json:ro
+      - ./config/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    deploy:
+      placement:
+        constraints: [node.hostname == node02]
+
+  write-home-timeline-rabbitmq-us:
+    image: rabbitmq:management
+    command: sh -c 'sleep 10 && rabbitmq-server'
+    hostname: write-home-timeline-rabbitmq-us
+    environment:
+      RABBITMQ_ERLANG_COOKIE: "WRITE-HOME-TIMELINE-RABBITMQ"
+      RABBITMQ_DEFAULT_VHOST: "/"
+    ports:
+      - 15673:15672
+      - 5673:5672
+    restart: always
+    volumes:
+      - ./config/rabbitmq/write-home-timeline-rabbitmq-us-definitions.json:/etc/rabbitmq/definitions.json:ro
+      - ./config/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
     deploy:
       placement:
         constraints: [node.hostname == node02]
@@ -261,7 +284,7 @@ services:
     restart: always
     entrypoint: ComposePostService
     depends_on:
-      - write-home-timeline-rabbitmq
+      - write-home-timeline-rabbitmq-eu
     deploy:
       placement:
         constraints: [node.hostname == node11]

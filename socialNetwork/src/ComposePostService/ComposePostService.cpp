@@ -33,8 +33,8 @@ int main(int argc, char *argv[]) {
   int redis_port = config_json["compose-post-redis"]["port"];
   std::string redis_addr = config_json["compose-post-redis"]["addr"];
 
-  int rabbitmq_port = config_json["write-home-timeline-rabbitmq"]["port"];
-  std::string rabbitmq_addr = config_json["write-home-timeline-rabbitmq"]["addr"];
+  int rabbitmq_port = config_json["write-home-timeline-rabbitmq-eu"]["port"];
+  std::string rabbitmq_addr = config_json["write-home-timeline-rabbitmq-eu"]["addr"];
 
   int post_storage_port = config_json["post-storage-service-eu"]["port"];
   std::string post_storage_addr = config_json["post-storage-service-eu"]["addr"];

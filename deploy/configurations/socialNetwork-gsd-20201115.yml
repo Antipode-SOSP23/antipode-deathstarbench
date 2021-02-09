@@ -6,7 +6,7 @@ services:
   social-graph-mongodb: node02
   social-graph-redis: node02
   write-home-timeline-service: node02
-  write-home-timeline-rabbitmq: node02
+  write-home-timeline-rabbitmq-eu: node02
   home-timeline-redis: node02
 
   #----------------------------------------------------------

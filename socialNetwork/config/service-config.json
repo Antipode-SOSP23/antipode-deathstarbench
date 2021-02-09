@@ -16,8 +16,8 @@
     "addr": "write-home-timeline-service",
     "port": 9090
   },
-  "write-home-timeline-rabbitmq": {
-    "addr": "write-home-timeline-rabbitmq",
+  "write-home-timeline-rabbitmq-eu": {
+    "addr": "write-home-timeline-rabbitmq-eu",
     "port": 5672
   },
   "home-timeline-redis": {

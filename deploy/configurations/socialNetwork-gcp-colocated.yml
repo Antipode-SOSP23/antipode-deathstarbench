@@ -12,7 +12,7 @@ services:
   #
   # 5 cores
   write-home-timeline-service: home-timeline-eu
-  write-home-timeline-rabbitmq: home-timeline-eu
+  write-home-timeline-rabbitmq-eu: home-timeline-eu
   home-timeline-redis: home-timeline-eu
 
   #----------------------------------------------------------

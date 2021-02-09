@@ -26,7 +26,7 @@ services:
     restart: always
   compose-post-service:
     depends_on:
-    - write-home-timeline-rabbitmq
+    - write-home-timeline-rabbitmq-eu
     deploy:
       placement:
         constraints:
@@ -458,7 +458,7 @@ services:
     networks:
     - deathstarbench_network
     restart: always
-  write-home-timeline-rabbitmq:
+  write-home-timeline-rabbitmq-eu:
     deploy:
       placement:
         constraints:
@@ -466,7 +466,7 @@ services:
     environment:
       RABBITMQ_DEFAULT_VHOST: /
       RABBITMQ_ERLANG_COOKIE: WRITE-HOME-TIMELINE-RABBITMQ
-    hostname: write-home-timeline-rabbitmq
+    hostname: write-home-timeline-rabbitmq-eu
     image: rabbitmq:management
     networks:
     - deathstarbench_network
@@ -477,7 +477,7 @@ services:
     restart: always
   write-home-timeline-service:
     depends_on:
-    - write-home-timeline-rabbitmq
+    - write-home-timeline-rabbitmq-eu
     deploy:
       placement:
         constraints:

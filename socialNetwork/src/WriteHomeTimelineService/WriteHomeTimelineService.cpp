@@ -264,7 +264,7 @@ void HeartbeatSend(AmqpLibeventHandler &handler,
 void WorkerThread(std::string &addr, int port) {
   AmqpLibeventHandler handler;
   AMQP::TcpConnection connection(handler, AMQP::Address(
-      addr, port, AMQP::Login("guest", "guest"), "/"));
+      addr, port, AMQP::Login("admin", "admin"), "/"));
   AMQP::TcpChannel channel(&connection);
   channel.onError(
       [&handler](const char *message) {
@@ -318,8 +318,8 @@ int main(int argc, char *argv[]) {
   int port = config_json["write-home-timeline-service"]["port"];
 
   std::string rabbitmq_addr =
-      config_json["write-home-timeline-rabbitmq"]["addr"];
-  int rabbitmq_port = config_json["write-home-timeline-rabbitmq"]["port"];
+      config_json["write-home-timeline-rabbitmq-eu"]["addr"];
+  int rabbitmq_port = config_json["write-home-timeline-rabbitmq-eu"]["port"];
 
   std::string redis_addr =
       config_json["home-timeline-redis"]["addr"];

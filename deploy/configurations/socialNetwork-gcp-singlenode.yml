@@ -7,7 +7,7 @@ services:
   social-graph-redis: node01
   #
   write-home-timeline-service: node01
-  write-home-timeline-rabbitmq: node01
+  write-home-timeline-rabbitmq-eu: node01
   #
   home-timeline-redis: node01
 
