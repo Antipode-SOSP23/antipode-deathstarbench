@@ -36,7 +36,7 @@ class RabbitmqClient : public GenericClient {
 RabbitmqClient::RabbitmqClient(const std::string &addr, int port) {
   _addr = addr;
   _port = port;
-  _channel = AmqpClient::Channel::Create(addr, port);
+  _channel = AmqpClient::Channel::Create(addr, port, "admin", "admin");
   _is_connected = false;
 }
 

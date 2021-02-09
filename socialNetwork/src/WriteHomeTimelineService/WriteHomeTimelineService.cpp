@@ -300,7 +300,7 @@ void serveThriftServer(int port) {
       std::make_shared<TFramedTransportFactory>(),
       std::make_shared<TBinaryProtocolFactory>()
   );
-  LOG(debug) << "Starting the write-home-timeline-service server...";
+  LOG(debug) << "Starting the write-home-timeline-service-eu server...";
   server.serve();
 }
 
@@ -308,14 +308,14 @@ int main(int argc, char *argv[]) {
   signal(SIGINT, sigintHandler);
   init_logger();
 
-  SetUpTracer("config/jaeger-config.yml", "write-home-timeline-service");
+  SetUpTracer("config/jaeger-config.yml", "write-home-timeline-service-eu");
 
   json config_json;
   if (load_config_file("config/service-config.json", &config_json) != 0) {
     exit(EXIT_FAILURE);
   }
 
-  int port = config_json["write-home-timeline-service"]["port"];
+  int port = config_json["write-home-timeline-service-eu"]["port"];
 
   std::string rabbitmq_addr =
       config_json["write-home-timeline-rabbitmq-eu"]["addr"];

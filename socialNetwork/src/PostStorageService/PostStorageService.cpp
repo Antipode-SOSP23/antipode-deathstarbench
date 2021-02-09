@@ -94,8 +94,8 @@ int main(int argc, char *argv[]) {
   int antipode_oracle_port = config_json["antipode-oracle"]["port"];
   std::string antipode_oracle_addr = config_json["antipode-oracle"]["addr"];
 
-  int write_home_timeline_service_port = config_json["write-home-timeline-service"]["port"];
-  std::string write_home_timeline_service_addr = config_json["write-home-timeline-service"]["addr"];
+  int write_home_timeline_service_port = config_json["write-home-timeline-service-eu"]["port"];
+  std::string write_home_timeline_service_addr = config_json["write-home-timeline-service-eu"]["addr"];
 
   int post_storage_eu_port = config_json["post-storage-service-eu"]["port"];
   std::string post_storage_eu_addr = config_json["post-storage-service-eu"]["addr"];
@@ -108,7 +108,7 @@ int main(int argc, char *argv[]) {
                                 antipode_oracle_port, 0, 10000, 1000);
 
   ClientPool<ThriftClient<WriteHomeTimelineServiceClient>>
-      write_home_timeline_service_client_pool("write-home-timeline-service", write_home_timeline_service_addr,
+      write_home_timeline_service_client_pool("write-home-timeline-service-eu", write_home_timeline_service_addr,
                                 write_home_timeline_service_port, 0, 10000, 1000);
 
   ClientPool<ThriftClient<PostStorageServiceClient>>

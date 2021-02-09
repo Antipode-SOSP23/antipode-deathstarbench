@@ -355,7 +355,7 @@ void PostStorageHandler::AntipodeHintReplica(
   if (!write_home_timeline_client_wrapper) {
     ServiceException se;
     se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
-    se.message = "[ANTIPODE][DISTRIBUTED] Failed to connect to write-home-timeline-service";
+    se.message = "[ANTIPODE][DISTRIBUTED] Failed to connect to write-home-timeline-service-eu";
     throw se;
   }
 
@@ -365,7 +365,7 @@ void PostStorageHandler::AntipodeHintReplica(
     write_home_timeline_client_response = write_home_timeline_client->MakeVisible(post_id, writer_text_map);
     LOG(debug) << "[ANTIPODE][DISTRIBUTED] Post successfuly marked as visible in replica: " << write_home_timeline_client_response;
   } catch (...) {
-    LOG(error) << "[ANTIPODE][DISTRIBUTED] Failed to write post visibility to write-home-timeline-service";
+    LOG(error) << "[ANTIPODE][DISTRIBUTED] Failed to write post visibility to write-home-timeline-service-eu";
     _write_home_timeline_client_pool->Push(write_home_timeline_client_wrapper);
     throw;
   }

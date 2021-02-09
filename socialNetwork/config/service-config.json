@@ -12,8 +12,8 @@
     "addr": "social-graph-redis",
     "port": 6379
   },
-  "write-home-timeline-service": {
-    "addr": "write-home-timeline-service",
+  "write-home-timeline-service-eu": {
+    "addr": "write-home-timeline-service-eu",
     "port": 9090
   },
   "write-home-timeline-rabbitmq-eu": {

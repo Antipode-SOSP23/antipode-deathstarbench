@@ -49,16 +49,13 @@ services:
       placement:
         constraints: [node.hostname == node02]
 
-  write-home-timeline-service:
+  write-home-timeline-service-eu:
     image: yg397/social-network-microservices:antipode
-    hostname: write-home-timeline-service
+    hostname: write-home-timeline-service-eu
     restart: always
     entrypoint: WriteHomeTimelineService
     depends_on:
       - write-home-timeline-rabbitmq-eu
-    volumes:
-      - ./rabbit1-definitions.json:/etc/rabbitmq/definitions.json:ro
-      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
     deploy:
       placement:
         constraints: [node.hostname == node02]
