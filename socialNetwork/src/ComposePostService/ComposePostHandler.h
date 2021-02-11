@@ -901,7 +901,9 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
     // json j_baggage = baggage.str();
     // std::string baggage_str = j_baggage.dump(-1, ' ', false, json::error_handler_t::replace);
 
-    std::string msg_str = "{ \"req_id\": " + std::to_string(req_id) +
+    std::string zone_env_str(std::getenv("ZONE"));
+    std::string msg_str = "{ \"zone\": \"" + zone_env_str + "\"" +
+        ", \"req_id\": " + std::to_string(req_id) +
         ", \"post_id\": " + std::to_string(post_id) +
         ", \"user_id\": " + std::to_string(user_id) +
         ", \"timestamp\": " + std::to_string(timestamp) +

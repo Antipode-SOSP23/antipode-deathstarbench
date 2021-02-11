@@ -52,6 +52,8 @@ services:
   write-home-timeline-service-eu:
     image: yg397/social-network-microservices:antipode
     hostname: write-home-timeline-service-eu
+    environment:
+      - ZONE=eu
     restart: always
     entrypoint: WriteHomeTimelineService
     depends_on:
@@ -276,6 +278,8 @@ services:
   compose-post-service:
     image: yg397/social-network-microservices:antipode
     hostname: compose-post-service
+    environment:
+      - ZONE=eu
     # ports:
       # - 10001:9090
     restart: always
