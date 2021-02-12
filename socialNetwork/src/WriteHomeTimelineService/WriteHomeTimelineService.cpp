@@ -39,6 +39,7 @@ using namespace social_network;
 // for clock usage
 using namespace std::chrono;
 
+static std::string zone;
 static std::exception_ptr _teptr;
 static ClientPool<RedisClient> *_redis_client_pool;
 static ClientPool<ThriftClient<SocialGraphServiceClient>> *_social_graph_client_pool;
@@ -99,6 +100,11 @@ void OnReceivedWorker(const AMQP::Message &msg) {
   try {
     json msg_json = json::parse(std::string(msg.body(), msg.bodySize()));
 
+    // skip messages that came from the same zone
+    if (msg_json["zone"] == zone) {
+      return;
+    }
+
     std::map<std::string, std::string> carrier;
     for (auto it = msg_json["carrier"].begin();
         it != msg_json["carrier"].end(); ++it) {
@@ -143,26 +149,26 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     //----------
     // CENTRALIZED
     //----------
-    // LOG(debug) << "[ANTIPODE][CENTRALIZED] Start IsVisible for post_id: " << post_id;
-    // auto antipode_orable_client_wrapper = _antipode_oracle_client_pool->Pop();
-    // if (!antipode_orable_client_wrapper) {
-    //   ServiceException se;
-    //   se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
-    //   se.message = "[ANTIPODE][CENTRALIZED] Failed to connect to antipode-oracle";
-    //   throw se;
-    // }
-    // auto antipode_oracle_client = antipode_orable_client_wrapper->GetClient();
-    // // loop oracle calls until its visible
-    // bool antipode_oracle_response = false;
-    // try {
-    //   antipode_oracle_response = antipode_oracle_client->IsVisible(post_id, writer_text_map);
-    //   LOG(debug) << "[ANTIPODE][CENTRALIZED] Finished IsVisible for post_id: " << post_id;
-    // } catch (...) {
-    //   LOG(error) << "[ANTIPODE][CENTRALIZED] Failed to check post visibility in Oracle";
-    //   _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
-    //   throw;
-    // }
-    // _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
+    LOG(debug) << "[ANTIPODE][CENTRALIZED] Start IsVisible for post_id: " << post_id;
+    auto antipode_orable_client_wrapper = _antipode_oracle_client_pool->Pop();
+    if (!antipode_orable_client_wrapper) {
+      ServiceException se;
+      se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
+      se.message = "[ANTIPODE][CENTRALIZED] Failed to connect to antipode-oracle";
+      throw se;
+    }
+    auto antipode_oracle_client = antipode_orable_client_wrapper->GetClient();
+    // loop oracle calls until its visible
+    bool antipode_oracle_response = false;
+    try {
+      antipode_oracle_response = antipode_oracle_client->IsVisible(post_id, writer_text_map);
+      LOG(debug) << "[ANTIPODE][CENTRALIZED] Finished IsVisible for post_id: " << post_id;
+    } catch (...) {
+      LOG(error) << "[ANTIPODE][CENTRALIZED] Failed to check post visibility in Oracle";
+      _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
+      throw;
+    }
+    _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
     //----------
     // CENTRALIZED
     //----------
@@ -170,7 +176,7 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     //----------
     // DISTRIBUTED
     //----------
-    IsVisible(post_id, writer_text_map);
+    // IsVisible(post_id, writer_text_map);
     //----------
     // DISTRIBUTED
     //----------
@@ -263,6 +269,7 @@ void HeartbeatSend(AmqpLibeventHandler &handler,
 
 void WorkerThread(std::string &addr, int port) {
   AmqpLibeventHandler handler;
+
   AMQP::TcpConnection connection(handler, AMQP::Address(
       addr, port, AMQP::Login("admin", "admin"), "/"));
   AMQP::TcpChannel channel(&connection);
@@ -292,7 +299,7 @@ void WorkerThread(std::string &addr, int port) {
 }
 
 // The function we want to execute on the new thread.
-void serveThriftServer(int port) {
+void serveThriftServer(int port, std::string name) {
   // for thrift
   TThreadedServer server(
       std::make_shared<WriteHomeTimelineServiceProcessor>(std::make_shared<WriteHomeTimelineServiceHandler>()),
@@ -300,7 +307,7 @@ void serveThriftServer(int port) {
       std::make_shared<TFramedTransportFactory>(),
       std::make_shared<TBinaryProtocolFactory>()
   );
-  LOG(debug) << "Starting the write-home-timeline-service-eu server...";
+  LOG(debug) << "Starting the " << name << " server...";
   server.serve();
 }
 
@@ -308,23 +315,28 @@ int main(int argc, char *argv[]) {
   signal(SIGINT, sigintHandler);
   init_logger();
 
-  SetUpTracer("config/jaeger-config.yml", "write-home-timeline-service-eu");
+  zone = (std::getenv("ZONE") == NULL) ? "eu" : std::getenv("ZONE");
+  std::string service_name = "write-home-timeline-service-" + zone;
+
+  SetUpTracer("config/jaeger-config.yml", service_name);
 
   json config_json;
   if (load_config_file("config/service-config.json", &config_json) != 0) {
     exit(EXIT_FAILURE);
   }
 
-  int port = config_json["write-home-timeline-service-eu"]["port"];
+  int port = config_json[service_name]["port"];
 
-  std::string rabbitmq_addr =
-      config_json["write-home-timeline-rabbitmq-eu"]["addr"];
-  int rabbitmq_port = config_json["write-home-timeline-rabbitmq-eu"]["port"];
+  std::string rabbitmq_name = "write-home-timeline-rabbitmq-" + zone;
+  std::string rabbitmq_addr = config_json[rabbitmq_name]["addr"];
+  int rabbitmq_port = config_json[rabbitmq_name]["port"];
 
+  // Should it be on the same region?
   std::string redis_addr =
       config_json["home-timeline-redis"]["addr"];
   int redis_port = config_json["home-timeline-redis"]["port"];
 
+  // Should it be on the same region?
   std::string social_graph_service_addr =
       config_json["social-graph-service"]["addr"];
   int social_graph_service_port = config_json["social-graph-service"]["port"];
@@ -355,8 +367,8 @@ int main(int argc, char *argv[]) {
   }
 
   // Constructs the new thread and runs it. Does not block execution.
-  std::thread tserver_thread(serveThriftServer, port);
-  // serveThriftServer(port);
+  std::thread tserver_thread(serveThriftServer, port, service_name);
+  // serveThriftServer(port, service_name);
 
   for (auto &thread_ptr : threads_ptr) {
     thread_ptr->join();

@@ -26,7 +26,7 @@
   },
   "write-home-timeline-rabbitmq-us": {
     "addr": "write-home-timeline-rabbitmq-us",
-    "port": 5673
+    "port": 5672
   },
   "home-timeline-redis": {
     "addr": "home-timeline-redis",

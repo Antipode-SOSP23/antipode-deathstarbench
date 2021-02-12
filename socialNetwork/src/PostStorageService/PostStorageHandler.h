@@ -323,53 +323,53 @@ void PostStorageHandler::AntipodeHintReplica(
   //----------
   // CENTRALIZED
   //----------
-  // LOG(debug) << "[ANTIPODE][CENTRALIZED] Hinting replica";
-  // auto antipode_oracle_client_wrapper = _antipode_oracle_client_pool->Pop();
-  // if (!antipode_oracle_client_wrapper) {
-  //   ServiceException se;
-  //   se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
-  //   se.message = "[ANTIPODE][CENTRALIZED] Failed to connect to antipode-oracle";
-  //   throw se;
-  // }
+  LOG(debug) << "[ANTIPODE][CENTRALIZED] Hinting replica";
+  auto antipode_oracle_client_wrapper = _antipode_oracle_client_pool->Pop();
+  if (!antipode_oracle_client_wrapper) {
+    ServiceException se;
+    se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
+    se.message = "[ANTIPODE][CENTRALIZED] Failed to connect to antipode-oracle";
+    throw se;
+  }
 
-  // auto antipode_oracle_client = antipode_oracle_client_wrapper->GetClient();
-  // bool antipode_oracle_response;
-  // try {
-  //   antipode_oracle_response = antipode_oracle_client->MakeVisible(post_id, writer_text_map);
-  //   LOG(debug) << "[ANTIPODE][CENTRALIZED] Post successfuly marked as visible in Oracle with response: " << antipode_oracle_response;
-  // } catch (...) {
-  //   LOG(error) << "[ANTIPODE][CENTRALIZED] Failed to write post visibility to Oracle";
-  //   _antipode_oracle_client_pool->Push(antipode_oracle_client_wrapper);
-  //   throw;
-  // }
-  // _antipode_oracle_client_pool->Push(antipode_oracle_client_wrapper);
+  auto antipode_oracle_client = antipode_oracle_client_wrapper->GetClient();
+  bool antipode_oracle_response;
+  try {
+    antipode_oracle_response = antipode_oracle_client->MakeVisible(post_id, writer_text_map);
+    LOG(debug) << "[ANTIPODE][CENTRALIZED] Post successfuly marked as visible in Oracle with response: " << antipode_oracle_response;
+  } catch (...) {
+    LOG(error) << "[ANTIPODE][CENTRALIZED] Failed to write post visibility to Oracle";
+    _antipode_oracle_client_pool->Push(antipode_oracle_client_wrapper);
+    throw;
+  }
+  _antipode_oracle_client_pool->Push(antipode_oracle_client_wrapper);
   //----------
   // CENTRALIZED
   //----------
   //----------
   // DISTRIBUTED
   //----------
-  LOG(debug) << "[ANTIPODE][DISTRIBUTED] Hinting replica";
+  // LOG(debug) << "[ANTIPODE][DISTRIBUTED] Hinting replica";
 
-  auto write_home_timeline_client_wrapper = _write_home_timeline_client_pool->Pop();
-  if (!write_home_timeline_client_wrapper) {
-    ServiceException se;
-    se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
-    se.message = "[ANTIPODE][DISTRIBUTED] Failed to connect to write-home-timeline-service-eu";
-    throw se;
-  }
+  // auto write_home_timeline_client_wrapper = _write_home_timeline_client_pool->Pop();
+  // if (!write_home_timeline_client_wrapper) {
+  //   ServiceException se;
+  //   se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
+  //   se.message = "[ANTIPODE][DISTRIBUTED] Failed to connect to write-home-timeline-service-eu";
+  //   throw se;
+  // }
 
-  auto write_home_timeline_client = write_home_timeline_client_wrapper->GetClient();
-  bool write_home_timeline_client_response;
-  try {
-    write_home_timeline_client_response = write_home_timeline_client->MakeVisible(post_id, writer_text_map);
-    LOG(debug) << "[ANTIPODE][DISTRIBUTED] Post successfuly marked as visible in replica: " << write_home_timeline_client_response;
-  } catch (...) {
-    LOG(error) << "[ANTIPODE][DISTRIBUTED] Failed to write post visibility to write-home-timeline-service-eu";
-    _write_home_timeline_client_pool->Push(write_home_timeline_client_wrapper);
-    throw;
-  }
-  _write_home_timeline_client_pool->Push(write_home_timeline_client_wrapper);
+  // auto write_home_timeline_client = write_home_timeline_client_wrapper->GetClient();
+  // bool write_home_timeline_client_response;
+  // try {
+  //   write_home_timeline_client_response = write_home_timeline_client->MakeVisible(post_id, writer_text_map);
+  //   LOG(debug) << "[ANTIPODE][DISTRIBUTED] Post successfuly marked as visible in replica: " << write_home_timeline_client_response;
+  // } catch (...) {
+  //   LOG(error) << "[ANTIPODE][DISTRIBUTED] Failed to write post visibility to write-home-timeline-service-eu";
+  //   _write_home_timeline_client_pool->Push(write_home_timeline_client_wrapper);
+  //   throw;
+  // }
+  // _write_home_timeline_client_pool->Push(write_home_timeline_client_wrapper);
   //----------
   // DISTRIBUTED
   //----------
