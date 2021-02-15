@@ -29,7 +29,7 @@
         "ha-sync-mode": "automatic",
         "ha-sync-batch-size": 1
       },
-      "pattern": "^write\-home\-timeline",
+      "pattern": "^write\-home\-timeline\-*",
       "priority": 0,
       "vhost": "/"
     }
@@ -37,7 +37,14 @@
   "queues":
   [
     {
-      "name": "write-home-timeline",
+      "name": "write-home-timeline-eu",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "write-home-timeline-us",
       "vhost": "/",
       "durable": true,
       "auto_delete": false,

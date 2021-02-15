@@ -32,7 +32,7 @@ void sigintHandler(int sig) {
 
 int main(int argc, char *argv[]) {
   signal(SIGINT, sigintHandler);
-  std::string zone = (std::getenv("ZONE") == NULL) ? "eu" : std::getenv("ZONE");
+  std::string zone = load_zone();
   std::string service_name = "post-storage-service-" + zone;
 
   init_logger();

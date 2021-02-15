@@ -39,7 +39,10 @@ class ComposePostHandler : public ComposePostServiceIf {
       ClientPool<RedisClient> *,
       ClientPool<ThriftClient<PostStorageServiceClient>> *,
       ClientPool<ThriftClient<UserTimelineServiceClient>> *,
-      ClientPool<RabbitmqClient> *rabbitmq_client_pool);
+      ClientPool<RabbitmqClient> *,
+      std::string,
+      std::vector<std::string>);
+
   ~ComposePostHandler() override = default;
 
   void UploadText(BaseRpcResponse& response, int64_t req_id, const std::string& text,
@@ -67,6 +70,8 @@ class ComposePostHandler : public ComposePostServiceIf {
   ClientPool<ThriftClient<PostStorageServiceClient>> *_post_storage_client_pool;
   ClientPool<ThriftClient<UserTimelineServiceClient>> *_user_timeline_client_pool;
   ClientPool<RabbitmqClient> *_rabbitmq_client_pool;
+  std::string _zone;
+  std::vector<std::string> _interest_zones;
 
   std::exception_ptr _rabbitmq_teptr;
   std::exception_ptr _post_storage_teptr;
@@ -95,7 +100,9 @@ ComposePostHandler::ComposePostHandler(
     ClientPool<social_network::RedisClient> * redis_client_pool,
     ClientPool<social_network::ThriftClient<PostStorageServiceClient>> *post_storage_client_pool,
     ClientPool<social_network::ThriftClient<UserTimelineServiceClient>> *user_timeline_client_pool,
-    ClientPool<RabbitmqClient> *rabbitmq_client_pool) {
+    ClientPool<RabbitmqClient> *rabbitmq_client_pool,
+    std::string zone,
+    std::vector<std::string> interest_zones) {
   _redis_client_pool = redis_client_pool;
   _post_storage_client_pool = post_storage_client_pool;
   _user_timeline_client_pool = user_timeline_client_pool;
@@ -103,6 +110,8 @@ ComposePostHandler::ComposePostHandler(
   _rabbitmq_teptr = nullptr;
   _post_storage_teptr = nullptr;
   _user_timeline_teptr = nullptr;
+  _zone = zone;
+  _interest_zones = interest_zones;
 }
 
 void ComposePostHandler::UploadCreator(
@@ -901,9 +910,7 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
     // json j_baggage = baggage.str();
     // std::string baggage_str = j_baggage.dump(-1, ' ', false, json::error_handler_t::replace);
 
-    std::string zone_env_str(std::getenv("ZONE"));
-    std::string msg_str = "{ \"zone\": \"" + zone_env_str + "\"" +
-        ", \"req_id\": " + std::to_string(req_id) +
+    std::string msg_str = "{ \"req_id\": " + std::to_string(req_id) +
         ", \"post_id\": " + std::to_string(post_id) +
         ", \"user_id\": " + std::to_string(user_id) +
         ", \"timestamp\": " + std::to_string(timestamp) +
@@ -922,14 +929,19 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
     auto rabbitmq_channel = rabbitmq_client_wrapper->GetChannel();
     auto msg = AmqpClient::BasicMessage::Create(msg_str);
 
+    // use the channel object to call the AMQP method you like
+    rabbitmq_channel->DeclareExchange("notifications", AmqpClient::Channel::EXCHANGE_TYPE_TOPIC);
+    // publishes to the queue of each zone
+    for (auto &izone : _interest_zones){
+      rabbitmq_channel->BasicPublish("notifications", "write-home-timeline-" + izone, msg, true);
+    }
+    _rabbitmq_client_pool->Push(rabbitmq_client_wrapper);
+
     // save ts when notification as placed on rabbitmq
     high_resolution_clock::time_point wht_start_queue_ts = high_resolution_clock::now();
     uint64_t ts = duration_cast<milliseconds>(wht_start_queue_ts.time_since_epoch()).count();
     span->SetTag("wht_start_queue_ts", std::to_string(ts));
 
-    rabbitmq_channel->BasicPublish("", "write-home-timeline", msg, true);
-
-    _rabbitmq_client_pool->Push(rabbitmq_client_wrapper);
   } catch (...) {
     LOG(error) << "Failed to connected to home-timeline-rabbitmq";
     // XTRACE("Failed to connect to home-timeline-rabbitmq");

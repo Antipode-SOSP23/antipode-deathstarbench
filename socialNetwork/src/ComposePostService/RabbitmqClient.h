@@ -4,6 +4,7 @@
 #include <SimpleAmqpClient/SimpleAmqpClient.h>
 
 #include "../GenericClient.h"
+#include "../utils.h"
 
 namespace social_network {
 
@@ -31,11 +32,15 @@ class RabbitmqClient : public GenericClient {
   int _port;
   AmqpClient::Channel::ptr_t _channel;
   bool _is_connected;
+  std::string _zone;
+  std::string _queue;
 };
 
 RabbitmqClient::RabbitmqClient(const std::string &addr, int port) {
   _addr = addr;
   _port = port;
+  _zone = load_zone();
+  _queue = "write-home-timeline-"+_zone;
   _channel = AmqpClient::Channel::Create(addr, port, "admin", "admin");
   _is_connected = false;
 }
@@ -47,7 +52,7 @@ RabbitmqClient::~RabbitmqClient() {
 void RabbitmqClient::Connect() {
   if (!IsConnected()) {
     try {
-      _channel->DeclareQueue("write-home-timeline", false, true, false, false);
+      _channel->DeclareQueue(_queue, false, true, false, false);
     } catch (...) {
       throw;
     }
@@ -58,7 +63,7 @@ void RabbitmqClient::Connect() {
 void RabbitmqClient::Disconnect() {
   if (IsConnected()) {
     try {
-      _channel->DeleteQueue("write-home-timeline");
+      _channel->DeleteQueue(_queue);
       _is_connected = false;
     } catch (...) {
       throw;

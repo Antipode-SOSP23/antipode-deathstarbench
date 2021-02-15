@@ -21,6 +21,10 @@ void sigintHandler(int sig) {
 int main(int argc, char *argv[]) {
   signal(SIGINT, sigintHandler);
   init_logger();
+
+  std::string zone = load_zone();
+  std::vector<std::string> interest_zones = load_interest_zones();
+
   SetUpTracer("config/jaeger-config.yml", "compose-post-service");
 
   json config_json;
@@ -65,7 +69,8 @@ int main(int argc, char *argv[]) {
               &redis_client_pool,
               &post_storage_client_pool,
               &user_timeline_client_pool,
-              &rabbitmq_client_pool)),
+              &rabbitmq_client_pool,
+              zone, interest_zones)),
       std::make_shared<TServerSocket>("0.0.0.0", port),
       std::make_shared<TFramedTransportFactory>(),
       std::make_shared<TBinaryProtocolFactory>()

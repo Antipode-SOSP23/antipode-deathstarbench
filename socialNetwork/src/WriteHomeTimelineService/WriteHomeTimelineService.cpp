@@ -40,6 +40,7 @@ using namespace social_network;
 using namespace std::chrono;
 
 static std::string zone;
+
 static std::exception_ptr _teptr;
 static ClientPool<RedisClient> *_redis_client_pool;
 static ClientPool<ThriftClient<SocialGraphServiceClient>> *_social_graph_client_pool;
@@ -100,14 +101,8 @@ void OnReceivedWorker(const AMQP::Message &msg) {
   try {
     json msg_json = json::parse(std::string(msg.body(), msg.bodySize()));
 
-    // skip messages that came from the same zone
-    if (msg_json["zone"] == zone) {
-      return;
-    }
-
     std::map<std::string, std::string> carrier;
-    for (auto it = msg_json["carrier"].begin();
-        it != msg_json["carrier"].end(); ++it) {
+    for (auto it = msg_json["carrier"].begin(); it != msg_json["carrier"].end(); ++it) {
       carrier.emplace(std::make_pair(it.key(), it.value()));
     }
 
@@ -250,12 +245,11 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     high_resolution_clock::time_point end_worker_ts = high_resolution_clock::now();
     ts = duration_cast<milliseconds>(end_worker_ts.time_since_epoch()).count();
     span->SetTag("wth_end_worker_ts", std::to_string(ts));
-
+    DELETE_CURRENT_BAGGAGE();
   } catch (...) {
     LOG(error) << "OnReveived worker error";
     throw;
   }
-  DELETE_CURRENT_BAGGAGE();
 }
 
 void HeartbeatSend(AmqpLibeventHandler &handler,
@@ -278,17 +272,27 @@ void WorkerThread(std::string &addr, int port) {
         LOG(error) << "Channel error: " << message;
         handler.Stop();
       });
-  channel.declareQueue("write-home-timeline", AMQP::durable).onSuccess(
-      [&connection](const std::string &name, uint32_t messagecount,
-                    uint32_t consumercount) {
-        LOG(debug) << "Created queue: " << name;
-      });
-  channel.consume("write-home-timeline", AMQP::noack).onReceived(
-      [](const AMQP::Message &msg, uint64_t tag, bool redelivered) {
+
+  // Queue already exists
+  // declared in configuration files
+  // channel.declareQueue("write-home-timeline", AMQP::durable).onSuccess(
+  //     [&connection](const std::string &name, uint32_t messagecount,
+  //                   uint32_t consumercount) {
+  //       LOG(debug) << "Created queue: " << name;
+  //     });
+
+  channel.declareExchange("notifications", AMQP::topic);
+  // params in order: <exchange>,<queue>,<routing_key>
+  // queue and routing key are the same which is the current zone
+  // other zones post messages to routing key of this zone
+  channel.bindQueue("notifications", "write-home-timeline-" + zone, "write-home-timeline-" + zone);
+
+  // ref: https://github.com/CopernicaMarketingSoftware/AMQP-CPP#consuming-messages
+  channel.consume("write-home-timeline-"+zone, AMQP::noack).onReceived(
+      [&channel](const AMQP::Message &msg, uint64_t deliveryTag, bool redelivered) {
         LOG(debug) << "Received: " << std::string(msg.body(), msg.bodySize());
         OnReceivedWorker(msg);
       });
-
 
   std::thread heartbeat_thread(HeartbeatSend, std::ref(handler),
       std::ref(connection), 60);
@@ -315,7 +319,8 @@ int main(int argc, char *argv[]) {
   signal(SIGINT, sigintHandler);
   init_logger();
 
-  zone = (std::getenv("ZONE") == NULL) ? "eu" : std::getenv("ZONE");
+  zone = load_zone();
+
   std::string service_name = "write-home-timeline-service-" + zone;
 
   SetUpTracer("config/jaeger-config.yml", service_name);

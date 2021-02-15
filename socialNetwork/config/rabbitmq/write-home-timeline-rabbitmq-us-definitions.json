@@ -29,7 +29,7 @@
         "ha-sync-mode": "automatic",
         "ha-sync-batch-size": 1
       },
-      "pattern": "^write\-home\-timeline",
+      "pattern": "^write\-home\-timeline\-*",
       "priority": 0,
       "vhost": "/"
     }
