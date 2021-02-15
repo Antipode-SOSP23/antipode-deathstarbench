@@ -25,6 +25,19 @@ int load_config_file(const std::string &file_name, json *config_json) {
   }
 };
 
+std::string load_zone() {
+  std::string z = (std::getenv("ZONE") == NULL) ? "eu" : std::getenv("ZONE");
+  return z;
+}
+
+std::vector<std::string> load_interest_zones() {
+  std::string z = load_zone();
+  std::vector<std::string> interest_zones({ "eu", "us" });
+  auto izones = std::find(interest_zones.begin(), interest_zones.end(), z);
+  if (izones != interest_zones.end()) interest_zones.erase(izones);
+  return interest_zones;
+}
+
 } //namespace social_network
 
 #endif //SOCIAL_NETWORK_MICROSERVICES_UTILS_H
