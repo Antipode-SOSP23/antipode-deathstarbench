@@ -112,9 +112,9 @@ services:
       placement:
         constraints: [node.hostname == node02]
 
-  home-timeline-redis:
+  home-timeline-redis-eu:
     image: redis
-    hostname: home-timeline-redis
+    hostname: home-timeline-redis-eu
     command: redis-server --port 6379
     # ports:
       # 6381:6379
@@ -131,10 +131,10 @@ services:
     hostname: home-timeline-redis-us
     # ports:
       # - 6381:6379
-    command: redis-server --slaveof home-timeline-redis 6379 --replica-read-only no
+    command: redis-server --slaveof home-timeline-redis-eu 6379 --replica-read-only no
     restart: always
     links:
-      - home-timeline-redis
+      - home-timeline-redis-eu
     deploy:
       placement:
         constraints: [node.hostname == node03]

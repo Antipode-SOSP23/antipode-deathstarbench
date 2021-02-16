@@ -9,7 +9,7 @@ services:
   write-home-timeline-service-us: saturn1
   write-home-timeline-rabbitmq-eu: saturn1
   write-home-timeline-rabbitmq-us: saturn1
-  home-timeline-redis: saturn1
+  home-timeline-redis-eu: saturn1
 
   #----------------------------------------------------------
   # read notifications at US replica

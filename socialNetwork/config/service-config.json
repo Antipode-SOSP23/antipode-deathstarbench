@@ -28,8 +28,8 @@
     "addr": "write-home-timeline-rabbitmq-us",
     "port": 5672
   },
-  "home-timeline-redis": {
-    "addr": "home-timeline-redis",
+  "home-timeline-redis-eu": {
+    "addr": "home-timeline-redis-eu",
     "port": 6379
   },
   "compose-post-service": {

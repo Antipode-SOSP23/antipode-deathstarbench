@@ -11,7 +11,7 @@ services:
   write-home-timeline-rabbitmq-eu: node01
   write-home-timeline-rabbitmq-us: node01
   #
-  home-timeline-redis: node01
+  home-timeline-redis-eu: node01
 
   #----------------------------------------------------------
   # read notifications at US replica

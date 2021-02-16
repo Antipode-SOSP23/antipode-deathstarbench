@@ -313,10 +313,10 @@ int main(int argc, char *argv[]) {
   int post_storage_port = config_json["post-storage-service-" + zone]["port"];
   std::string post_storage_addr = config_json["post-storage-service-" + zone]["addr"];
 
-  // Should it be on the same region?
-  std::string redis_addr = config_json["home-timeline-redis"]["addr"];
-  int redis_port = config_json["home-timeline-redis"]["port"];
+  std::string redis_addr = config_json["home-timeline-redis-" + zone]["addr"];
+  int redis_port = config_json["home-timeline-redis-" + zone]["port"];
 
+  // Should it be on the same region?
   std::string social_graph_service_addr = config_json["social-graph-service"]["addr"];
   int social_graph_service_port = config_json["social-graph-service"]["port"];
 
