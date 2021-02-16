@@ -30,20 +30,16 @@ exp_tss = [
   # DISTRIBUTED
   #
   # -- 1 Client  // 75 req/s
-  '20210126023656',
+  '20210216042308',
   # -- 1 Client  // 150 req/s
-  '20210126102219',
-  # -- 1 Client  // 150 req/s  // standard-8 Hint Pool
-  '20210126153004',
-  # -- 2 Clients // 75  req/s
-  '20210126113934',
+  # '20210126102219',
   #
   # CENTRALIZED
   #
   # -- 1 Client  // 75 req/s
-  '20210126131746',
+  # '20210126131746',
   # -- 1 Client  // 150 req/s
-  '20210126123424'
+  # '20210126123424'
 ]
 
 for exp_ts in exp_tss:
@@ -63,13 +59,11 @@ for exp_ts in exp_tss:
   # row of max queue duration
   print(df.iloc[df['wht_queue_duration'].argmax()])
 
-  #
+  # from ats
   del df['wht_worker_per_antipode']
   del df['wht_total_duration']
+  # from vl
   del df['post_notification_diff_ms']
-  del df['poststorage_hint_replicate_step_1_2']
-  del df['hint_replicas_duration_ms']
-  # del df['until_hint_duration_ms']
 
   axs = df.plot.line(subplots=True, figsize=(5,10))
 

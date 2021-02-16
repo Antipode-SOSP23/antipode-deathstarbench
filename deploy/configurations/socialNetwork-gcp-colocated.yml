@@ -138,11 +138,11 @@ nodes:
   post-storage-eu:
     hostname: post-storage-eu.pluribus
     zone: us-central1-a
-    machine_type: e2-standard-8
+    machine_type: e2-standard-4
   post-storage-us:
     hostname: post-storage-us.pluribus
     zone: europe-west3-c
-    machine_type: e2-standard-8
+    machine_type: e2-standard-4
   compose-post:
     hostname: compose-post.pluribus
     zone: us-central1-a
@@ -175,19 +175,19 @@ nodes:
   client01:
     hostname: client01.pluribus
     zone: us-central1-a
-    machine_type: e2-small
+    machine_type: e2-standard-2
   client02:
     hostname: client02.pluribus
     zone: us-central1-a
-    machine_type: e2-small
+    machine_type: e2-standard-2
   client03:
     hostname: client03.pluribus
     zone: us-central1-a
-    machine_type: e2-small
+    machine_type: e2-standard-2
   client04:
     hostname: client04.pluribus
     zone: us-central1-a
-    machine_type: e2-small
+    machine_type: e2-standard-2
 
 ########
 #

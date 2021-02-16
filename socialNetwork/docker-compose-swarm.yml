@@ -32,24 +32,27 @@ services:
         constraints:
         - node.hostname == compose-post
     entrypoint: ComposePostService
+    environment:
+    - ZONE=eu
     hostname: compose-post-service
     image: yg397/social-network-microservices:antipode
     networks:
     - deathstarbench_network
     restart: always
-  home-timeline-redis:
+  home-timeline-redis-eu:
     command: redis-server --port 6379
     deploy:
       placement:
         constraints:
         - node.hostname == home-timeline-eu
-    hostname: home-timeline-redis
+    hostname: home-timeline-redis-eu
     image: redis
     networks:
     - deathstarbench_network
     restart: always
   home-timeline-redis-us:
-    command: redis-server --slaveof home-timeline-redis 6379 --replica-read-only no
+    command: redis-server --slaveof home-timeline-redis-eu 6379 --replica-read-only
+      no
     deploy:
       placement:
         constraints:
@@ -57,7 +60,7 @@ services:
     hostname: home-timeline-redis-us
     image: redis
     links:
-    - home-timeline-redis
+    - home-timeline-redis-eu
     networks:
     - deathstarbench_network
     restart: always
@@ -473,9 +476,33 @@ services:
     ports:
     - 15672:15672
     - 5672:5672
-    - 5673:5673
     restart: always
-  write-home-timeline-service:
+    volumes:
+    - ./config/rabbitmq/write-home-timeline-rabbitmq-eu-definitions.json:/etc/rabbitmq/definitions.json:ro
+    - ./config/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+  write-home-timeline-rabbitmq-us:
+    command: sh -c 'sleep 10 && rabbitmq-server'
+    depends_on:
+    - write-home-timeline-rabbitmq-eu
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == home-timeline-us
+    environment:
+      RABBITMQ_DEFAULT_VHOST: /
+      RABBITMQ_ERLANG_COOKIE: WRITE-HOME-TIMELINE-RABBITMQ
+    hostname: write-home-timeline-rabbitmq-us
+    image: rabbitmq:management
+    networks:
+    - deathstarbench_network
+    ports:
+    - 15673:15672
+    - 5673:5672
+    restart: always
+    volumes:
+    - ./config/rabbitmq/write-home-timeline-rabbitmq-us-definitions.json:/etc/rabbitmq/definitions.json:ro
+    - ./config/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+  write-home-timeline-service-eu:
     depends_on:
     - write-home-timeline-rabbitmq-eu
     deploy:
@@ -483,7 +510,24 @@ services:
         constraints:
         - node.hostname == home-timeline-eu
     entrypoint: WriteHomeTimelineService
-    hostname: write-home-timeline-service
+    environment:
+    - ZONE=eu
+    hostname: write-home-timeline-service-eu
+    image: yg397/social-network-microservices:antipode
+    networks:
+    - deathstarbench_network
+    restart: always
+  write-home-timeline-service-us:
+    depends_on:
+    - write-home-timeline-rabbitmq-us
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == home-timeline-us
+    entrypoint: WriteHomeTimelineService
+    environment:
+    - ZONE=us
+    hostname: write-home-timeline-service-us
     image: yg397/social-network-microservices:antipode
     networks:
     - deathstarbench_network
