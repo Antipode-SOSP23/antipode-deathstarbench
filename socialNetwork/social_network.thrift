@@ -213,11 +213,6 @@ service PostStorageService {
     3: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  oneway void AntipodeHintReplica(
-    2: i64 post_id,
-    3: map<string, string> carrier
-  )
-
   PostRpcResponse ReadPost(
     1: i64 req_id,
     2: i64 post_id,
@@ -228,6 +223,11 @@ service PostStorageService {
     1: i64 req_id,
     2: list<i64> post_ids,
     3: map<string, string> carrier
+  ) throws (1: ServiceException se)
+
+  void AntipodeCheckReplica(
+    1: i64 post_id,
+    2: map<string, string> carrier
   ) throws (1: ServiceException se)
 }
 

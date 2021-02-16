@@ -281,134 +281,6 @@ uint32_t PostStorageService_StorePost_presult::read(::apache::thrift::protocol::
 }
 
 
-PostStorageService_AntipodeHintReplica_args::~PostStorageService_AntipodeHintReplica_args() throw() {
-}
-
-
-uint32_t PostStorageService_AntipodeHintReplica_args::read(::apache::thrift::protocol::TProtocol* iprot) {
-
-  ::apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
-  uint32_t xfer = 0;
-  std::string fname;
-  ::apache::thrift::protocol::TType ftype;
-  int16_t fid;
-
-  xfer += iprot->readStructBegin(fname);
-
-  using ::apache::thrift::protocol::TProtocolException;
-
-
-  while (true)
-  {
-    xfer += iprot->readFieldBegin(fname, ftype, fid);
-    if (ftype == ::apache::thrift::protocol::T_STOP) {
-      break;
-    }
-    switch (fid)
-    {
-      case 2:
-        if (ftype == ::apache::thrift::protocol::T_I64) {
-          xfer += iprot->readI64(this->post_id);
-          this->__isset.post_id = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      case 3:
-        if (ftype == ::apache::thrift::protocol::T_MAP) {
-          {
-            this->carrier.clear();
-            uint32_t _size224;
-            ::apache::thrift::protocol::TType _ktype225;
-            ::apache::thrift::protocol::TType _vtype226;
-            xfer += iprot->readMapBegin(_ktype225, _vtype226, _size224);
-            uint32_t _i228;
-            for (_i228 = 0; _i228 < _size224; ++_i228)
-            {
-              std::string _key229;
-              xfer += iprot->readString(_key229);
-              std::string& _val230 = this->carrier[_key229];
-              xfer += iprot->readString(_val230);
-            }
-            xfer += iprot->readMapEnd();
-          }
-          this->__isset.carrier = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
-      default:
-        xfer += iprot->skip(ftype);
-        break;
-    }
-    xfer += iprot->readFieldEnd();
-  }
-
-  xfer += iprot->readStructEnd();
-
-  return xfer;
-}
-
-uint32_t PostStorageService_AntipodeHintReplica_args::write(::apache::thrift::protocol::TProtocol* oprot) const {
-  uint32_t xfer = 0;
-  ::apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
-  xfer += oprot->writeStructBegin("PostStorageService_AntipodeHintReplica_args");
-
-  xfer += oprot->writeFieldBegin("post_id", ::apache::thrift::protocol::T_I64, 2);
-  xfer += oprot->writeI64(this->post_id);
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 3);
-  {
-    xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->carrier.size()));
-    std::map<std::string, std::string> ::const_iterator _iter231;
-    for (_iter231 = this->carrier.begin(); _iter231 != this->carrier.end(); ++_iter231)
-    {
-      xfer += oprot->writeString(_iter231->first);
-      xfer += oprot->writeString(_iter231->second);
-    }
-    xfer += oprot->writeMapEnd();
-  }
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-
-PostStorageService_AntipodeHintReplica_pargs::~PostStorageService_AntipodeHintReplica_pargs() throw() {
-}
-
-
-uint32_t PostStorageService_AntipodeHintReplica_pargs::write(::apache::thrift::protocol::TProtocol* oprot) const {
-  uint32_t xfer = 0;
-  ::apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
-  xfer += oprot->writeStructBegin("PostStorageService_AntipodeHintReplica_pargs");
-
-  xfer += oprot->writeFieldBegin("post_id", ::apache::thrift::protocol::T_I64, 2);
-  xfer += oprot->writeI64((*(this->post_id)));
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 3);
-  {
-    xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>((*(this->carrier)).size()));
-    std::map<std::string, std::string> ::const_iterator _iter232;
-    for (_iter232 = (*(this->carrier)).begin(); _iter232 != (*(this->carrier)).end(); ++_iter232)
-    {
-      xfer += oprot->writeString(_iter232->first);
-      xfer += oprot->writeString(_iter232->second);
-    }
-    xfer += oprot->writeMapEnd();
-  }
-  xfer += oprot->writeFieldEnd();
-
-  xfer += oprot->writeFieldStop();
-  xfer += oprot->writeStructEnd();
-  return xfer;
-}
-
-
 PostStorageService_ReadPost_args::~PostStorageService_ReadPost_args() throw() {
 }
 
@@ -454,17 +326,17 @@ uint32_t PostStorageService_ReadPost_args::read(::apache::thrift::protocol::TPro
         if (ftype == ::apache::thrift::protocol::T_MAP) {
           {
             this->carrier.clear();
-            uint32_t _size233;
-            ::apache::thrift::protocol::TType _ktype234;
-            ::apache::thrift::protocol::TType _vtype235;
-            xfer += iprot->readMapBegin(_ktype234, _vtype235, _size233);
-            uint32_t _i237;
-            for (_i237 = 0; _i237 < _size233; ++_i237)
+            uint32_t _size224;
+            ::apache::thrift::protocol::TType _ktype225;
+            ::apache::thrift::protocol::TType _vtype226;
+            xfer += iprot->readMapBegin(_ktype225, _vtype226, _size224);
+            uint32_t _i228;
+            for (_i228 = 0; _i228 < _size224; ++_i228)
             {
-              std::string _key238;
-              xfer += iprot->readString(_key238);
-              std::string& _val239 = this->carrier[_key238];
-              xfer += iprot->readString(_val239);
+              std::string _key229;
+              xfer += iprot->readString(_key229);
+              std::string& _val230 = this->carrier[_key229];
+              xfer += iprot->readString(_val230);
             }
             xfer += iprot->readMapEnd();
           }
@@ -501,11 +373,11 @@ uint32_t PostStorageService_ReadPost_args::write(::apache::thrift::protocol::TPr
   xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 3);
   {
     xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->carrier.size()));
-    std::map<std::string, std::string> ::const_iterator _iter240;
-    for (_iter240 = this->carrier.begin(); _iter240 != this->carrier.end(); ++_iter240)
+    std::map<std::string, std::string> ::const_iterator _iter231;
+    for (_iter231 = this->carrier.begin(); _iter231 != this->carrier.end(); ++_iter231)
     {
-      xfer += oprot->writeString(_iter240->first);
-      xfer += oprot->writeString(_iter240->second);
+      xfer += oprot->writeString(_iter231->first);
+      xfer += oprot->writeString(_iter231->second);
     }
     xfer += oprot->writeMapEnd();
   }
@@ -537,11 +409,11 @@ uint32_t PostStorageService_ReadPost_pargs::write(::apache::thrift::protocol::TP
   xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 3);
   {
     xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>((*(this->carrier)).size()));
-    std::map<std::string, std::string> ::const_iterator _iter241;
-    for (_iter241 = (*(this->carrier)).begin(); _iter241 != (*(this->carrier)).end(); ++_iter241)
+    std::map<std::string, std::string> ::const_iterator _iter232;
+    for (_iter232 = (*(this->carrier)).begin(); _iter232 != (*(this->carrier)).end(); ++_iter232)
     {
-      xfer += oprot->writeString(_iter241->first);
-      xfer += oprot->writeString(_iter241->second);
+      xfer += oprot->writeString(_iter232->first);
+      xfer += oprot->writeString(_iter232->second);
     }
     xfer += oprot->writeMapEnd();
   }
@@ -718,14 +590,14 @@ uint32_t PostStorageService_ReadPosts_args::read(::apache::thrift::protocol::TPr
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             this->post_ids.clear();
-            uint32_t _size242;
-            ::apache::thrift::protocol::TType _etype245;
-            xfer += iprot->readListBegin(_etype245, _size242);
-            this->post_ids.resize(_size242);
-            uint32_t _i246;
-            for (_i246 = 0; _i246 < _size242; ++_i246)
+            uint32_t _size233;
+            ::apache::thrift::protocol::TType _etype236;
+            xfer += iprot->readListBegin(_etype236, _size233);
+            this->post_ids.resize(_size233);
+            uint32_t _i237;
+            for (_i237 = 0; _i237 < _size233; ++_i237)
             {
-              xfer += iprot->readI64(this->post_ids[_i246]);
+              xfer += iprot->readI64(this->post_ids[_i237]);
             }
             xfer += iprot->readListEnd();
           }
@@ -738,17 +610,17 @@ uint32_t PostStorageService_ReadPosts_args::read(::apache::thrift::protocol::TPr
         if (ftype == ::apache::thrift::protocol::T_MAP) {
           {
             this->carrier.clear();
-            uint32_t _size247;
-            ::apache::thrift::protocol::TType _ktype248;
-            ::apache::thrift::protocol::TType _vtype249;
-            xfer += iprot->readMapBegin(_ktype248, _vtype249, _size247);
-            uint32_t _i251;
-            for (_i251 = 0; _i251 < _size247; ++_i251)
+            uint32_t _size238;
+            ::apache::thrift::protocol::TType _ktype239;
+            ::apache::thrift::protocol::TType _vtype240;
+            xfer += iprot->readMapBegin(_ktype239, _vtype240, _size238);
+            uint32_t _i242;
+            for (_i242 = 0; _i242 < _size238; ++_i242)
             {
-              std::string _key252;
-              xfer += iprot->readString(_key252);
-              std::string& _val253 = this->carrier[_key252];
-              xfer += iprot->readString(_val253);
+              std::string _key243;
+              xfer += iprot->readString(_key243);
+              std::string& _val244 = this->carrier[_key243];
+              xfer += iprot->readString(_val244);
             }
             xfer += iprot->readMapEnd();
           }
@@ -781,10 +653,10 @@ uint32_t PostStorageService_ReadPosts_args::write(::apache::thrift::protocol::TP
   xfer += oprot->writeFieldBegin("post_ids", ::apache::thrift::protocol::T_LIST, 2);
   {
     xfer += oprot->writeListBegin(::apache::thrift::protocol::T_I64, static_cast<uint32_t>(this->post_ids.size()));
-    std::vector<int64_t> ::const_iterator _iter254;
-    for (_iter254 = this->post_ids.begin(); _iter254 != this->post_ids.end(); ++_iter254)
+    std::vector<int64_t> ::const_iterator _iter245;
+    for (_iter245 = this->post_ids.begin(); _iter245 != this->post_ids.end(); ++_iter245)
     {
-      xfer += oprot->writeI64((*_iter254));
+      xfer += oprot->writeI64((*_iter245));
     }
     xfer += oprot->writeListEnd();
   }
@@ -793,11 +665,11 @@ uint32_t PostStorageService_ReadPosts_args::write(::apache::thrift::protocol::TP
   xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 3);
   {
     xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->carrier.size()));
-    std::map<std::string, std::string> ::const_iterator _iter255;
-    for (_iter255 = this->carrier.begin(); _iter255 != this->carrier.end(); ++_iter255)
+    std::map<std::string, std::string> ::const_iterator _iter246;
+    for (_iter246 = this->carrier.begin(); _iter246 != this->carrier.end(); ++_iter246)
     {
-      xfer += oprot->writeString(_iter255->first);
-      xfer += oprot->writeString(_iter255->second);
+      xfer += oprot->writeString(_iter246->first);
+      xfer += oprot->writeString(_iter246->second);
     }
     xfer += oprot->writeMapEnd();
   }
@@ -825,10 +697,10 @@ uint32_t PostStorageService_ReadPosts_pargs::write(::apache::thrift::protocol::T
   xfer += oprot->writeFieldBegin("post_ids", ::apache::thrift::protocol::T_LIST, 2);
   {
     xfer += oprot->writeListBegin(::apache::thrift::protocol::T_I64, static_cast<uint32_t>((*(this->post_ids)).size()));
-    std::vector<int64_t> ::const_iterator _iter256;
-    for (_iter256 = (*(this->post_ids)).begin(); _iter256 != (*(this->post_ids)).end(); ++_iter256)
+    std::vector<int64_t> ::const_iterator _iter247;
+    for (_iter247 = (*(this->post_ids)).begin(); _iter247 != (*(this->post_ids)).end(); ++_iter247)
     {
-      xfer += oprot->writeI64((*_iter256));
+      xfer += oprot->writeI64((*_iter247));
     }
     xfer += oprot->writeListEnd();
   }
@@ -837,11 +709,11 @@ uint32_t PostStorageService_ReadPosts_pargs::write(::apache::thrift::protocol::T
   xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 3);
   {
     xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>((*(this->carrier)).size()));
-    std::map<std::string, std::string> ::const_iterator _iter257;
-    for (_iter257 = (*(this->carrier)).begin(); _iter257 != (*(this->carrier)).end(); ++_iter257)
+    std::map<std::string, std::string> ::const_iterator _iter248;
+    for (_iter248 = (*(this->carrier)).begin(); _iter248 != (*(this->carrier)).end(); ++_iter248)
     {
-      xfer += oprot->writeString(_iter257->first);
-      xfer += oprot->writeString(_iter257->second);
+      xfer += oprot->writeString(_iter248->first);
+      xfer += oprot->writeString(_iter248->second);
     }
     xfer += oprot->writeMapEnd();
   }
@@ -980,6 +852,242 @@ uint32_t PostStorageService_ReadPosts_presult::read(::apache::thrift::protocol::
   return xfer;
 }
 
+
+PostStorageService_AntipodeCheckReplica_args::~PostStorageService_AntipodeCheckReplica_args() throw() {
+}
+
+
+uint32_t PostStorageService_AntipodeCheckReplica_args::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  ::apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_I64) {
+          xfer += iprot->readI64(this->post_id);
+          this->__isset.post_id = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_MAP) {
+          {
+            this->carrier.clear();
+            uint32_t _size249;
+            ::apache::thrift::protocol::TType _ktype250;
+            ::apache::thrift::protocol::TType _vtype251;
+            xfer += iprot->readMapBegin(_ktype250, _vtype251, _size249);
+            uint32_t _i253;
+            for (_i253 = 0; _i253 < _size249; ++_i253)
+            {
+              std::string _key254;
+              xfer += iprot->readString(_key254);
+              std::string& _val255 = this->carrier[_key254];
+              xfer += iprot->readString(_val255);
+            }
+            xfer += iprot->readMapEnd();
+          }
+          this->__isset.carrier = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t PostStorageService_AntipodeCheckReplica_args::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  ::apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("PostStorageService_AntipodeCheckReplica_args");
+
+  xfer += oprot->writeFieldBegin("post_id", ::apache::thrift::protocol::T_I64, 1);
+  xfer += oprot->writeI64(this->post_id);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 2);
+  {
+    xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->carrier.size()));
+    std::map<std::string, std::string> ::const_iterator _iter256;
+    for (_iter256 = this->carrier.begin(); _iter256 != this->carrier.end(); ++_iter256)
+    {
+      xfer += oprot->writeString(_iter256->first);
+      xfer += oprot->writeString(_iter256->second);
+    }
+    xfer += oprot->writeMapEnd();
+  }
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+
+PostStorageService_AntipodeCheckReplica_pargs::~PostStorageService_AntipodeCheckReplica_pargs() throw() {
+}
+
+
+uint32_t PostStorageService_AntipodeCheckReplica_pargs::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  ::apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("PostStorageService_AntipodeCheckReplica_pargs");
+
+  xfer += oprot->writeFieldBegin("post_id", ::apache::thrift::protocol::T_I64, 1);
+  xfer += oprot->writeI64((*(this->post_id)));
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 2);
+  {
+    xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>((*(this->carrier)).size()));
+    std::map<std::string, std::string> ::const_iterator _iter257;
+    for (_iter257 = (*(this->carrier)).begin(); _iter257 != (*(this->carrier)).end(); ++_iter257)
+    {
+      xfer += oprot->writeString(_iter257->first);
+      xfer += oprot->writeString(_iter257->second);
+    }
+    xfer += oprot->writeMapEnd();
+  }
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+
+PostStorageService_AntipodeCheckReplica_result::~PostStorageService_AntipodeCheckReplica_result() throw() {
+}
+
+
+uint32_t PostStorageService_AntipodeCheckReplica_result::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  ::apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->se.read(iprot);
+          this->__isset.se = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t PostStorageService_AntipodeCheckReplica_result::write(::apache::thrift::protocol::TProtocol* oprot) const {
+
+  uint32_t xfer = 0;
+
+  xfer += oprot->writeStructBegin("PostStorageService_AntipodeCheckReplica_result");
+
+  if (this->__isset.se) {
+    xfer += oprot->writeFieldBegin("se", ::apache::thrift::protocol::T_STRUCT, 1);
+    xfer += this->se.write(oprot);
+    xfer += oprot->writeFieldEnd();
+  }
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+
+PostStorageService_AntipodeCheckReplica_presult::~PostStorageService_AntipodeCheckReplica_presult() throw() {
+}
+
+
+uint32_t PostStorageService_AntipodeCheckReplica_presult::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  ::apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->se.read(iprot);
+          this->__isset.se = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
 void PostStorageServiceClient::StorePost(BaseRpcResponse& _return, const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier)
 {
   send_StorePost(req_id, post, carrier);
@@ -1041,26 +1149,6 @@ void PostStorageServiceClient::recv_StorePost(BaseRpcResponse& _return)
     throw result.se;
   }
   throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "StorePost failed: unknown result");
-}
-
-void PostStorageServiceClient::AntipodeHintReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier)
-{
-  send_AntipodeHintReplica(post_id, carrier);
-}
-
-void PostStorageServiceClient::send_AntipodeHintReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier)
-{
-  int32_t cseqid = 0;
-  oprot_->writeMessageBegin("AntipodeHintReplica", ::apache::thrift::protocol::T_ONEWAY, cseqid);
-
-  PostStorageService_AntipodeHintReplica_pargs args;
-  args.post_id = &post_id;
-  args.carrier = &carrier;
-  args.write(oprot_);
-
-  oprot_->writeMessageEnd();
-  oprot_->getTransport()->writeEnd();
-  oprot_->getTransport()->flush();
 }
 
 void PostStorageServiceClient::ReadPost(PostRpcResponse& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier)
@@ -1189,6 +1277,63 @@ void PostStorageServiceClient::recv_ReadPosts(PostListRpcResponse& _return)
   throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "ReadPosts failed: unknown result");
 }
 
+void PostStorageServiceClient::AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier)
+{
+  send_AntipodeCheckReplica(post_id, carrier);
+  recv_AntipodeCheckReplica();
+}
+
+void PostStorageServiceClient::send_AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier)
+{
+  int32_t cseqid = 0;
+  oprot_->writeMessageBegin("AntipodeCheckReplica", ::apache::thrift::protocol::T_CALL, cseqid);
+
+  PostStorageService_AntipodeCheckReplica_pargs args;
+  args.post_id = &post_id;
+  args.carrier = &carrier;
+  args.write(oprot_);
+
+  oprot_->writeMessageEnd();
+  oprot_->getTransport()->writeEnd();
+  oprot_->getTransport()->flush();
+}
+
+void PostStorageServiceClient::recv_AntipodeCheckReplica()
+{
+
+  int32_t rseqid = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TMessageType mtype;
+
+  iprot_->readMessageBegin(fname, mtype, rseqid);
+  if (mtype == ::apache::thrift::protocol::T_EXCEPTION) {
+    ::apache::thrift::TApplicationException x;
+    x.read(iprot_);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+    throw x;
+  }
+  if (mtype != ::apache::thrift::protocol::T_REPLY) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  if (fname.compare("AntipodeCheckReplica") != 0) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  PostStorageService_AntipodeCheckReplica_presult result;
+  result.read(iprot_);
+  iprot_->readMessageEnd();
+  iprot_->getTransport()->readEnd();
+
+  if (result.__isset.se) {
+    throw result.se;
+  }
+  return;
+}
+
 bool PostStorageServiceProcessor::dispatchCall(::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, const std::string& fname, int32_t seqid, void* callContext) {
   ProcessMap::iterator pfn;
   pfn = processMap_.find(fname);
@@ -1263,43 +1408,6 @@ void PostStorageServiceProcessor::process_StorePost(int32_t seqid, ::apache::thr
   if (this->eventHandler_.get() != NULL) {
     this->eventHandler_->postWrite(ctx, "PostStorageService.StorePost", bytes);
   }
-}
-
-void PostStorageServiceProcessor::process_AntipodeHintReplica(int32_t, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol*, void* callContext)
-{
-  void* ctx = NULL;
-  if (this->eventHandler_.get() != NULL) {
-    ctx = this->eventHandler_->getContext("PostStorageService.AntipodeHintReplica", callContext);
-  }
-  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "PostStorageService.AntipodeHintReplica");
-
-  if (this->eventHandler_.get() != NULL) {
-    this->eventHandler_->preRead(ctx, "PostStorageService.AntipodeHintReplica");
-  }
-
-  PostStorageService_AntipodeHintReplica_args args;
-  args.read(iprot);
-  iprot->readMessageEnd();
-  uint32_t bytes = iprot->getTransport()->readEnd();
-
-  if (this->eventHandler_.get() != NULL) {
-    this->eventHandler_->postRead(ctx, "PostStorageService.AntipodeHintReplica", bytes);
-  }
-
-  try {
-    iface_->AntipodeHintReplica(args.post_id, args.carrier);
-  } catch (const std::exception&) {
-    if (this->eventHandler_.get() != NULL) {
-      this->eventHandler_->handlerError(ctx, "PostStorageService.AntipodeHintReplica");
-    }
-    return;
-  }
-
-  if (this->eventHandler_.get() != NULL) {
-    this->eventHandler_->asyncComplete(ctx, "PostStorageService.AntipodeHintReplica");
-  }
-
-  return;
 }
 
 void PostStorageServiceProcessor::process_ReadPost(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
@@ -1416,6 +1524,62 @@ void PostStorageServiceProcessor::process_ReadPosts(int32_t seqid, ::apache::thr
   }
 }
 
+void PostStorageServiceProcessor::process_AntipodeCheckReplica(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = NULL;
+  if (this->eventHandler_.get() != NULL) {
+    ctx = this->eventHandler_->getContext("PostStorageService.AntipodeCheckReplica", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "PostStorageService.AntipodeCheckReplica");
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preRead(ctx, "PostStorageService.AntipodeCheckReplica");
+  }
+
+  PostStorageService_AntipodeCheckReplica_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postRead(ctx, "PostStorageService.AntipodeCheckReplica", bytes);
+  }
+
+  PostStorageService_AntipodeCheckReplica_result result;
+  try {
+    iface_->AntipodeCheckReplica(args.post_id, args.carrier);
+  } catch (ServiceException &se) {
+    result.se = se;
+    result.__isset.se = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != NULL) {
+      this->eventHandler_->handlerError(ctx, "PostStorageService.AntipodeCheckReplica");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("AntipodeCheckReplica", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->preWrite(ctx, "PostStorageService.AntipodeCheckReplica");
+  }
+
+  oprot->writeMessageBegin("AntipodeCheckReplica", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != NULL) {
+    this->eventHandler_->postWrite(ctx, "PostStorageService.AntipodeCheckReplica", bytes);
+  }
+}
+
 ::apache::thrift::stdcxx::shared_ptr< ::apache::thrift::TProcessor > PostStorageServiceProcessorFactory::getProcessor(const ::apache::thrift::TConnectionInfo& connInfo) {
   ::apache::thrift::ReleaseHandler< PostStorageServiceIfFactory > cleanup(handlerFactory_);
   ::apache::thrift::stdcxx::shared_ptr< PostStorageServiceIf > handler(handlerFactory_->getHandler(connInfo), cleanup);
@@ -1511,29 +1675,6 @@ void PostStorageServiceConcurrentClient::recv_StorePost(BaseRpcResponse& _return
     // this will temporarily unlock the readMutex, and let other clients get work done
     this->sync_.waitForWork(seqid);
   } // end while(true)
-}
-
-void PostStorageServiceConcurrentClient::AntipodeHintReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier)
-{
-  send_AntipodeHintReplica(post_id, carrier);
-}
-
-void PostStorageServiceConcurrentClient::send_AntipodeHintReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier)
-{
-  int32_t cseqid = 0;
-  ::apache::thrift::async::TConcurrentSendSentry sentry(&this->sync_);
-  oprot_->writeMessageBegin("AntipodeHintReplica", ::apache::thrift::protocol::T_ONEWAY, cseqid);
-
-  PostStorageService_AntipodeHintReplica_pargs args;
-  args.post_id = &post_id;
-  args.carrier = &carrier;
-  args.write(oprot_);
-
-  oprot_->writeMessageEnd();
-  oprot_->getTransport()->writeEnd();
-  oprot_->getTransport()->flush();
-
-  sentry.commit();
 }
 
 void PostStorageServiceConcurrentClient::ReadPost(PostRpcResponse& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier)
@@ -1707,6 +1848,89 @@ void PostStorageServiceConcurrentClient::recv_ReadPosts(PostListRpcResponse& _re
       }
       // in a bad state, don't commit
       throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "ReadPosts failed: unknown result");
+    }
+    // seqid != rseqid
+    this->sync_.updatePending(fname, mtype, rseqid);
+
+    // this will temporarily unlock the readMutex, and let other clients get work done
+    this->sync_.waitForWork(seqid);
+  } // end while(true)
+}
+
+void PostStorageServiceConcurrentClient::AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier)
+{
+  int32_t seqid = send_AntipodeCheckReplica(post_id, carrier);
+  recv_AntipodeCheckReplica(seqid);
+}
+
+int32_t PostStorageServiceConcurrentClient::send_AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier)
+{
+  int32_t cseqid = this->sync_.generateSeqId();
+  ::apache::thrift::async::TConcurrentSendSentry sentry(&this->sync_);
+  oprot_->writeMessageBegin("AntipodeCheckReplica", ::apache::thrift::protocol::T_CALL, cseqid);
+
+  PostStorageService_AntipodeCheckReplica_pargs args;
+  args.post_id = &post_id;
+  args.carrier = &carrier;
+  args.write(oprot_);
+
+  oprot_->writeMessageEnd();
+  oprot_->getTransport()->writeEnd();
+  oprot_->getTransport()->flush();
+
+  sentry.commit();
+  return cseqid;
+}
+
+void PostStorageServiceConcurrentClient::recv_AntipodeCheckReplica(const int32_t seqid)
+{
+
+  int32_t rseqid = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TMessageType mtype;
+
+  // the read mutex gets dropped and reacquired as part of waitForWork()
+  // The destructor of this sentry wakes up other clients
+  ::apache::thrift::async::TConcurrentRecvSentry sentry(&this->sync_, seqid);
+
+  while(true) {
+    if(!this->sync_.getPending(fname, mtype, rseqid)) {
+      iprot_->readMessageBegin(fname, mtype, rseqid);
+    }
+    if(seqid == rseqid) {
+      if (mtype == ::apache::thrift::protocol::T_EXCEPTION) {
+        ::apache::thrift::TApplicationException x;
+        x.read(iprot_);
+        iprot_->readMessageEnd();
+        iprot_->getTransport()->readEnd();
+        sentry.commit();
+        throw x;
+      }
+      if (mtype != ::apache::thrift::protocol::T_REPLY) {
+        iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+        iprot_->readMessageEnd();
+        iprot_->getTransport()->readEnd();
+      }
+      if (fname.compare("AntipodeCheckReplica") != 0) {
+        iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+        iprot_->readMessageEnd();
+        iprot_->getTransport()->readEnd();
+
+        // in a bad state, don't commit
+        using ::apache::thrift::protocol::TProtocolException;
+        throw TProtocolException(TProtocolException::INVALID_DATA);
+      }
+      PostStorageService_AntipodeCheckReplica_presult result;
+      result.read(iprot_);
+      iprot_->readMessageEnd();
+      iprot_->getTransport()->readEnd();
+
+      if (result.__isset.se) {
+        sentry.commit();
+        throw result.se;
+      }
+      sentry.commit();
+      return;
     }
     // seqid != rseqid
     this->sync_.updatePending(fname, mtype, rseqid);

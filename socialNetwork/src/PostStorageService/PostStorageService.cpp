@@ -97,12 +97,6 @@ int main(int argc, char *argv[]) {
   int write_home_timeline_service_port = config_json["write-home-timeline-service-eu"]["port"];
   std::string write_home_timeline_service_addr = config_json["write-home-timeline-service-eu"]["addr"];
 
-  int post_storage_eu_port = config_json["post-storage-service-eu"]["port"];
-  std::string post_storage_eu_addr = config_json["post-storage-service-eu"]["addr"];
-
-  int post_storage_us_port = config_json["post-storage-service-us"]["port"];
-  std::string post_storage_us_addr = config_json["post-storage-service-us"]["addr"];
-
   ClientPool<ThriftClient<AntipodeOracleClient>>
       antipode_oracle_client_pool("antipode-oracle", antipode_oracle_addr,
                                 antipode_oracle_port, 0, 10000, 1000);
@@ -111,14 +105,6 @@ int main(int argc, char *argv[]) {
       write_home_timeline_service_client_pool("write-home-timeline-service-eu", write_home_timeline_service_addr,
                                 write_home_timeline_service_port, 0, 10000, 1000);
 
-  ClientPool<ThriftClient<PostStorageServiceClient>>
-      post_storage_client_eu_pool("post-storage-client-eu", post_storage_eu_addr,
-                               post_storage_eu_port, 0, 10000, 1000);
-
-  ClientPool<ThriftClient<PostStorageServiceClient>>
-      post_storage_client_us_pool("post-storage-client-us", post_storage_us_addr,
-                               post_storage_us_port, 0, 10000, 1000);
-
   TThreadedServer server (
       std::make_shared<PostStorageServiceProcessor>(
           std::make_shared<PostStorageHandler>(
@@ -126,8 +112,7 @@ int main(int argc, char *argv[]) {
               mongodb_client_pool,
               &antipode_oracle_client_pool,
               &write_home_timeline_service_client_pool,
-              &post_storage_client_eu_pool,
-              &post_storage_client_us_pool)),
+              zone)),
       std::make_shared<TServerSocket>("0.0.0.0", port),
       std::make_shared<TFramedTransportFactory>(),
       std::make_shared<TBinaryProtocolFactory>()

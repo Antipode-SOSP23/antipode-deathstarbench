@@ -22,9 +22,9 @@ class PostStorageServiceIf {
  public:
   virtual ~PostStorageServiceIf() {}
   virtual void StorePost(BaseRpcResponse& _return, const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier) = 0;
-  virtual void AntipodeHintReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier) = 0;
   virtual void ReadPost(PostRpcResponse& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier) = 0;
   virtual void ReadPosts(PostListRpcResponse& _return, const int64_t req_id, const std::vector<int64_t> & post_ids, const std::map<std::string, std::string> & carrier) = 0;
+  virtual void AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier) = 0;
 };
 
 class PostStorageServiceIfFactory {
@@ -57,13 +57,13 @@ class PostStorageServiceNull : virtual public PostStorageServiceIf {
   void StorePost(BaseRpcResponse& /* _return */, const int64_t /* req_id */, const Post& /* post */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
-  void AntipodeHintReplica(const int64_t /* post_id */, const std::map<std::string, std::string> & /* carrier */) {
-    return;
-  }
   void ReadPost(PostRpcResponse& /* _return */, const int64_t /* req_id */, const int64_t /* post_id */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
   void ReadPosts(PostListRpcResponse& /* _return */, const int64_t /* req_id */, const std::vector<int64_t> & /* post_ids */, const std::map<std::string, std::string> & /* carrier */) {
+    return;
+  }
+  void AntipodeCheckReplica(const int64_t /* post_id */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
 };
@@ -191,62 +191,6 @@ class PostStorageService_StorePost_presult {
   _PostStorageService_StorePost_presult__isset __isset;
 
   uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
-
-};
-
-typedef struct _PostStorageService_AntipodeHintReplica_args__isset {
-  _PostStorageService_AntipodeHintReplica_args__isset() : post_id(false), carrier(false) {}
-  bool post_id :1;
-  bool carrier :1;
-} _PostStorageService_AntipodeHintReplica_args__isset;
-
-class PostStorageService_AntipodeHintReplica_args {
- public:
-
-  PostStorageService_AntipodeHintReplica_args(const PostStorageService_AntipodeHintReplica_args&);
-  PostStorageService_AntipodeHintReplica_args& operator=(const PostStorageService_AntipodeHintReplica_args&);
-  PostStorageService_AntipodeHintReplica_args() : post_id(0) {
-  }
-
-  virtual ~PostStorageService_AntipodeHintReplica_args() throw();
-  int64_t post_id;
-  std::map<std::string, std::string>  carrier;
-
-  _PostStorageService_AntipodeHintReplica_args__isset __isset;
-
-  void __set_post_id(const int64_t val);
-
-  void __set_carrier(const std::map<std::string, std::string> & val);
-
-  bool operator == (const PostStorageService_AntipodeHintReplica_args & rhs) const
-  {
-    if (!(post_id == rhs.post_id))
-      return false;
-    if (!(carrier == rhs.carrier))
-      return false;
-    return true;
-  }
-  bool operator != (const PostStorageService_AntipodeHintReplica_args &rhs) const {
-    return !(*this == rhs);
-  }
-
-  bool operator < (const PostStorageService_AntipodeHintReplica_args & ) const;
-
-  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
-  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
-
-};
-
-
-class PostStorageService_AntipodeHintReplica_pargs {
- public:
-
-
-  virtual ~PostStorageService_AntipodeHintReplica_pargs() throw();
-  const int64_t* post_id;
-  const std::map<std::string, std::string> * carrier;
-
-  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
 
 };
 
@@ -502,6 +446,117 @@ class PostStorageService_ReadPosts_presult {
 
 };
 
+typedef struct _PostStorageService_AntipodeCheckReplica_args__isset {
+  _PostStorageService_AntipodeCheckReplica_args__isset() : post_id(false), carrier(false) {}
+  bool post_id :1;
+  bool carrier :1;
+} _PostStorageService_AntipodeCheckReplica_args__isset;
+
+class PostStorageService_AntipodeCheckReplica_args {
+ public:
+
+  PostStorageService_AntipodeCheckReplica_args(const PostStorageService_AntipodeCheckReplica_args&);
+  PostStorageService_AntipodeCheckReplica_args& operator=(const PostStorageService_AntipodeCheckReplica_args&);
+  PostStorageService_AntipodeCheckReplica_args() : post_id(0) {
+  }
+
+  virtual ~PostStorageService_AntipodeCheckReplica_args() throw();
+  int64_t post_id;
+  std::map<std::string, std::string>  carrier;
+
+  _PostStorageService_AntipodeCheckReplica_args__isset __isset;
+
+  void __set_post_id(const int64_t val);
+
+  void __set_carrier(const std::map<std::string, std::string> & val);
+
+  bool operator == (const PostStorageService_AntipodeCheckReplica_args & rhs) const
+  {
+    if (!(post_id == rhs.post_id))
+      return false;
+    if (!(carrier == rhs.carrier))
+      return false;
+    return true;
+  }
+  bool operator != (const PostStorageService_AntipodeCheckReplica_args &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const PostStorageService_AntipodeCheckReplica_args & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+
+class PostStorageService_AntipodeCheckReplica_pargs {
+ public:
+
+
+  virtual ~PostStorageService_AntipodeCheckReplica_pargs() throw();
+  const int64_t* post_id;
+  const std::map<std::string, std::string> * carrier;
+
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+typedef struct _PostStorageService_AntipodeCheckReplica_result__isset {
+  _PostStorageService_AntipodeCheckReplica_result__isset() : se(false) {}
+  bool se :1;
+} _PostStorageService_AntipodeCheckReplica_result__isset;
+
+class PostStorageService_AntipodeCheckReplica_result {
+ public:
+
+  PostStorageService_AntipodeCheckReplica_result(const PostStorageService_AntipodeCheckReplica_result&);
+  PostStorageService_AntipodeCheckReplica_result& operator=(const PostStorageService_AntipodeCheckReplica_result&);
+  PostStorageService_AntipodeCheckReplica_result() {
+  }
+
+  virtual ~PostStorageService_AntipodeCheckReplica_result() throw();
+  ServiceException se;
+
+  _PostStorageService_AntipodeCheckReplica_result__isset __isset;
+
+  void __set_se(const ServiceException& val);
+
+  bool operator == (const PostStorageService_AntipodeCheckReplica_result & rhs) const
+  {
+    if (!(se == rhs.se))
+      return false;
+    return true;
+  }
+  bool operator != (const PostStorageService_AntipodeCheckReplica_result &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const PostStorageService_AntipodeCheckReplica_result & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+typedef struct _PostStorageService_AntipodeCheckReplica_presult__isset {
+  _PostStorageService_AntipodeCheckReplica_presult__isset() : se(false) {}
+  bool se :1;
+} _PostStorageService_AntipodeCheckReplica_presult__isset;
+
+class PostStorageService_AntipodeCheckReplica_presult {
+ public:
+
+
+  virtual ~PostStorageService_AntipodeCheckReplica_presult() throw();
+  ServiceException se;
+
+  _PostStorageService_AntipodeCheckReplica_presult__isset __isset;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+
+};
+
 class PostStorageServiceClient : virtual public PostStorageServiceIf {
  public:
   PostStorageServiceClient(apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> prot) {
@@ -530,14 +585,15 @@ class PostStorageServiceClient : virtual public PostStorageServiceIf {
   void StorePost(BaseRpcResponse& _return, const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier);
   void send_StorePost(const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier);
   void recv_StorePost(BaseRpcResponse& _return);
-  void AntipodeHintReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier);
-  void send_AntipodeHintReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier);
   void ReadPost(PostRpcResponse& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier);
   void send_ReadPost(const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier);
   void recv_ReadPost(PostRpcResponse& _return);
   void ReadPosts(PostListRpcResponse& _return, const int64_t req_id, const std::vector<int64_t> & post_ids, const std::map<std::string, std::string> & carrier);
   void send_ReadPosts(const int64_t req_id, const std::vector<int64_t> & post_ids, const std::map<std::string, std::string> & carrier);
   void recv_ReadPosts(PostListRpcResponse& _return);
+  void AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier);
+  void send_AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier);
+  void recv_AntipodeCheckReplica();
  protected:
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;
@@ -554,16 +610,16 @@ class PostStorageServiceProcessor : public ::apache::thrift::TDispatchProcessor 
   typedef std::map<std::string, ProcessFunction> ProcessMap;
   ProcessMap processMap_;
   void process_StorePost(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
-  void process_AntipodeHintReplica(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
   void process_ReadPost(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
   void process_ReadPosts(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
+  void process_AntipodeCheckReplica(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
  public:
   PostStorageServiceProcessor(::apache::thrift::stdcxx::shared_ptr<PostStorageServiceIf> iface) :
     iface_(iface) {
     processMap_["StorePost"] = &PostStorageServiceProcessor::process_StorePost;
-    processMap_["AntipodeHintReplica"] = &PostStorageServiceProcessor::process_AntipodeHintReplica;
     processMap_["ReadPost"] = &PostStorageServiceProcessor::process_ReadPost;
     processMap_["ReadPosts"] = &PostStorageServiceProcessor::process_ReadPosts;
+    processMap_["AntipodeCheckReplica"] = &PostStorageServiceProcessor::process_AntipodeCheckReplica;
   }
 
   virtual ~PostStorageServiceProcessor() {}
@@ -602,15 +658,6 @@ class PostStorageServiceMultiface : virtual public PostStorageServiceIf {
     return;
   }
 
-  void AntipodeHintReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier) {
-    size_t sz = ifaces_.size();
-    size_t i = 0;
-    for (; i < (sz - 1); ++i) {
-      ifaces_[i]->AntipodeHintReplica(post_id, carrier);
-    }
-    ifaces_[i]->AntipodeHintReplica(post_id, carrier);
-  }
-
   void ReadPost(PostRpcResponse& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
@@ -629,6 +676,15 @@ class PostStorageServiceMultiface : virtual public PostStorageServiceIf {
     }
     ifaces_[i]->ReadPosts(_return, req_id, post_ids, carrier);
     return;
+  }
+
+  void AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier) {
+    size_t sz = ifaces_.size();
+    size_t i = 0;
+    for (; i < (sz - 1); ++i) {
+      ifaces_[i]->AntipodeCheckReplica(post_id, carrier);
+    }
+    ifaces_[i]->AntipodeCheckReplica(post_id, carrier);
   }
 
 };
@@ -664,14 +720,15 @@ class PostStorageServiceConcurrentClient : virtual public PostStorageServiceIf {
   void StorePost(BaseRpcResponse& _return, const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier);
   int32_t send_StorePost(const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier);
   void recv_StorePost(BaseRpcResponse& _return, const int32_t seqid);
-  void AntipodeHintReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier);
-  void send_AntipodeHintReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier);
   void ReadPost(PostRpcResponse& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier);
   int32_t send_ReadPost(const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier);
   void recv_ReadPost(PostRpcResponse& _return, const int32_t seqid);
   void ReadPosts(PostListRpcResponse& _return, const int64_t req_id, const std::vector<int64_t> & post_ids, const std::map<std::string, std::string> & carrier);
   int32_t send_ReadPosts(const int64_t req_id, const std::vector<int64_t> & post_ids, const std::map<std::string, std::string> & carrier);
   void recv_ReadPosts(PostListRpcResponse& _return, const int32_t seqid);
+  void AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier);
+  int32_t send_AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier);
+  void recv_AntipodeCheckReplica(const int32_t seqid);
  protected:
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;

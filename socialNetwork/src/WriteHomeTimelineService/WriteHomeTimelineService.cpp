@@ -16,6 +16,7 @@
 #include "../utils.h"
 #include "../../gen-cpp/social_network_types.h"
 #include "../../gen-cpp/SocialGraphService.h"
+#include "../../gen-cpp/PostStorageService.h"
 #include "../../gen-cpp/AntipodeOracle.h"
 #include <xtrace/xtrace.h>
 #include <xtrace/baggage.h>
@@ -45,53 +46,11 @@ static std::exception_ptr _teptr;
 static ClientPool<RedisClient> *_redis_client_pool;
 static ClientPool<ThriftClient<SocialGraphServiceClient>> *_social_graph_client_pool;
 static ClientPool<ThriftClient<AntipodeOracleClient>> *_antipode_oracle_client_pool;
+static ClientPool<ThriftClient<PostStorageServiceClient>> *_post_storage_client_pool;
 
 
 void sigintHandler(int sig) {
   exit(EXIT_SUCCESS);
-}
-
-bool IsVisible(const int64_t object_id, const std::map<std::string, std::string> & carrier) {
-  LOG(debug) << "[ANTIPODE][DISTRIBUTED] Checking '" << object_id << "' for visibility ..." ;
-
-  // Jaeger tracing
-  TextMapReader span_reader(carrier);
-  auto parent_span = opentracing::Tracer::Global()->Extract(span_reader);
-  auto span = opentracing::Tracer::Global()->StartSpan(
-      "IsVisible",
-      {opentracing::ChildOf(parent_span->get())});
-  std::map<std::string, std::string> writer_text_map;
-  TextMapWriter writer(writer_text_map);
-  opentracing::Tracer::Global()->Inject(span->context(), writer);
-
-  // evaluation
-  high_resolution_clock::time_point start_ts = high_resolution_clock::now();
-  int attempts = 0;
-
-  // perform operation
-  tbb::concurrent_unordered_set<int64_t, tbb::tbb_hash<int64_t>, std::equal_to<int>>::iterator cacheit;
-  while(true){
-    attempts++;
-
-    cacheit = cache.find(object_id);
-    if (cacheit != cache.end()){
-    // if(true) {
-      // add metrics to span to read later
-      span->SetTag("antipode_isvisible_attempts", std::to_string(attempts));
-
-      high_resolution_clock::time_point is_visible_ts = high_resolution_clock::now();
-      uint64_t ts = duration_cast<milliseconds>(is_visible_ts.time_since_epoch()).count();
-      span->SetTag("is_visible_ts", std::to_string(ts));
-
-      duration<double, std::milli> timespent = is_visible_ts - start_ts;
-      span->SetTag("antipode_isvisible_duration", std::to_string(timespent.count()));
-      span->Finish();
-
-      return true;
-    }
-  }
-  span->Finish();
-  return false;
 }
 
 void OnReceivedWorker(const AMQP::Message &msg) {
@@ -144,26 +103,26 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     //----------
     // CENTRALIZED
     //----------
-    LOG(debug) << "[ANTIPODE][CENTRALIZED] Start IsVisible for post_id: " << post_id;
-    auto antipode_orable_client_wrapper = _antipode_oracle_client_pool->Pop();
-    if (!antipode_orable_client_wrapper) {
-      ServiceException se;
-      se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
-      se.message = "[ANTIPODE][CENTRALIZED] Failed to connect to antipode-oracle";
-      throw se;
-    }
-    auto antipode_oracle_client = antipode_orable_client_wrapper->GetClient();
-    // loop oracle calls until its visible
-    bool antipode_oracle_response = false;
-    try {
-      antipode_oracle_response = antipode_oracle_client->IsVisible(post_id, writer_text_map);
-      LOG(debug) << "[ANTIPODE][CENTRALIZED] Finished IsVisible for post_id: " << post_id;
-    } catch (...) {
-      LOG(error) << "[ANTIPODE][CENTRALIZED] Failed to check post visibility in Oracle";
-      _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
-      throw;
-    }
-    _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
+    // LOG(debug) << "[ANTIPODE][CENTRALIZED] Start IsVisible for post_id: " << post_id;
+    // auto antipode_orable_client_wrapper = _antipode_oracle_client_pool->Pop();
+    // if (!antipode_orable_client_wrapper) {
+    //   ServiceException se;
+    //   se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
+    //   se.message = "[ANTIPODE][CENTRALIZED] Failed to connect to antipode-oracle";
+    //   throw se;
+    // }
+    // auto antipode_oracle_client = antipode_orable_client_wrapper->GetClient();
+    // // loop oracle calls until its visible
+    // bool antipode_oracle_response = false;
+    // try {
+    //   antipode_oracle_response = antipode_oracle_client->IsVisible(post_id, writer_text_map);
+    //   LOG(debug) << "[ANTIPODE][CENTRALIZED] Finished IsVisible for post_id: " << post_id;
+    // } catch (...) {
+    //   LOG(error) << "[ANTIPODE][CENTRALIZED] Failed to check post visibility in Oracle";
+    //   _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
+    //   throw;
+    // }
+    // _antipode_oracle_client_pool->Push(antipode_orable_client_wrapper);
     //----------
     // CENTRALIZED
     //----------
@@ -171,7 +130,24 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     //----------
     // DISTRIBUTED
     //----------
-    // IsVisible(post_id, writer_text_map);
+    LOG(debug) << "[ANTIPODE][DISTRIBUTED] Checking replica on zone '" << zone << "' for post_id: " << post_id ;
+    auto post_storage_client_wrapper = _post_storage_client_pool->Pop();
+    if (!post_storage_client_wrapper) {
+      ServiceException se;
+      se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
+      se.message = "[ANTIPODE][DISTRIBUTED] Failed to connect to post-storage-service-" + zone;
+      throw se;
+    }
+    auto post_storage_client = post_storage_client_wrapper->GetClient();
+    try {
+      post_storage_client->AntipodeCheckReplica(post_id, writer_text_map);
+      LOG(debug) << "[ANTIPODE][DISTRIBUTED] Finished AntipodeCheckReplica on zone '" << zone << "'for post_id: " << post_id;
+    } catch (...) {
+      LOG(debug) << "[ANTIPODE][DISTRIBUTED] Failed to AntipodeCheckReplica on zone '" << zone << "'for post_id: " << post_id;
+      _post_storage_client_pool->Push(post_storage_client_wrapper);
+      throw;
+    }
+    _post_storage_client_pool->Push(post_storage_client_wrapper);
     //----------
     // DISTRIBUTED
     //----------
@@ -252,8 +228,7 @@ void OnReceivedWorker(const AMQP::Message &msg) {
   }
 }
 
-void HeartbeatSend(AmqpLibeventHandler &handler,
-    AMQP::TcpConnection &connection, int interval){
+void HeartbeatSend(AmqpLibeventHandler &handler, AMQP::TcpConnection &connection, int interval){
   while(handler.GetIsRunning()){
     // LOG(debug) << "Heartbeat sent";
     connection.heartbeat();
@@ -332,22 +307,22 @@ int main(int argc, char *argv[]) {
 
   int port = config_json[service_name]["port"];
 
-  std::string rabbitmq_name = "write-home-timeline-rabbitmq-" + zone;
-  std::string rabbitmq_addr = config_json[rabbitmq_name]["addr"];
-  int rabbitmq_port = config_json[rabbitmq_name]["port"];
+  std::string rabbitmq_addr = config_json["write-home-timeline-rabbitmq-" + zone]["addr"];
+  int rabbitmq_port = config_json["write-home-timeline-rabbitmq-" + zone]["port"];
+
+  int post_storage_port = config_json["post-storage-service-" + zone]["port"];
+  std::string post_storage_addr = config_json["post-storage-service-" + zone]["addr"];
 
   // Should it be on the same region?
-  std::string redis_addr =
-      config_json["home-timeline-redis"]["addr"];
+  std::string redis_addr = config_json["home-timeline-redis"]["addr"];
   int redis_port = config_json["home-timeline-redis"]["port"];
 
-  // Should it be on the same region?
-  std::string social_graph_service_addr =
-      config_json["social-graph-service"]["addr"];
+  std::string social_graph_service_addr = config_json["social-graph-service"]["addr"];
   int social_graph_service_port = config_json["social-graph-service"]["port"];
 
   int antipode_oracle_port = config_json["antipode-oracle"]["port"];
   std::string antipode_oracle_addr = config_json["antipode-oracle"]["addr"];
+
 
   ClientPool<RedisClient> redis_client_pool("redis", redis_addr, redis_port,
                                             0, 10000, 1000);
@@ -361,9 +336,15 @@ int main(int argc, char *argv[]) {
       antipode_oracle_client_pool("antipode-oracle", antipode_oracle_addr,
                                 antipode_oracle_port, 0, 10000, 1000);
 
+  ClientPool<ThriftClient<PostStorageServiceClient>>
+      post_storage_client_pool("post-storage-client", post_storage_addr,
+                               post_storage_port, 0, 10000, 1000);
+
+
   _redis_client_pool = &redis_client_pool;
   _social_graph_client_pool = &social_graph_client_pool;
   _antipode_oracle_client_pool = &antipode_oracle_client_pool;
+  _post_storage_client_pool = &post_storage_client_pool;
 
   std::unique_ptr<std::thread> threads_ptr[NUM_WORKERS];
   for (auto & thread_ptr : threads_ptr) {

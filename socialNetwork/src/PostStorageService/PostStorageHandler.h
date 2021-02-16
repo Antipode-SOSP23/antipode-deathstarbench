@@ -38,14 +38,13 @@ class PostStorageHandler : public PostStorageServiceIf {
       mongoc_client_pool_t *,
       ClientPool<ThriftClient<AntipodeOracleClient>> *,
       ClientPool<ThriftClient<WriteHomeTimelineServiceClient>> *,
-      ClientPool<ThriftClient<PostStorageServiceClient>> *,
-      ClientPool<ThriftClient<PostStorageServiceClient>> *);
+      std::string);
   ~PostStorageHandler() override = default;
 
   void StorePost(BaseRpcResponse& response, int64_t req_id, const Post &post,
       const std::map<std::string, std::string> &carrier) override;
 
-  void AntipodeHintReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier) override;
+  void AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier) override;
 
   void ReadPost(PostRpcResponse& response, int64_t req_id, int64_t post_id,
                  const std::map<std::string, std::string> &carrier) override;
@@ -59,12 +58,8 @@ class PostStorageHandler : public PostStorageServiceIf {
   mongoc_client_pool_t *_mongodb_client_pool;
   ClientPool<ThriftClient<AntipodeOracleClient>> *_antipode_oracle_client_pool;
   ClientPool<ThriftClient<WriteHomeTimelineServiceClient>> *_write_home_timeline_client_pool;
-  ClientPool<ThriftClient<PostStorageServiceClient>> *_post_storage_client_eu_pool;
-  ClientPool<ThriftClient<PostStorageServiceClient>> *_post_storage_client_us_pool;
-
+  std::string _zone;
   std::exception_ptr _post_storage_teptr;
-
-  void _AntipodeHintReplicas(int64_t post_id, const std::map<std::string, std::string> &carrier);
 };
 
 PostStorageHandler::PostStorageHandler(
@@ -72,14 +67,12 @@ PostStorageHandler::PostStorageHandler(
     mongoc_client_pool_t *mongodb_client_pool,
     ClientPool<social_network::ThriftClient<AntipodeOracleClient>> *antipode_oracle_client_pool,
     ClientPool<social_network::ThriftClient<WriteHomeTimelineServiceClient>> *write_home_timeline_client_pool,
-    ClientPool<social_network::ThriftClient<PostStorageServiceClient>> *post_storage_client_eu_pool,
-    ClientPool<social_network::ThriftClient<PostStorageServiceClient>> *post_storage_client_us_pool) {
+    std::string zone) {
   _memcached_client_pool = memcached_client_pool;
   _mongodb_client_pool = mongodb_client_pool;
   _antipode_oracle_client_pool = antipode_oracle_client_pool;
   _write_home_timeline_client_pool = write_home_timeline_client_pool;
-  _post_storage_client_eu_pool = post_storage_client_eu_pool;
-  _post_storage_client_us_pool = post_storage_client_us_pool;
+  _zone = zone;
 }
 
 // Launch the pool with as much threads as cores
@@ -240,20 +233,6 @@ void PostStorageHandler::StorePost(
   ts_int = duration_cast<milliseconds>(ts.time_since_epoch()).count();
   span->SetTag("poststorage_post_written_ts", std::to_string(ts_int));
 
-  //----------
-  // ANTIPODE
-  //----------
-  boost::asio::post(pool, std::bind(&PostStorageHandler::_AntipodeHintReplicas, this, post.post_id, writer_text_map));
-  // _AntipodeHintReplicas(post.post_id, carrier);
-
-  ts = high_resolution_clock::now();
-  ts_int = duration_cast<milliseconds>(ts.time_since_epoch()).count();
-  span->SetTag("poststorage_hint_replicas_end_ts", std::to_string(ts_int));
-
-  //----------
-  // ANTIPODE
-  //----------
-
   span->Finish();
   // XTRACE("PostStorageHandler::StorePost complete");
   response.baggage = GET_CURRENT_BAGGAGE().str();
@@ -263,12 +242,12 @@ void PostStorageHandler::StorePost(
 //----------
 // ANTIPODE
 //----------
-void PostStorageHandler::AntipodeHintReplica(
+void PostStorageHandler::AntipodeCheckReplica(
     const int64_t post_id,
     const std::map<std::string, std::string> & carrier) {
   //
-  // This method is called by another PostStorage replica
-  LOG(debug) << "[ANTIPODE] Start Hint Replica on zone '" << std::getenv("ZONE") << "' for post_id: " << post_id ;
+  // This method is called by WriteHomeTimeline replica
+  LOG(debug) << "[ANTIPODE] Start Check Replica on zone '" << _zone << "' for post_id: " << post_id ;
 
   // Initialize a span
   TextMapReader reader(carrier);
@@ -276,13 +255,13 @@ void PostStorageHandler::AntipodeHintReplica(
   TextMapWriter writer(writer_text_map);
   auto parent_span = opentracing::Tracer::Global()->Extract(reader);
   auto span = opentracing::Tracer::Global()->StartSpan(
-      "AntipodeHintReplica",
+      "AntipodeCheckReplica",
       { opentracing::ChildOf(parent_span->get()) });
   opentracing::Tracer::Global()->Inject(span->context(), writer);
 
   high_resolution_clock::time_point start_antipode_ts = high_resolution_clock::now();
   uint64_t ts = duration_cast<milliseconds>(start_antipode_ts.time_since_epoch()).count();
-  span->SetTag("poststorage_hint_replicate_start_ts", std::to_string(ts));
+  span->SetTag("poststorage_replicate_start_ts", std::to_string(ts));
 
   // sleep while post is not ready at US replica
   bool read_post = false;
@@ -315,41 +294,38 @@ void PostStorageHandler::AntipodeHintReplica(
     mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
   }
 
-  // eval
-  high_resolution_clock::time_point replicated_ts = high_resolution_clock::now();
-  ts = duration_cast<milliseconds>(replicated_ts.time_since_epoch()).count();
-  span->SetTag("poststorage_post_replicated_ts", std::to_string(ts));
-
   //----------
   // CENTRALIZED
   //----------
-  LOG(debug) << "[ANTIPODE][CENTRALIZED] Hinting replica";
-  auto antipode_oracle_client_wrapper = _antipode_oracle_client_pool->Pop();
-  if (!antipode_oracle_client_wrapper) {
-    ServiceException se;
-    se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
-    se.message = "[ANTIPODE][CENTRALIZED] Failed to connect to antipode-oracle";
-    throw se;
-  }
+  // LOG(debug) << "[ANTIPODE][CENTRALIZED] Checking replica";
+  // auto antipode_oracle_client_wrapper = _antipode_oracle_client_pool->Pop();
+  // if (!antipode_oracle_client_wrapper) {
+  //   ServiceException se;
+  //   se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
+  //   se.message = "[ANTIPODE][CENTRALIZED] Failed to connect to antipode-oracle";
+  //   throw se;
+  // }
 
-  auto antipode_oracle_client = antipode_oracle_client_wrapper->GetClient();
-  bool antipode_oracle_response;
-  try {
-    antipode_oracle_response = antipode_oracle_client->MakeVisible(post_id, writer_text_map);
-    LOG(debug) << "[ANTIPODE][CENTRALIZED] Post successfuly marked as visible in Oracle with response: " << antipode_oracle_response;
-  } catch (...) {
-    LOG(error) << "[ANTIPODE][CENTRALIZED] Failed to write post visibility to Oracle";
-    _antipode_oracle_client_pool->Push(antipode_oracle_client_wrapper);
-    throw;
-  }
-  _antipode_oracle_client_pool->Push(antipode_oracle_client_wrapper);
+  // auto antipode_oracle_client = antipode_oracle_client_wrapper->GetClient();
+  // bool antipode_oracle_response;
+  // try {
+  //   antipode_oracle_response = antipode_oracle_client->MakeVisible(post_id, writer_text_map);
+  //   LOG(debug) << "[ANTIPODE][CENTRALIZED] Post successfuly marked as visible in Oracle with response: " << antipode_oracle_response;
+  // } catch (...) {
+  //   LOG(error) << "[ANTIPODE][CENTRALIZED] Failed to write post visibility to Oracle";
+  //   _antipode_oracle_client_pool->Push(antipode_oracle_client_wrapper);
+  //   throw;
+  // }
+  // _antipode_oracle_client_pool->Push(antipode_oracle_client_wrapper);
   //----------
   // CENTRALIZED
   //----------
+
   //----------
   // DISTRIBUTED
+  // -- This version might be useful for optimizations regarding ASYNC ACK --
   //----------
-  // LOG(debug) << "[ANTIPODE][DISTRIBUTED] Hinting replica";
+  // LOG(debug) << "[ANTIPODE][DISTRIBUTED] Checking replica: " << _zone;
 
   // auto write_home_timeline_client_wrapper = _write_home_timeline_client_pool->Pop();
   // if (!write_home_timeline_client_wrapper) {
@@ -376,7 +352,7 @@ void PostStorageHandler::AntipodeHintReplica(
 
   high_resolution_clock::time_point end_antipode_ts = high_resolution_clock::now();
   ts = duration_cast<milliseconds>(end_antipode_ts.time_since_epoch()).count();
-  span->SetTag("poststorage_hint_replicate_end_ts", std::to_string(ts));
+  span->SetTag("poststorage_replicate_end_ts", std::to_string(ts));
   span->Finish();
 };
 
@@ -959,84 +935,6 @@ void PostStorageHandler::ReadPosts(
   response.baggage = GET_CURRENT_BAGGAGE().str();
   response.result = _return;
   DELETE_CURRENT_BAGGAGE();
-}
-
-void PostStorageHandler::_AntipodeHintReplicas(int64_t post_id,
-    const std::map<std::string, std::string> &carrier) {
-
-  // all existing zones
-  std::string zones[2] = { "eu", "us" };
-  // spans
-  TextMapReader reader(carrier);
-  std::map<std::string, std::string> writer_text_map;
-  TextMapWriter writer(writer_text_map);
-  auto parent_span = opentracing::Tracer::Global()->Extract(reader);
-  auto span = opentracing::Tracer::Global()->StartSpan(
-      "_HintReplicas",
-      { opentracing::ChildOf(parent_span->get()) });
-  opentracing::Tracer::Global()->Inject(span->context(), writer);
-
-
-  high_resolution_clock::time_point ts;
-  uint64_t ts_int;
-
-  for (std::string zone : zones) {
-    if (zone != std::getenv("ZONE")) {
-      LOG(debug) << "[ANTIPODE] Hinting Replica on zone '" << zone << "' from zone '" << std::getenv("ZONE") << "' for post_id: " << post_id ;
-
-      ThriftClient<PostStorageServiceClient> * post_storage_client_wrapper;
-      try{
-        ts = high_resolution_clock::now();
-        ts_int = duration_cast<milliseconds>(ts.time_since_epoch()).count();
-        span->SetTag("poststorage_hint_replicate_step_1", std::to_string(ts_int));
-
-        // pop correct client
-        if(zone == "eu") {
-          post_storage_client_wrapper = _post_storage_client_eu_pool->Pop();
-        } else if (zone == "us") {
-          post_storage_client_wrapper = _post_storage_client_us_pool->Pop();
-        }
-
-        if (!post_storage_client_wrapper) {
-          ServiceException se;
-          se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
-          se.message = "Failed to connect to post-storage-service-" + zone;
-          throw se;
-        }
-        auto post_storage_client = post_storage_client_wrapper->GetClient();
-        try {
-          post_storage_client->AntipodeHintReplica(post_id, writer_text_map);
-        } catch (...) {
-          LOG(error) << "Failed to store post to post-storage-service-" + zone;
-          // pop correct client
-          if(zone == "eu") {
-            _post_storage_client_eu_pool->Push(post_storage_client_wrapper);
-          } else if (zone == "us") {
-            _post_storage_client_us_pool->Push(post_storage_client_wrapper);
-          }
-          throw;
-        }
-
-        // pop correct client
-        if(zone == "eu") {
-          _post_storage_client_eu_pool->Push(post_storage_client_wrapper);
-        } else if (zone == "us") {
-          _post_storage_client_us_pool->Push(post_storage_client_wrapper);
-        }
-      } catch (...) {
-        LOG(error) << "Failed to connect to post-storage-service-" + zone;
-        // XTRACE("Failed to connect to post-storage-service");
-        _post_storage_teptr = std::current_exception();
-      }
-
-      ts = high_resolution_clock::now();
-      ts_int = duration_cast<milliseconds>(ts.time_since_epoch()).count();
-      span->SetTag("poststorage_hint_replicate_step_2", std::to_string(ts_int));
-
-    }
-  }
-
-  span->Finish();
 }
 
 } // namespace social_network
