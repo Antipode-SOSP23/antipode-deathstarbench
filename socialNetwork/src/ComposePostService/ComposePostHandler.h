@@ -872,6 +872,10 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
     const std::map<std::string, std::string> &carrier,
     Baggage& baggage, std::promise<Baggage> baggage_promise) {
   //
+  // save ts for eval
+  high_resolution_clock::time_point ts;
+  uint64_t ts_int;
+
   BAGGAGE(baggage);
   TextMapReader reader(carrier);
   std::map<std::string, std::string> writer_text_map(carrier);
@@ -929,6 +933,11 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
     auto rabbitmq_channel = rabbitmq_client_wrapper->GetChannel();
     auto msg = AmqpClient::BasicMessage::Create(msg_str);
 
+    // save ts when notification as placed on rabbitmq
+    ts = high_resolution_clock::now();
+    ts_int = duration_cast<milliseconds>(ts.time_since_epoch()).count();
+    span->SetTag("rabbitmq_post_start", std::to_string(ts_int));
+
     // use the channel object to call the AMQP method you like
     rabbitmq_channel->DeclareExchange("notifications", AmqpClient::Channel::EXCHANGE_TYPE_TOPIC);
     // publishes to the queue of each zone
@@ -938,9 +947,9 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
     _rabbitmq_client_pool->Push(rabbitmq_client_wrapper);
 
     // save ts when notification as placed on rabbitmq
-    high_resolution_clock::time_point wht_start_queue_ts = high_resolution_clock::now();
-    uint64_t ts = duration_cast<milliseconds>(wht_start_queue_ts.time_since_epoch()).count();
-    span->SetTag("wht_start_queue_ts", std::to_string(ts));
+    ts = high_resolution_clock::now();
+    ts_int = duration_cast<milliseconds>(ts.time_since_epoch()).count();
+    span->SetTag("wht_start_queue_ts", std::to_string(ts_int));
 
   } catch (...) {
     LOG(error) << "Failed to connected to home-timeline-rabbitmq";
