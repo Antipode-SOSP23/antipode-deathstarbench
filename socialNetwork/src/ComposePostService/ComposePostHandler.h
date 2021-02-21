@@ -933,16 +933,11 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
     auto rabbitmq_channel = rabbitmq_client_wrapper->GetChannel();
     auto msg = AmqpClient::BasicMessage::Create(msg_str);
 
-    // save ts when notification as placed on rabbitmq
-    ts = high_resolution_clock::now();
-    ts_int = duration_cast<milliseconds>(ts.time_since_epoch()).count();
-    span->SetTag("rabbitmq_post_start", std::to_string(ts_int));
-
     // use the channel object to call the AMQP method you like
-    rabbitmq_channel->DeclareExchange("notifications", AmqpClient::Channel::EXCHANGE_TYPE_TOPIC);
+    rabbitmq_channel->DeclareExchange("write-home-timeline", AmqpClient::Channel::EXCHANGE_TYPE_TOPIC);
     // publishes to the queue of each zone
     for (auto &izone : _interest_zones){
-      rabbitmq_channel->BasicPublish("notifications", "write-home-timeline-" + izone, msg, true);
+      rabbitmq_channel->BasicPublish("write-home-timeline", "write-home-timeline-" + izone, msg, true);
     }
     _rabbitmq_client_pool->Push(rabbitmq_client_wrapper);
 

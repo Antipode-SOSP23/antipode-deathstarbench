@@ -11,6 +11,8 @@
 namespace social_network{
 using json = nlohmann::json;
 
+const std::vector<std::string> ALL_ZONES({ "eu", "us" });
+
 int load_config_file(const std::string &file_name, json *config_json) {
   std::ifstream json_file;
   json_file.open(file_name);

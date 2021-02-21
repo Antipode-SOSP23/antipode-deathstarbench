@@ -15,6 +15,7 @@ apps:
         # this container can be built but we are not modifying this version
         - yg397/media-frontend:xenial
       to_build:
+        - rabbitmq-setup
         - mongodb-setup
         - yg397/openresty-thrift:latest
         - yg397/social-network-microservices:antipode

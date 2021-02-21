@@ -114,6 +114,7 @@ SOCIAL_NETWORK_DEFAULT_SERVICES = {
     'xtrace-server': 'HOSTNAME',
     'mongodb-admin': 'HOSTNAME',
     'post-storage-mongodb-setup': 'HOSTNAME',
+    'write-home-timeline-rabbitmq-setup': 'HOSTNAME',
   },
   'nodes': {
     'HOSTNAME': {
@@ -124,6 +125,7 @@ SOCIAL_NETWORK_DEFAULT_SERVICES = {
 }
 CONTAINERS_BUILT = [
   'mongodb-setup',
+  'rabbitmq-setup',
   'yg397/openresty-thrift:latest',
   'yg397/social-network-microservices:antipode',
   'wrk2:antipode',
@@ -375,6 +377,10 @@ def build__socialNetwork__local(args):
   # Build the mongodb setup image
   os.chdir(app_dir.joinpath('docker', 'mongodb-setup', 'post-storage'))
   docker['build', '-t', 'mongodb-setup', '.'] & FG
+
+  # Build the rabbitmq setup image
+  os.chdir(app_dir.joinpath('docker', 'rabbitmq-setup', 'write-home-timeline'))
+  docker['build', '-t', 'rabbitmq-setup', '.'] & FG
 
   # Build the wrk2 image
   os.chdir(app_dir.joinpath('docker', 'wrk2'))
@@ -1288,7 +1294,6 @@ def gather(args):
           'post_id': None,
           # 'antipode_isvisible_duration': -1,
           # 'antipode_isvisible_attempts': -1,
-          'rabbitmq_post_start': None,
           'wht_start_queue_ts': None,
           'wth_start_worker_ts': None,
           'wth_end_worker_ts': None,
@@ -1304,7 +1309,6 @@ def gather(args):
 
           if s['operationName'] == '_UploadHomeTimelineHelper':
             # compute the time spent in the queue
-            trace_info['rabbitmq_post_start'] = float(_fetch_span_tag(s['tags'], 'rabbitmq_post_start'))
             trace_info['wht_start_queue_ts'] = float(_fetch_span_tag(s['tags'], 'wht_start_queue_ts'))
 
           # these values are captured by wht_antipode_duration
@@ -1342,12 +1346,6 @@ def gather(args):
         # queue + worker time
         diff = datetime.fromtimestamp(trace_info['wth_end_worker_ts']/1000.0) - datetime.fromtimestamp(trace_info['wht_start_queue_ts']/1000.0)
         trace_info['wht_total_duration'] = float(diff.total_seconds() * 1000)
-
-        # debug
-        diff = datetime.fromtimestamp(trace_info['wht_start_queue_ts']/1000.0) - datetime.fromtimestamp(trace_info['rabbitmq_post_start']/1000.0)
-        trace_info['rabbit_mq_time_spent_ms'] = float(diff.total_seconds() * 1000)
-
-
 
         traces.append(trace_info)
 

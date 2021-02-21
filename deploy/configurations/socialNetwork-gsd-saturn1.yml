@@ -105,6 +105,7 @@ services:
   xtrace-server: saturn1
   mongodb-admin: saturn1
   post-storage-mongodb-setup: saturn1
+  write-home-timeline-rabbitmq-setup: saturn1
 
 ########
 #

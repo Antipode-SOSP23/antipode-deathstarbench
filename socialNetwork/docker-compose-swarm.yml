@@ -468,6 +468,7 @@ services:
         - node.hostname == home-timeline-eu
     environment:
       RABBITMQ_DEFAULT_VHOST: /
+      RABBITMQ_ENABLED_PLUGINS_FILE: /etc/rabbitmq/enabled_plugins
       RABBITMQ_ERLANG_COOKIE: WRITE-HOME-TIMELINE-RABBITMQ
     hostname: write-home-timeline-rabbitmq-eu
     image: rabbitmq:management
@@ -479,9 +480,27 @@ services:
     restart: always
     volumes:
     - ./config/rabbitmq/write-home-timeline-rabbitmq-eu-definitions.json:/etc/rabbitmq/definitions.json:ro
-    - ./config/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    - ./config/rabbitmq/write-home-timeline-rabbitmq-eu.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    - ./config/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins
+  write-home-timeline-rabbitmq-setup:
+    depends_on:
+    - write-home-timeline-rabbitmq-eu
+    - write-home-timeline-rabbitmq-us
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == admin-tracing
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        max_attempts: 3
+    environment:
+      RABBITMQ_ERLANG_COOKIE: WRITE-HOME-TIMELINE-RABBITMQ
+    image: rabbitmq-setup
+    networks:
+    - deathstarbench_network
+    restart: 'no'
   write-home-timeline-rabbitmq-us:
-    command: sh -c 'sleep 10 && rabbitmq-server'
     depends_on:
     - write-home-timeline-rabbitmq-eu
     deploy:
@@ -490,6 +509,7 @@ services:
         - node.hostname == home-timeline-us
     environment:
       RABBITMQ_DEFAULT_VHOST: /
+      RABBITMQ_ENABLED_PLUGINS_FILE: /etc/rabbitmq/enabled_plugins
       RABBITMQ_ERLANG_COOKIE: WRITE-HOME-TIMELINE-RABBITMQ
     hostname: write-home-timeline-rabbitmq-us
     image: rabbitmq:management
@@ -501,7 +521,8 @@ services:
     restart: always
     volumes:
     - ./config/rabbitmq/write-home-timeline-rabbitmq-us-definitions.json:/etc/rabbitmq/definitions.json:ro
-    - ./config/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    - ./config/rabbitmq/write-home-timeline-rabbitmq-us.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    - ./config/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins
   write-home-timeline-service-eu:
     depends_on:
     - write-home-timeline-rabbitmq-eu

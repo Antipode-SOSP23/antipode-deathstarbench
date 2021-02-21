@@ -93,6 +93,7 @@
         docker tag gcr.io/pluribus/{{item}} {{item}}
       with_items:
         - mongodb-setup
+        - rabbitmq-setup
         - yg397/openresty-thrift:latest
         - yg397/social-network-microservices:antipode
         - redis-im:antipode

@@ -16,15 +16,6 @@
       register: out
       failed_when: "not(out.rc == 0) or 'fail' in out.stderr"
 
-    - name: Ensure DSB stack is deployed
-      # mongodb-setup has to run before DSB stack is deployed
-      shell: >
-            docker stack services {{ stack }} --format {% raw %}'{{.Name}};{{.Replicas}}'{%endraw%} | grep -v 'post-storage-mongodb-setup' | grep '1/1' | wc -l
-      register: cmd_res
-      retries: 12
-      delay: 30
-      until: (cmd_res.stdout | int) == num_services
-
     - name: Ensure MongoDB setup is finished
       # mongodb-setup has to run before DSB stack is deployed
       shell: >
@@ -34,3 +25,22 @@
       retries: 6
       delay: 30
       until: (cmd_res.stdout | int) == 1
+
+    - name: Ensure RabbitMQ setup is finished
+      # mongodb-setup has to run before DSB stack is deployed
+      shell: >
+            docker stack services {{ stack }} --format {% raw %}'{{.Name}};{{.Replicas}}'{%endraw%} | grep 'write-home-timeline-rabbitmq-setup' | grep '0/1' | wc -l
+      register: cmd_res
+      # 1 minute
+      retries: 6
+      delay: 30
+      until: (cmd_res.stdout | int) == 1
+
+    - name: Ensure DSB stack is deployed
+      # mongodb-setup has to run before DSB stack is deployed
+      shell: >
+            docker stack services {{ stack }} --format {% raw %}'{{.Name}};{{.Replicas}}'{%endraw%} | grep -v 'post-storage-mongodb-setup' | grep -v 'write-home-timeline-rabbitmq-setup' | grep '1/1' | wc -l
+      register: cmd_res
+      retries: 12
+      delay: 30
+      until: (cmd_res.stdout | int) == num_services

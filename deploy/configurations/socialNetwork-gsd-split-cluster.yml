@@ -75,3 +75,4 @@ services:
   xtrace-server: node25
   mongodb-admin: node25
   post-storage-mongodb-setup: node25
+  write-home-timeline-rabbitmq-setup: node25

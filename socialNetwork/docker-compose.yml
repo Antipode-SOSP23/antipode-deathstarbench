@@ -81,31 +81,34 @@ services:
     environment:
       RABBITMQ_ERLANG_COOKIE: "WRITE-HOME-TIMELINE-RABBITMQ"
       RABBITMQ_DEFAULT_VHOST: "/"
+      RABBITMQ_ENABLED_PLUGINS_FILE: "/etc/rabbitmq/enabled_plugins"
     ports:
       - 15672:15672
       - 5672:5672
     restart: always
     volumes:
       - ./config/rabbitmq/write-home-timeline-rabbitmq-eu-definitions.json:/etc/rabbitmq/definitions.json:ro
-      - ./config/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./config/rabbitmq/write-home-timeline-rabbitmq-eu.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./config/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins
     deploy:
       placement:
         constraints: [node.hostname == node02]
 
   write-home-timeline-rabbitmq-us:
     image: rabbitmq:management
-    command: sh -c 'sleep 10 && rabbitmq-server'
     hostname: write-home-timeline-rabbitmq-us
     environment:
       RABBITMQ_ERLANG_COOKIE: "WRITE-HOME-TIMELINE-RABBITMQ"
       RABBITMQ_DEFAULT_VHOST: "/"
+      RABBITMQ_ENABLED_PLUGINS_FILE: "/etc/rabbitmq/enabled_plugins"
     ports:
       - 15673:15672
       - 5673:5672
     restart: always
     volumes:
       - ./config/rabbitmq/write-home-timeline-rabbitmq-us-definitions.json:/etc/rabbitmq/definitions.json:ro
-      - ./config/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./config/rabbitmq/write-home-timeline-rabbitmq-us.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./config/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins
     depends_on:
       - write-home-timeline-rabbitmq-eu
     deploy:
@@ -562,12 +565,25 @@ services:
 
   post-storage-mongodb-setup:
     image: mongodb-setup
-    # build:
-    #   context: ./docker/mongodb-setup/post-storage/
-    #   dockerfile: Dockerfile
     depends_on:
       - post-storage-mongodb-eu
       - post-storage-mongodb-us
+    restart: 'no'
+    deploy:
+      placement:
+        constraints: [node.hostname == node25]
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        max_attempts: 3
+
+  write-home-timeline-rabbitmq-setup:
+    image: rabbitmq-setup
+    depends_on:
+      - write-home-timeline-rabbitmq-eu
+      - write-home-timeline-rabbitmq-us
+    environment:
+      RABBITMQ_ERLANG_COOKIE: "WRITE-HOME-TIMELINE-RABBITMQ"
     restart: 'no'
     deploy:
       placement:

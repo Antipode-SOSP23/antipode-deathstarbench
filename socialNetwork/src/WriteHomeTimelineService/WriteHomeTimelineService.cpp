@@ -248,19 +248,18 @@ void WorkerThread(std::string &addr, int port) {
         handler.Stop();
       });
 
-  // Queue already exists
-  // declared in configuration files
-  // channel.declareQueue("write-home-timeline", AMQP::durable).onSuccess(
-  //     [&connection](const std::string &name, uint32_t messagecount,
-  //                   uint32_t consumercount) {
-  //       LOG(debug) << "Created queue: " << name;
-  //     });
+  channel.declareExchange("write-home-timeline", AMQP::topic);
 
-  channel.declareExchange("notifications", AMQP::topic);
+  channel.declareQueue("write-home-timeline-"+zone, AMQP::durable).onSuccess(
+      [&connection](const std::string &name, uint32_t messagecount,
+                    uint32_t consumercount) {
+        LOG(debug) << "Created queue: " << name;
+      });
+
   // params in order: <exchange>,<queue>,<routing_key>
   // queue and routing key are the same which is the current zone
   // other zones post messages to routing key of this zone
-  channel.bindQueue("notifications", "write-home-timeline-" + zone, "write-home-timeline-" + zone);
+  channel.bindQueue("write-home-timeline", "write-home-timeline-" + zone, "write-home-timeline-" + zone);
 
   // ref: https://github.com/CopernicaMarketingSoftware/AMQP-CPP#consuming-messages
   channel.consume("write-home-timeline-"+zone, AMQP::noack).onReceived(

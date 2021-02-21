@@ -78,6 +78,7 @@ services:
   xtrace-server: node01
   mongodb-admin: node01
   post-storage-mongodb-setup: node01
+  write-home-timeline-rabbitmq-setup: node01
 
 clients:
   - client01

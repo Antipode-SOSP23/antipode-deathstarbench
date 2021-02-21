@@ -19,19 +19,5 @@
       "write":".*",
       "read":".*"
     }
-  ],
-  "policies": [
-    {
-      "name": "write-home-timeline-all",
-      "apply-to": "all",
-      "definition": {
-        "ha-mode": "all",
-        "ha-sync-mode": "automatic",
-        "ha-sync-batch-size": 1
-      },
-      "pattern": "^write\-home\-timeline\-*",
-      "priority": 0,
-      "vhost": "/"
-    }
   ]
 }

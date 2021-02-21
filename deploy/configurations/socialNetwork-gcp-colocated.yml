@@ -107,6 +107,7 @@ services:
   xtrace-server: admin-tracing
   mongodb-admin: admin-tracing
   post-storage-mongodb-setup: admin-tracing
+  write-home-timeline-rabbitmq-setup: admin-tracing
 
 clients:
   - client01
