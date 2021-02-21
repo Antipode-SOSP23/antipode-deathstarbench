@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import glob
 from pprint import pprint
 from pathlib import Path
 import sys
@@ -15,6 +16,7 @@ pd.set_option('display.float_format', lambda x: '%.3f' % x)
 # CONSTANTS
 #
 ROOT_PATH = Path(os.path.abspath(os.path.dirname(sys.argv[0])))
+WKLD_DATA_PATH = ROOT_PATH / 'deploy' / 'wkld-data'
 PERCENTILES_TO_PRINT = [.25, .5, .75, .90, .99]
 
 #############################
@@ -23,28 +25,10 @@ PERCENTILES_TO_PRINT = [.25, .5, .75, .90, .99]
 def _fetch_span_tag(tags, tag_to_search):
   return next(item for item in tags if item['key'] == tag_to_search)['value']
 
-
-# replace with argparse
-exp_tss = [
-  #
-  # DISTRIBUTED
-  #
-  # -- 1 Client  // 75 req/s
-  '20210216042308',
-  # -- 1 Client  // 150 req/s
-  # '20210126102219',
-  #
-  # CENTRALIZED
-  #
-  # -- 1 Client  // 75 req/s
-  # '20210126131746',
-  # -- 1 Client  // 150 req/s
-  # '20210126123424'
-]
-
-for exp_ts in exp_tss:
-  dataset_folder = ROOT_PATH / 'deploy' / 'wkld-data' / 'socialNetwork-gcp-colocated' / exp_ts
-
+#############################
+# HELPERS
+#
+def plot_debug(dataset_folder):
   os.chdir(dataset_folder)
 
   ats_df = pd.read_csv('ats_single.csv', sep=';')
@@ -73,17 +57,28 @@ for exp_ts in exp_tss:
   fig.savefig(f"plot_debug.png")
 
 
+if __name__ == "__main__":
+  import argparse
 
+  # parse arguments
+  main_parser = argparse.ArgumentParser()
 
-# distributed
+  deploy_file_group = main_parser.add_mutually_exclusive_group(required=True)
+  deploy_file_group.add_argument('-l', '--latest', action='store_true', help="Use last used deploy file")
+  deploy_file_group.add_argument('-d', '--dir', help="Use specific directory")
 
-# 20210126023656 -- 1 Client  // 75 req/s
-# 20210126102219 -- 1 Client  // 150 req/s
+  args = vars(main_parser.parse_args())
 
-# 20210126113934 -- 2 Clients // 75  req/s
+  if args['latest'] == True:
+    all_ts_dirs = [ ts_dir for ts_dir in glob.glob(str(WKLD_DATA_PATH / '*' / '**')) if os.path.isdir(ts_dir) ]
+    args['dir'] = max(all_ts_dirs, key=os.path.getmtime)
 
-# centralized
+  # check if directory is not empty
+  if os.path.exists(args['dir']) and os.path.isdir(args['dir']):
+    if not os.listdir(args['dir']):
+      raise argparse.ArgumentError(args['dir'], "is an empty dir.")
+  else:
+    raise argparse.ArgumentError(args['dir'], "does not exist")
 
-# 20210126131746 -- 1 Client  // 75 req/s
-# 20210126123424 -- 1 Client  // 150 req/s
-#  -- 2 Clients // 75  req/s
+  # no errors call plot - for now we only have one
+  plot_debug(args['dir'])
