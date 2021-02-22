@@ -41,6 +41,6 @@
       shell: >
             docker stack services {{ stack }} --format {% raw %}'{{.Name}};{{.Replicas}}'{%endraw%} | grep -v 'post-storage-mongodb-setup' | grep -v 'write-home-timeline-rabbitmq-setup' | grep '1/1' | wc -l
       register: cmd_res
-      retries: 12
+      retries: 15
       delay: 30
       until: (cmd_res.stdout | int) == num_services

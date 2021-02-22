@@ -52,7 +52,7 @@
         - ansible
         - aiohttp
 
-# deploy prometheus
+    # deploy prometheus
     - name: Ensures network prometheus configuration dir exists
       file: path=/code/prometheus state=directory
 
@@ -65,7 +65,7 @@
     - name: Create prometheus configuration
       template:
         src: prometheus.yml.j2
-        dest: /code/prometheus/prometheus.yml"
+        dest: /code/prometheus/prometheus.yml
         mode: u=rwx,g=r,o=xr
 
 - hosts: all
@@ -108,12 +108,12 @@
     - name: Ensures network prometheus configuration dir exists
       file: path=/code/prometheus state=directory
 
-    - name: Download Prometheus Nodeexporter version 
+    - name: Download Prometheus Nodeexporter version
       get_url:
         url: "https://github.com/prometheus/node_exporter/releases/download/v1.1.1/node_exporter-1.1.1.linux-amd64.tar.gz"
         dest: "/tmp/node_exporter-1.1.1.linux-amd64.tar.gz"
 
-    - name: Deploy node exporter bundle and unpack it at the remote nodes 
+    - name: Deploy node exporter bundle and unpack it at the remote nodes
       unarchive:
         src: "/tmp/node_exporter-1.1.1.linux-amd64.tar.gz"
         dest: "/tmp"

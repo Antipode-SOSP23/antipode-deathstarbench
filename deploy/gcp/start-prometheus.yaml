@@ -3,13 +3,13 @@
   gather_facts: no
   become: no
   any_errors_fatal: true
- 
+
   tasks:
-   
+
     - name: Initialize Node Exporter
-      shell: 
+      shell:
         killall nodeexporter;
-        nohup ./nodeexporter  & 
+        nohup ./node_exporter  &
       args:
         chdir: '/code/prometheus'
         executable: /bin/bash
@@ -18,7 +18,7 @@
   gather_facts: no
   become: no
   any_errors_fatal: true
-  
+
   tasks:
     - name: Initialize Prometheus
       shell: >
@@ -52,5 +52,3 @@
 
 # https://www.robustperception.io/temperature-and-hardware-monitoring-metrics-from-the-node-exporter
 # https://www.robustperception.io/adding-tls-to-prometheus-with-caddy
-
-

@@ -6,7 +6,7 @@
   vars:
     - stack: deathstarbench
     - app: socialNetwork
-    - num_services: 38
+    - num_services: 40
 
   tasks:
     - name: Run DSB Stack

@@ -435,6 +435,8 @@ def build__socialNetwork__gcp(args):
   #     - docker pull redis:latest
   #     - docker pull portainer/agent:latest
   #     - docker pull portainer/portainer-ce:latest
+  #     - docker pull prom/pushgateway:latest
+  #     - docker pull prom/prometheus:latest
   #     - docker pull yg397/media-frontend:xenial
   # 6) Add alias for python
   #     - sudo ln -s /usr/bin/python3 /usr/bin/python
@@ -460,14 +462,14 @@ def build__socialNetwork__gcp(args):
   # 10) Create firewall rules for the following tags:
   #     - 'portainer'
   #         IP Addresses: 0.0.0.0/0
-  #         TCP ports: 9000, 8000
+  #         TCP ports: 9000,8000,9090,9091,9100
   #     - 'swarm':
   #         IP Addresses: 0.0.0.0/0
   #         TCP ports: 2376, 2377, 7946
   #         UDP ports: 7946, 4789
   #     - 'nodes':
   #         IP Addresses: 0.0.0.0/0
-  #         TCP ports: 9001,16686,8080,8081,8082,1234,4080,5563,15672,5672,5778,14268,14250,9411
+  #         TCP ports: 9001,16686,8080,8081,8082,1234,4080,5563,15672,5672,5778,14268,14250,9411,9100
   #         UDP ports: 5775,6831,6832
   #
 
@@ -841,6 +843,7 @@ def run__socialNetwork__gcp(args):
       rabbitmq_eu_public_ip = inventory[conf['services']['write-home-timeline-rabbitmq-eu']]['external_ip']
       rabbitmq_us_public_ip = inventory[conf['services']['write-home-timeline-rabbitmq-us']]['external_ip']
       portainer_public_ip = inventory['manager']['external_ip']
+      prometheus_public_ip = inventory['manager']['external_ip']
 
       print(f"Jaeger:    http://{jaeger_public_ip}:16686")
       print(f"RabbitMQ-EU:  http://{rabbitmq_eu_public_ip}:15672")
@@ -848,7 +851,7 @@ def run__socialNetwork__gcp(args):
       print("\tuser: admin / pwd: admin")
       print(f"Portainer: http://{portainer_public_ip}:9000")
       print("\tuser: admin / pwd: antipode")
-
+      print(f"Prometheus: http://{prometheus_public_ip}:9090/graph?g0.expr=100%20-%20(avg%20by%20(instance)%20(irate(node_cpu_seconds_total%7Bjob%3D%22nodeexporter%22%2Cmode%3D%22idle%22%7D%5B5m%5D))%20*%20100)&g0.tab=0&g0.stacked=0&g0.range_input=10m&g0.step_input=1&g1.expr=(node_memory_MemTotal_bytes%20-%20node_memory_MemFree_bytes)%2Fnode_memory_MemTotal_bytes%20*100&g1.tab=0&g1.stacked=0&g1.range_input=10m&g1.step_input=1&g2.expr=(node_filesystem_size_bytes%7Bmountpoint%3D%22%2F%22%7D%20-%20node_filesystem_free_bytes%7Bmountpoint%3D%22%2F%22%7D)%2Fnode_filesystem_size_bytes%7Bmountpoint%3D%22%2F%22%7D%20*100&g2.tab=0&g2.stacked=0&g2.range_input=10m&g2.step_input=1&g3.expr=rate(node_network_transmit_bytes_total%7Bdevice%3D%22ens4%22%7D%5B10s%5D)*8%2F1024%2F1024&g3.tab=0&g3.stacked=0&g3.range_input=10m&g3.step_input=1")
     return
 
   # change path to playbooks folder
@@ -860,16 +863,22 @@ def run__socialNetwork__gcp(args):
   _wait_url_up(portainer_url)
   print(f"[INFO] Portainer link (u/pwd: admin/antipode): {portainer_url}")
 
+  ansible_playbook['start-prometheus.yaml'] & FG
+  prometheus_url = f"http://{inventory['manager']['external_ip']}:9090/graph?g0.expr=100%20-%20(avg%20by%20(instance)%20(irate(node_cpu_seconds_total%7Bjob%3D%22nodeexporter%22%2Cmode%3D%22idle%22%7D%5B5m%5D))%20*%20100)&g0.tab=0&g0.stacked=0&g0.range_input=10m&g0.step_input=1&g1.expr=(node_memory_MemTotal_bytes%20-%20node_memory_MemFree_bytes)%2Fnode_memory_MemTotal_bytes%20*100&g1.tab=0&g1.stacked=0&g1.range_input=10m&g1.step_input=1&g2.expr=(node_filesystem_size_bytes%7Bmountpoint%3D%22%2F%22%7D%20-%20node_filesystem_free_bytes%7Bmountpoint%3D%22%2F%22%7D)%2Fnode_filesystem_size_bytes%7Bmountpoint%3D%22%2F%22%7D%20*100&g2.tab=0&g2.stacked=0&g2.range_input=10m&g2.step_input=1&g3.expr=rate(node_network_transmit_bytes_total%7Bdevice%3D%22ens4%22%7D%5B10s%5D)*8%2F1024%2F1024&g3.tab=0&g3.stacked=0&g3.range_input=10m&g3.step_input=1"
+  _wait_url_up(prometheus_url)
+  print(f"[INFO] Prometheus link: {prometheus_url}")
+
   # weird bug when starting DSB right after deploying it
   print("[INFO] Sleeping before deploying to avoid weird bugs ...!")
   time.sleep(30)
 
   # start dsb services
   ansible_playbook['start-dsb.yml', '-e', 'app=socialNetwork'] & FG
-  # init social graph
-  print("[INFO] Sleeping before init with the social graph dataset ...")
-  time.sleep(30)
-  ansible_playbook['init-social-graph.yml', '-e', 'app=socialNetwork', '-e', f"configuration={filepath}"] & FG
+
+  # # init social graph
+  # print("[INFO] Sleeping before init with the social graph dataset ...")
+  # time.sleep(30)
+  # ansible_playbook['init-social-graph.yml', '-e', 'app=socialNetwork', '-e', f"configuration={filepath}"] & FG
 
   print("[INFO] Run Complete!")
 
