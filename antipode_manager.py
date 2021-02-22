@@ -1407,6 +1407,9 @@ def gather(args):
         diff = datetime.fromtimestamp(trace_info['poststorage_replicate_end_ts']/1000.0) - datetime.fromtimestamp(trace_info['wth_end_worker_ts']/1000.0)
         trace_info['post_notification_diff_ms'] = float(diff.total_seconds() * 1000)
 
+        diff = datetime.fromtimestamp(trace_info['poststorage_replicate_end_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_replicate_start_ts']/1000.0)
+        trace_info['antipode_check_duration_ms'] = float(diff.total_seconds() * 1000)
+
         diff = datetime.fromtimestamp(trace_info['poststorage_replicate_end_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_post_written_ts']/1000.0)
         trace_info['replication_duration_ms'] = float(diff.total_seconds() * 1000)
 
