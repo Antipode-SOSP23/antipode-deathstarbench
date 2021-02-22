@@ -14,9 +14,9 @@ scrape_configs:
     # Retain labels, as within PushGateway use
     honor_labels: true
     static_configs:
-{% for node_idx in range(hostvars[inventory_hostname]['groups']['cluster']|length) %} 
+{% for node_idx in range(hostvars[inventory_hostname]['groups']['cluster']|length) %}
 
       - targets: [  "{{hostvars[groups['cluster'][node_idx]].ansible_host}}:9100" ]
         labels:
           service: "{{ groups['cluster'][node_idx] }}"
-{% endfor %}}
+{% endfor %}
