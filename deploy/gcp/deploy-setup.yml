@@ -52,6 +52,22 @@
         - ansible
         - aiohttp
 
+# deploy prometheus
+    - name: Ensures network prometheus configuration dir exists
+      file: path=/code/prometheus state=directory
+
+    - name: Create prometheus docker-compose file
+      copy:
+        src: docker-compose-prometheus.yml
+        dest: /code/prometheus/docker-compose.yml
+        mode: u=rwx,g=r,o=xr
+
+    - name: Create prometheus configuration
+      template:
+        src: prometheus.yml.j2
+        dest: /code/prometheus/prometheus.yml"
+        mode: u=rwx,g=r,o=xr
+
 - hosts: all
   any_errors_fatal: true
   become: no
@@ -80,3 +96,27 @@
         - yg397/openresty-thrift:latest
         - yg397/social-network-microservices:antipode
         - redis-im:antipode
+
+# deploy prometheus sensors
+- hosts: cluster
+  any_errors_fatal: true
+  become: no
+  gather_facts: no
+
+  tasks:
+    - name: Ensures network prometheus configuration dir exists
+      file: path=/code/prometheus state=directory
+
+    - name: Download Prometheus Nodeexporter version 
+      get_url:
+        url: "https://github.com/prometheus/node_exporter/releases/download/v1.1.1/node_exporter-1.1.1.linux-amd64.tar.gz"
+        dest: "/tmp/node_exporter-1.1.1.linux-amd64.tar.gz"
+
+    - name: Deploy node exporter bundle and unpack it at the remote nodes 
+      unarchive:
+        src: "/tmp/node_exporter-1.1.1.linux-amd64.tar.gz"
+        dest: "/tmp"
+        remote_src: yes
+
+    - name: Move nodeexporter to installation dir
+      command: mv "/tmp/node_exporter-1.1.1.linux-amd64/node_exporter" "/code/prometheus/"

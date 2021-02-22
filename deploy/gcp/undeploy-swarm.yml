@@ -43,3 +43,15 @@
       shell: docker swarm leave -f
       register: out
       failed_when: "not(out.rc == 0 or 'This node is not part of a swarm' in out.stderr)"
+
+# undeploy prometheus:
+    - name: Check that prometheus docker-compose exists
+      stat:
+        path: "/code/prometheus/docker-compose.yml"
+      register: stat_result
+
+    - name: Tear down existing prometheus services
+      docker_compose:
+        project_src: "/code/prometheus/docker-compose.yml"
+        state: absent
+      when: stat_result.stat.exists

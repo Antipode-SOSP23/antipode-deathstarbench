@@ -1,0 +1,37 @@
+version: "3"
+
+networks:
+  prometheus_network:
+    driver: bridge
+
+volumes:
+    prometheus_data: {}
+
+services:
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    networks:
+        prometheus_network:
+            aliases:
+            - prometheus.example.com
+
+  pushGateway:
+    image: prom/pushgateway
+    container_name: pushGateway
+    ports:
+      - "9091:9091"
+    networks:
+        prometheus_network:
+            aliases:
+            - pushgateway.example.com
