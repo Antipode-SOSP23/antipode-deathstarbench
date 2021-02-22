@@ -14,13 +14,6 @@
         path: "/code/deploy/gcp/"
         state: directory
 
-    - name: Upload portainer compose
-      synchronize:
-        src: "./docker-compose-portainer.yml"
-        dest: "/code/deploy/gcp/"
-        use_ssh_args: yes
-        mode: push
-
     - name: Upload ansible inventory
       synchronize:
         src: "./inventory.cfg"

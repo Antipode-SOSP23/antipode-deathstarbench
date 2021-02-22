@@ -7,6 +7,13 @@
     - stack: management
 
   tasks:
+    - name: Upload portainer compose
+      synchronize:
+        src: "./docker-compose-portainer.yml"
+        dest: "/code/deploy/gcp/"
+        use_ssh_args: yes
+        mode: push
+
     - name: Run Portainer
       shell: >
             docker stack deploy --compose-file /code/deploy/gcp/docker-compose-portainer.yml {{ stack }};

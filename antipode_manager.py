@@ -876,9 +876,9 @@ def run__socialNetwork__gcp(args):
   ansible_playbook['start-dsb.yml', '-e', 'app=socialNetwork'] & FG
 
   # # init social graph
-  # print("[INFO] Sleeping before init with the social graph dataset ...")
-  # time.sleep(30)
-  # ansible_playbook['init-social-graph.yml', '-e', 'app=socialNetwork', '-e', f"configuration={filepath}"] & FG
+  print("[INFO] Sleeping before init with the social graph dataset ...")
+  time.sleep(30)
+  ansible_playbook['init-social-graph.yml', '-e', 'app=socialNetwork', '-e', f"configuration={filepath}"] & FG
 
   print("[INFO] Run Complete!")
 
