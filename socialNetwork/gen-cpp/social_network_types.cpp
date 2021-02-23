@@ -21,7 +21,8 @@ int _kErrorCodeValues[] = {
   ErrorCode::SE_MONGODB_ERROR,
   ErrorCode::SE_REDIS_ERROR,
   ErrorCode::SE_THRIFT_HANDLER_ERROR,
-  ErrorCode::SE_RABBITMQ_CONN_ERROR
+  ErrorCode::SE_RABBITMQ_CONN_ERROR,
+  ErrorCode::SE_FAKE_ERROR
 };
 const char* _kErrorCodeNames[] = {
   "SE_CONNPOOL_TIMEOUT",
@@ -31,9 +32,10 @@ const char* _kErrorCodeNames[] = {
   "SE_MONGODB_ERROR",
   "SE_REDIS_ERROR",
   "SE_THRIFT_HANDLER_ERROR",
-  "SE_RABBITMQ_CONN_ERROR"
+  "SE_RABBITMQ_CONN_ERROR",
+  "SE_FAKE_ERROR"
 };
-const std::map<int, const char*> _ErrorCode_VALUES_TO_NAMES(::apache::thrift::TEnumIterator(8, _kErrorCodeValues, _kErrorCodeNames), ::apache::thrift::TEnumIterator(-1, NULL, NULL));
+const std::map<int, const char*> _ErrorCode_VALUES_TO_NAMES(::apache::thrift::TEnumIterator(9, _kErrorCodeValues, _kErrorCodeNames), ::apache::thrift::TEnumIterator(-1, NULL, NULL));
 
 std::ostream& operator<<(std::ostream& out, const ErrorCode::type& val) {
   std::map<int, const char*>::const_iterator it = _ErrorCode_VALUES_TO_NAMES.find(val);

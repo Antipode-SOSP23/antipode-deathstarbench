@@ -29,7 +29,8 @@ struct ErrorCode {
     SE_MONGODB_ERROR = 4,
     SE_REDIS_ERROR = 5,
     SE_THRIFT_HANDLER_ERROR = 6,
-    SE_RABBITMQ_CONN_ERROR = 7
+    SE_RABBITMQ_CONN_ERROR = 7,
+    SE_FAKE_ERROR = 8
   };
 };
 

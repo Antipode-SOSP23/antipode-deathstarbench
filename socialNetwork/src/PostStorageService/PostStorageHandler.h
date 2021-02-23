@@ -44,7 +44,7 @@ class PostStorageHandler : public PostStorageServiceIf {
   void StorePost(BaseRpcResponse& response, int64_t req_id, const Post &post,
       const std::map<std::string, std::string> &carrier) override;
 
-  void AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier) override;
+  bool AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier) override;
 
   void ReadPost(PostRpcResponse& response, int64_t req_id, int64_t post_id,
                  const std::map<std::string, std::string> &carrier) override;
@@ -242,7 +242,7 @@ void PostStorageHandler::StorePost(
 //----------
 // ANTIPODE
 //----------
-void PostStorageHandler::AntipodeCheckReplica(
+bool PostStorageHandler::AntipodeCheckReplica(
     const int64_t post_id,
     const std::map<std::string, std::string> & carrier) {
   //
@@ -263,10 +263,10 @@ void PostStorageHandler::AntipodeCheckReplica(
   uint64_t ts = duration_cast<milliseconds>(start_antipode_ts.time_since_epoch()).count();
   span->SetTag("poststorage_replicate_start_ts", std::to_string(ts));
 
-  // sleep while post is not ready at US replica
+  // Check if post is available on MongoDB
   bool read_post = false;
-  // bool read_post = true;
-  while(!read_post) {
+  // loop so we retry on errors from mongo or query
+  while(true) {
     mongoc_client_t *mongodb_client = mongoc_client_pool_pop(_mongodb_client_pool);
     if (!mongodb_client) {
       LOG(warning) << "[ANTIPODE] Could not open mongo connection: client";
@@ -292,6 +292,7 @@ void PostStorageHandler::AntipodeCheckReplica(
     mongoc_cursor_destroy(cursor);
     mongoc_collection_destroy(collection);
     mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
+    break;
   }
 
   //----------
@@ -354,6 +355,8 @@ void PostStorageHandler::AntipodeCheckReplica(
   ts = duration_cast<milliseconds>(end_antipode_ts.time_since_epoch()).count();
   span->SetTag("poststorage_replicate_end_ts", std::to_string(ts));
   span->Finish();
+
+  return read_post;
 };
 
 //----------

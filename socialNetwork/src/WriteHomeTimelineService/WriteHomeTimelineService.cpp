@@ -53,7 +53,7 @@ void sigintHandler(int sig) {
   exit(EXIT_SUCCESS);
 }
 
-void OnReceivedWorker(const AMQP::Message &msg) {
+bool OnReceivedWorker(const AMQP::Message &msg) {
   high_resolution_clock::time_point start_worker_ts = high_resolution_clock::now();
   uint64_t ts = duration_cast<milliseconds>(start_worker_ts.time_since_epoch()).count();
 
@@ -99,6 +99,7 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     // ANTIPODE
     //----------
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
+    bool check = false;
 
     //----------
     // CENTRALIZED
@@ -140,7 +141,7 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     }
     auto post_storage_client = post_storage_client_wrapper->GetClient();
     try {
-      post_storage_client->AntipodeCheckReplica(post_id, writer_text_map);
+      check = post_storage_client->AntipodeCheckReplica(post_id, writer_text_map);
       LOG(debug) << "[ANTIPODE][DISTRIBUTED] Finished AntipodeCheckReplica on zone '" << zone << "'for post_id: " << post_id;
     } catch (...) {
       LOG(debug) << "[ANTIPODE][DISTRIBUTED] Failed to AntipodeCheckReplica on zone '" << zone << "'for post_id: " << post_id;
@@ -155,6 +156,14 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     duration<double, std::milli> time_span = t2 - t1;
     span->SetTag("wht_antipode_duration", std::to_string(time_span.count()));
+
+    // return false to exit
+    if (!check) {
+      ServiceException se;
+      se.errorCode = ErrorCode::SE_FAKE_ERROR;
+      se.message = "Antipode failed to check message - return message to queue";
+      throw se;
+    }
     //----------
     // ANTIPODE
     //----------
@@ -222,9 +231,10 @@ void OnReceivedWorker(const AMQP::Message &msg) {
     ts = duration_cast<milliseconds>(end_worker_ts.time_since_epoch()).count();
     span->SetTag("wth_end_worker_ts", std::to_string(ts));
     DELETE_CURRENT_BAGGAGE();
+    return true;
   } catch (...) {
     LOG(error) << "OnReveived worker error";
-    throw;
+    return false;
   }
 }
 
@@ -239,8 +249,7 @@ void HeartbeatSend(AmqpLibeventHandler &handler, AMQP::TcpConnection &connection
 void WorkerThread(std::string &addr, int port) {
   AmqpLibeventHandler handler;
 
-  AMQP::TcpConnection connection(handler, AMQP::Address(
-      addr, port, AMQP::Login("admin", "admin"), "/"));
+  AMQP::TcpConnection connection(handler, AMQP::Address(addr, port, AMQP::Login("admin", "admin"), "/"));
   AMQP::TcpChannel channel(&connection);
   channel.onError(
       [&handler](const char *message) {
@@ -248,12 +257,25 @@ void WorkerThread(std::string &addr, int port) {
         handler.Stop();
       });
 
+  // with dead lettering you republish a rejected message
+  // refs:
+  //    https://www.rabbitmq.com/dlx.html#using-optional-queue-arguments
+  //    https://github.com/CopernicaMarketingSoftware/AMQP-CPP/blob/master/README.md#flags-and-tables
+  //    https://www.cloudamqp.com/blog/2020-12-29-when-and-how-to-use-the-rabbitmq-dead-letter-exchange.html
+
+  // AMQP::Table arguments;
+  // arguments["x-dead-letter-exchange"] = "write-home-timeline";
+
   channel.declareExchange("write-home-timeline", AMQP::topic);
 
   channel.declareQueue("write-home-timeline-"+zone, AMQP::durable).onSuccess(
-      [&connection](const std::string &name, uint32_t messagecount,
-                    uint32_t consumercount) {
+      [&connection](const std::string &name, uint32_t messagecount, uint32_t consumercount) {
         LOG(debug) << "Created queue: " << name;
+      }
+    ).onError(
+      [&handler](const char *message) {
+        LOG(error) << "Error creating queue: " << message;
+        // handler.Stop();
       });
 
   // params in order: <exchange>,<queue>,<routing_key>
@@ -262,10 +284,25 @@ void WorkerThread(std::string &addr, int port) {
   channel.bindQueue("write-home-timeline", "write-home-timeline-" + zone, "write-home-timeline-" + zone);
 
   // ref: https://github.com/CopernicaMarketingSoftware/AMQP-CPP#consuming-messages
+  // nack ref: https://github.com/CopernicaMarketingSoftware/AMQP-CPP/blob/master/include/amqpcpp/channel.h#L568
+  // channel.consume("write-home-timeline-"+zone, AMQP::nolocal).onReceived(
+
   channel.consume("write-home-timeline-"+zone, AMQP::noack).onReceived(
       [&channel](const AMQP::Message &msg, uint64_t deliveryTag, bool redelivered) {
         LOG(debug) << "Received: " << std::string(msg.body(), msg.bodySize());
-        OnReceivedWorker(msg);
+        if (!OnReceivedWorker(msg)) {
+          // LOG(debug) << "MESSAGE RERROR: REPUBLISH";
+          channel.publish("write-home-timeline", "write-home-timeline-" + zone, msg);
+
+          // acknowledge the message if true
+          // channel.ack(deliveryTag);
+          // LOG(debug) << "MESSAGE SUCCESS";
+
+          // return to queue if false
+          // LOG(debug) << "MESSAGE REJECT";
+          // channel.reject(deliveryTag, AMQP::requeue);
+          // channel.reject(deliveryTag);
+        }
       });
 
   std::thread heartbeat_thread(HeartbeatSend, std::ref(handler),

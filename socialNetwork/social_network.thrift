@@ -23,7 +23,8 @@ enum ErrorCode {
   SE_MONGODB_ERROR,
   SE_REDIS_ERROR,
   SE_THRIFT_HANDLER_ERROR,
-  SE_RABBITMQ_CONN_ERROR
+  SE_RABBITMQ_CONN_ERROR,
+  SE_FAKE_ERROR
 }
 
 exception ServiceException {
@@ -225,7 +226,7 @@ service PostStorageService {
     3: map<string, string> carrier
   ) throws (1: ServiceException se)
 
-  void AntipodeCheckReplica(
+  bool AntipodeCheckReplica(
     1: i64 post_id,
     2: map<string, string> carrier
   ) throws (1: ServiceException se)

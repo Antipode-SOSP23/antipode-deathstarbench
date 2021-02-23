@@ -24,7 +24,7 @@ class PostStorageServiceIf {
   virtual void StorePost(BaseRpcResponse& _return, const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier) = 0;
   virtual void ReadPost(PostRpcResponse& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier) = 0;
   virtual void ReadPosts(PostListRpcResponse& _return, const int64_t req_id, const std::vector<int64_t> & post_ids, const std::map<std::string, std::string> & carrier) = 0;
-  virtual void AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier) = 0;
+  virtual bool AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier) = 0;
 };
 
 class PostStorageServiceIfFactory {
@@ -63,8 +63,9 @@ class PostStorageServiceNull : virtual public PostStorageServiceIf {
   void ReadPosts(PostListRpcResponse& /* _return */, const int64_t /* req_id */, const std::vector<int64_t> & /* post_ids */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
-  void AntipodeCheckReplica(const int64_t /* post_id */, const std::map<std::string, std::string> & /* carrier */) {
-    return;
+  bool AntipodeCheckReplica(const int64_t /* post_id */, const std::map<std::string, std::string> & /* carrier */) {
+    bool _return = false;
+    return _return;
   }
 };
 
@@ -503,7 +504,8 @@ class PostStorageService_AntipodeCheckReplica_pargs {
 };
 
 typedef struct _PostStorageService_AntipodeCheckReplica_result__isset {
-  _PostStorageService_AntipodeCheckReplica_result__isset() : se(false) {}
+  _PostStorageService_AntipodeCheckReplica_result__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _PostStorageService_AntipodeCheckReplica_result__isset;
 
@@ -512,18 +514,23 @@ class PostStorageService_AntipodeCheckReplica_result {
 
   PostStorageService_AntipodeCheckReplica_result(const PostStorageService_AntipodeCheckReplica_result&);
   PostStorageService_AntipodeCheckReplica_result& operator=(const PostStorageService_AntipodeCheckReplica_result&);
-  PostStorageService_AntipodeCheckReplica_result() {
+  PostStorageService_AntipodeCheckReplica_result() : success(0) {
   }
 
   virtual ~PostStorageService_AntipodeCheckReplica_result() throw();
+  bool success;
   ServiceException se;
 
   _PostStorageService_AntipodeCheckReplica_result__isset __isset;
+
+  void __set_success(const bool val);
 
   void __set_se(const ServiceException& val);
 
   bool operator == (const PostStorageService_AntipodeCheckReplica_result & rhs) const
   {
+    if (!(success == rhs.success))
+      return false;
     if (!(se == rhs.se))
       return false;
     return true;
@@ -540,7 +547,8 @@ class PostStorageService_AntipodeCheckReplica_result {
 };
 
 typedef struct _PostStorageService_AntipodeCheckReplica_presult__isset {
-  _PostStorageService_AntipodeCheckReplica_presult__isset() : se(false) {}
+  _PostStorageService_AntipodeCheckReplica_presult__isset() : success(false), se(false) {}
+  bool success :1;
   bool se :1;
 } _PostStorageService_AntipodeCheckReplica_presult__isset;
 
@@ -549,6 +557,7 @@ class PostStorageService_AntipodeCheckReplica_presult {
 
 
   virtual ~PostStorageService_AntipodeCheckReplica_presult() throw();
+  bool* success;
   ServiceException se;
 
   _PostStorageService_AntipodeCheckReplica_presult__isset __isset;
@@ -591,9 +600,9 @@ class PostStorageServiceClient : virtual public PostStorageServiceIf {
   void ReadPosts(PostListRpcResponse& _return, const int64_t req_id, const std::vector<int64_t> & post_ids, const std::map<std::string, std::string> & carrier);
   void send_ReadPosts(const int64_t req_id, const std::vector<int64_t> & post_ids, const std::map<std::string, std::string> & carrier);
   void recv_ReadPosts(PostListRpcResponse& _return);
-  void AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier);
+  bool AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier);
   void send_AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier);
-  void recv_AntipodeCheckReplica();
+  bool recv_AntipodeCheckReplica();
  protected:
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;
@@ -678,13 +687,13 @@ class PostStorageServiceMultiface : virtual public PostStorageServiceIf {
     return;
   }
 
-  void AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier) {
+  bool AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
       ifaces_[i]->AntipodeCheckReplica(post_id, carrier);
     }
-    ifaces_[i]->AntipodeCheckReplica(post_id, carrier);
+    return ifaces_[i]->AntipodeCheckReplica(post_id, carrier);
   }
 
 };
@@ -726,9 +735,9 @@ class PostStorageServiceConcurrentClient : virtual public PostStorageServiceIf {
   void ReadPosts(PostListRpcResponse& _return, const int64_t req_id, const std::vector<int64_t> & post_ids, const std::map<std::string, std::string> & carrier);
   int32_t send_ReadPosts(const int64_t req_id, const std::vector<int64_t> & post_ids, const std::map<std::string, std::string> & carrier);
   void recv_ReadPosts(PostListRpcResponse& _return, const int32_t seqid);
-  void AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier);
+  bool AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier);
   int32_t send_AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier);
-  void recv_AntipodeCheckReplica(const int32_t seqid);
+  bool recv_AntipodeCheckReplica(const int32_t seqid);
  protected:
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;
