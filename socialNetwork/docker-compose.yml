@@ -161,10 +161,13 @@ services:
     hostname: post-storage-service-eu
     environment:
       - ZONE=eu
+      - MASTER=true
     # ports:
     #   - 10002:9090
     restart: always
     entrypoint: PostStorageService
+    depends_on:
+      - post-storage-mongodb-eu
     deploy:
       placement:
         constraints: [node.hostname == node04]
@@ -208,6 +211,9 @@ services:
     entrypoint: PostStorageService
     environment:
       - ZONE=us
+      - MASTER=false
+    depends_on:
+      - post-storage-mongodb-us
     deploy:
       placement:
         constraints: [node.hostname == node06]
