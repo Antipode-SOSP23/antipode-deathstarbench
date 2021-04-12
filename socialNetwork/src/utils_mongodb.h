@@ -11,6 +11,19 @@ using json = nlohmann::json;
 
 namespace social_network {
 
+std::string mongodb_uri(
+    const json &config_json,
+    const std::string &service_name,
+    const std::string &zone
+) {
+  std::string addr = config_json[service_name + "-mongodb-" + zone]["addr"];
+  int port = config_json[service_name + "-mongodb-" + zone]["port"];
+  std::string uri_str = "mongodb://" + addr + ":" + std::to_string(port) + "/?appname=" + service_name + "-service";
+  uri_str += "&" MONGOC_URI_SERVERSELECTIONTIMEOUTMS "=" + std::to_string(SERVER_SELECTION_TIMEOUT_MS);
+
+  return uri_str;
+}
+
 mongoc_client_pool_t* init_mongodb_client_pool(
     const json &config_json,
     const std::string &service_name,
@@ -31,8 +44,7 @@ mongoc_client_pool_t* init_mongodb_client_pool(
 
   mongoc_init();
   bson_error_t error;
-  mongoc_uri_t *mongodb_uri =
-      mongoc_uri_new_with_error(uri_str.c_str(), &error);
+  mongoc_uri_t *mongodb_uri = mongoc_uri_new_with_error(uri_str.c_str(), &error);
 
   if (!mongodb_uri) {
     LOG(fatal) << "Error: failed to parse URI" << std::endl
