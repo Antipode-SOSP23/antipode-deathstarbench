@@ -21,6 +21,7 @@
 #include "../ClientPool.h"
 #include "../logger.h"
 #include "../tracing.h"
+#include "../antipode.h"
 #include "../ThriftClient.h"
 #include <xtrace/xtrace.h>
 #include <xtrace/baggage.h>
@@ -203,14 +204,57 @@ void PostStorageHandler::StorePost(
   // XTRACE("MongoInsertPost start");
   auto insert_span = opentracing::Tracer::Global()->StartSpan(
       "MongoInsertPost", { opentracing::ChildOf(&span->context()) });
-  bool inserted = mongoc_collection_insert_one (
-      collection, new_doc, nullptr, nullptr, &error);
-  insert_span->Finish();
-  // XTRACE("MongoInsertPost complete");
 
-  if (!inserted) {
-    LOG(error) << "Error: Failed to insert post to MongoDB: "
-                << error.message;
+  //----------
+  // ANTIPODE
+  //----------
+  // Replacing the mongoc_collection_insert_one with a transaction so we can store the
+  // ctx_id on Antipode table
+  //
+  // original:
+  //    bool inserted = mongoc_collection_insert_one (collection, new_doc, nullptr, nullptr, &error);
+  //
+  // ref: http://mongoc.org/libmongoc/1.14.0/mongoc_transaction_opt_t.html#
+
+  /* Step 1: Start a client session. */
+  mongoc_client_session_t *session = NULL;
+  session = mongoc_client_start_session (mongodb_client, NULL /* opts */, &error);
+  if (!session) {
+    LOG(error) << "Error: Failed to start MongoDB session: " << error.message;
+    ServiceException se;
+    se.errorCode = ErrorCode::SE_MONGODB_ERROR;
+    se.message = error.message;
+
+    mongoc_client_session_destroy (session);
+    mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
+    throw se;
+  }
+
+  /* Step 2: Start Antipode client */
+  AntipodeMongodb* antipode_client = new AntipodeMongodb(mongodb_client, "post");
+  // std::string cscope_id = antipode_client->gen_cscope_id();
+  std::string cscope_id = std::to_string(req_id);
+  LOG(debug) << "[Antipode] CSCOPE_ID = " << cscope_id;
+
+  /* Step 3: Use mongoc_client_session_with_transaction to start a transaction,
+   * execute the callback, and commit (or abort on error). */
+  bool r;
+  r = mongoc_client_session_start_transaction(session, NULL /* txn_opts */, &error);
+  if (!r) {
+    LOG(error) << "Error: Failed to start MongoDB transaction: " << error.message;
+    ServiceException se;
+    se.errorCode = ErrorCode::SE_MONGODB_ERROR;
+    se.message = error.message;
+
+    mongoc_client_session_destroy (session);
+    mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
+    throw se;
+  }
+
+  /* insert post into the transaction */
+  r = mongoc_collection_insert_one (collection, new_doc, nullptr, nullptr, &error);
+  if (!r) {
+    LOG(error) << "Error: Failed to insert post to MongoDB: " << error.message;
     ServiceException se;
     se.errorCode = ErrorCode::SE_MONGODB_ERROR;
     se.message = error.message;
@@ -221,9 +265,44 @@ void PostStorageHandler::StorePost(
     throw se;
   }
 
-  bson_destroy(new_doc);
-  mongoc_collection_destroy(collection);
-  mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
+  /* insert cscope_id into the transaction */
+  antipode_client->inject(cscope_id, session);
+
+
+  /* in case of transient errors, retry for 5 seconds to commit transaction */
+  bson_t reply = BSON_INITIALIZER;
+  int64_t start = bson_get_monotonic_time ();
+  while (bson_get_monotonic_time () - start < 5 * 1000 * 1000) {
+    bson_destroy (&reply);
+    r = mongoc_client_session_commit_transaction (session, &reply, &error);
+    if (r) {
+      /* success */
+      break;
+    } else {
+      MONGOC_ERROR ("Warning: commit failed: %s", error.message);
+      if (mongoc_error_has_label (&reply, "UnknownTransactionCommitResult")) {
+        /* try again to commit */
+        continue;
+      }
+      /* unrecoverable error trying to commit */
+      break;
+    }
+  }
+
+  antipode_client->barrier(cscope_id);
+
+  //----------
+  // ANTIPODE
+  //----------
+
+  insert_span->Finish();
+  // XTRACE("MongoInsertPost complete");
+
+  bson_destroy (new_doc);
+  bson_destroy (&reply);
+  mongoc_client_session_destroy (session);
+  mongoc_collection_destroy (collection);
+  mongoc_client_pool_push (_mongodb_client_pool, mongodb_client);
 
   // eval
   high_resolution_clock::time_point ts;
@@ -322,35 +401,6 @@ bool PostStorageHandler::AntipodeCheckReplica(
   // CENTRALIZED
   //----------
 
-  //----------
-  // DISTRIBUTED
-  // -- This version might be useful for optimizations regarding ASYNC ACK --
-  //----------
-  // LOG(debug) << "[ANTIPODE][DISTRIBUTED] Checking replica: " << _zone;
-
-  // auto write_home_timeline_client_wrapper = _write_home_timeline_client_pool->Pop();
-  // if (!write_home_timeline_client_wrapper) {
-  //   ServiceException se;
-  //   se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
-  //   se.message = "[ANTIPODE][DISTRIBUTED] Failed to connect to write-home-timeline-service-eu";
-  //   throw se;
-  // }
-
-  // auto write_home_timeline_client = write_home_timeline_client_wrapper->GetClient();
-  // bool write_home_timeline_client_response;
-  // try {
-  //   write_home_timeline_client_response = write_home_timeline_client->MakeVisible(post_id, writer_text_map);
-  //   LOG(debug) << "[ANTIPODE][DISTRIBUTED] Post successfuly marked as visible in replica: " << write_home_timeline_client_response;
-  // } catch (...) {
-  //   LOG(error) << "[ANTIPODE][DISTRIBUTED] Failed to write post visibility to write-home-timeline-service-eu";
-  //   _write_home_timeline_client_pool->Push(write_home_timeline_client_wrapper);
-  //   throw;
-  // }
-  // _write_home_timeline_client_pool->Push(write_home_timeline_client_wrapper);
-  //----------
-  // DISTRIBUTED
-  //----------
-
   high_resolution_clock::time_point end_antipode_ts = high_resolution_clock::now();
   ts = duration_cast<milliseconds>(end_antipode_ts.time_since_epoch()).count();
   span->SetTag("poststorage_replicate_end_ts", std::to_string(ts));
@@ -358,7 +408,6 @@ bool PostStorageHandler::AntipodeCheckReplica(
 
   return read_post;
 };
-
 //----------
 // ANTIPODE
 //----------

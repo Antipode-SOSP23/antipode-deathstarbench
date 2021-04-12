@@ -10,6 +10,7 @@ add_executable(
 
 target_include_directories(
     WriteHomeTimelineService PRIVATE
+    ${MONGOC_INCLUDE_DIRS}
     /usr/local/include/jaegertracing
     /usr/local/include/cpp_redis
     ${LIBEVENT_INCLUDE_DIRS}
@@ -19,6 +20,7 @@ target_include_directories(
 
 target_link_libraries(
     WriteHomeTimelineService
+    ${MONGOC_LIBRARIES}
     ${THRIFT_LIB}
     ${CMAKE_THREAD_LIBS_INIT}
     ${Boost_LIBRARIES}

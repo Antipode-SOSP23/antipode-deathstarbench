@@ -14,6 +14,8 @@
 #include "../logger.h"
 #include "../tracing.h"
 #include "../utils.h"
+#include "../utils_mongodb.h"
+#include "../antipode.h"
 #include "../../gen-cpp/social_network_types.h"
 #include "../../gen-cpp/SocialGraphService.h"
 #include "../../gen-cpp/PostStorageService.h"
@@ -44,6 +46,7 @@ static std::string zone;
 
 static std::exception_ptr _teptr;
 static ClientPool<RedisClient> *_redis_client_pool;
+static mongoc_client_pool_t *_mongodb_client_pool;
 static ClientPool<ThriftClient<SocialGraphServiceClient>> *_social_graph_client_pool;
 static ClientPool<ThriftClient<AntipodeOracleClient>> *_antipode_oracle_client_pool;
 static ClientPool<ThriftClient<PostStorageServiceClient>> *_post_storage_client_pool;
@@ -131,24 +134,11 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
     //----------
     // DISTRIBUTED
     //----------
-    LOG(debug) << "[ANTIPODE][DISTRIBUTED] Checking replica on zone '" << zone << "' for post_id: " << post_id ;
-    auto post_storage_client_wrapper = _post_storage_client_pool->Pop();
-    if (!post_storage_client_wrapper) {
-      ServiceException se;
-      se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
-      se.message = "[ANTIPODE][DISTRIBUTED] Failed to connect to post-storage-service-" + zone;
-      throw se;
-    }
-    auto post_storage_client = post_storage_client_wrapper->GetClient();
-    try {
-      check = post_storage_client->AntipodeCheckReplica(post_id, writer_text_map);
-      LOG(debug) << "[ANTIPODE][DISTRIBUTED] Finished AntipodeCheckReplica on zone '" << zone << "'for post_id: " << post_id;
-    } catch (...) {
-      LOG(debug) << "[ANTIPODE][DISTRIBUTED] Failed to AntipodeCheckReplica on zone '" << zone << "'for post_id: " << post_id;
-      _post_storage_client_pool->Push(post_storage_client_wrapper);
-      throw;
-    }
-    _post_storage_client_pool->Push(post_storage_client_wrapper);
+    std::string cscope_id = std::to_string(req_id);
+
+    mongoc_client_t *mongodb_client = mongoc_client_pool_pop(_mongodb_client_pool);
+    AntipodeMongodb* antipode_client = new AntipodeMongodb(mongodb_client, "post");
+    antipode_client->barrier(cscope_id);
     //----------
     // DISTRIBUTED
     //----------
@@ -157,13 +147,6 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
     duration<double, std::milli> time_span = t2 - t1;
     span->SetTag("wht_antipode_duration", std::to_string(time_span.count()));
 
-    // return false to exit
-    if (!check) {
-      ServiceException se;
-      se.errorCode = ErrorCode::SE_FAKE_ERROR;
-      se.message = "Antipode failed to check message - return message to queue";
-      throw se;
-    }
     //----------
     // ANTIPODE
     //----------
@@ -362,6 +345,11 @@ int main(int argc, char *argv[]) {
 
   ClientPool<RedisClient> redis_client_pool("redis", redis_addr, redis_port,
                                             0, 10000, 1000);
+
+  _mongodb_client_pool = init_mongodb_client_pool(config_json, "post-storage", zone, 1024);
+  if (_mongodb_client_pool == nullptr) {
+    return EXIT_FAILURE;
+  }
 
   ClientPool<ThriftClient<SocialGraphServiceClient>>
       social_graph_client_pool(

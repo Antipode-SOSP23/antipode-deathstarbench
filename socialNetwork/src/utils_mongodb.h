@@ -11,7 +11,7 @@ using json = nlohmann::json;
 
 namespace social_network {
 
-std::string mongodb_uri(
+std::string mongodb_dsb_uri(
     const json &config_json,
     const std::string &service_name,
     const std::string &zone
