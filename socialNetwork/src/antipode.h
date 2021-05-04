@@ -33,6 +33,7 @@ class AntipodeMongodb {
     std::string gen_cscope_id();
     bool inject(std::string, mongoc_client_session_t*);
     void barrier(std::string);
+    void close();
 };
 
 const std::string AntipodeMongodb::ANTIPODE_COLLECTION = "antipode";
@@ -45,8 +46,6 @@ AntipodeMongodb::AntipodeMongodb(mongoc_client_t* client, std::string dbname) {
 }
 
 AntipodeMongodb::~AntipodeMongodb() {
-  mongoc_collection_destroy(_collection);
-  mongoc_database_destroy(_db);
 }
 
 /* static */ void AntipodeMongodb::init_store (std::string uri, std::string dbname) {
@@ -110,11 +109,11 @@ AntipodeMongodb::~AntipodeMongodb() {
     BSON_APPEND_INT32(&keys, "cscope_id", 1);
     char* index_name = mongoc_collection_keys_to_index_string(&keys);
     bson_t* create_indexes = BCON_NEW (
-        "createIndexes", BCON_UTF8(dbname.c_str()),
+        "createIndexes", BCON_UTF8(AntipodeMongodb::ANTIPODE_COLLECTION.c_str()),
         "indexes", "[", "{",
             "key", BCON_DOCUMENT (&keys),
             "name", BCON_UTF8 ("cscope_id"),
-            "unique", BCON_BOOL(true),
+            "unique", BCON_BOOL(false),
         "}", "]");
 
     if (!mongoc_database_write_command_with_opts (db, create_indexes, NULL, NULL /* &reply */, &error)) {
@@ -152,25 +151,66 @@ bool AntipodeMongodb::inject(std::string cscope_id, mongoc_client_session_t* ses
 }
 
 void AntipodeMongodb::barrier(std::string cscope_id) {
-  bson_t* filter = BCON_NEW ("cscope_id", BCON_UTF8(cscope_id.c_str()));
-  bson_t* opts = BCON_NEW ("limit", BCON_INT64(1));
-  mongoc_cursor_t* cursor;
+  // refs:
+  // http://mongoc.org/libmongoc/1.17.0/mongoc_change_stream_t.html
+  // https://docs.mongodb.com/manual/changeStreams/
 
-  // blocking behaviour
-  bool cscope_id_visible = false;
-  while(!cscope_id_visible) {
-    const bson_t* doc;
-    cursor = mongoc_collection_find_with_opts(_collection, filter, opts, NULL);
-    cscope_id_visible = mongoc_cursor_next(cursor, &doc);
+  mongoc_change_stream_t *stream;
+  // bson_t pipeline = BSON_INITIALIZER;
+  bson_t *pipeline = BCON_NEW("pipeline",
+    "[",
+      "{",
+        "$match", "{",
+          "$and", "[",
+            "{",
+              "fullDocument.cscope_id", BCON_UTF8(cscope_id.c_str()),
+            "}",
+            "{",
+              "operationType", "insert",
+            "}",
+          "]",
+        "}",
+      "}",
+    "]");
+  const bson_t *change;
 
-    char* str = bson_as_canonical_extended_json (doc, NULL);
-    LOG(debug) << " IS_VISIBLE " << str;
-    bson_free (str);
+  // if the stream finds the same cscope
+  stream = mongoc_collection_watch (_collection, pipeline, NULL /* opts */);
+  while (mongoc_change_stream_next (stream, &change)) {
+    break;
+    // for debug:
+    // char *as_json = bson_as_relaxed_extended_json (change, NULL);
+    // fprintf (stderr, "CSCOPE %s IN DOCUMENT: %s\n", cscope_id.c_str(), as_json);
+    // bson_free (as_json);
+
+    // Got document:
+    // {
+    //   "_id" : { "_data" : "8260912B960000001E2B022C0100296E5A100497F661F4018447EEAE871045D76AB3E846645F6964006460912B96CE0EFD70017274DA0004" },
+    //   "operationType" : "insert",
+    //   "clusterTime" : { "$timestamp" : { "t" : 1620126614, "i" : 30 } },
+    //   "fullDocument" : {
+    //     "_id" : { "$oid" : "60912b96ce0efd70017274da" },
+    //     "cscope_id" : "6548665420189724672"
+    //   },
+    //   "ns" : { "db" : "post", "coll" : "antipode" },
+    //   "documentKey" : { "_id" : { "$oid" : "60912b96ce0efd70017274da" } }
+    // }
   }
+  LOG(debug) << " IS_VISIBLE " << cscope_id;
 
-  mongoc_cursor_destroy (cursor);
-  bson_destroy (filter);
-  bson_destroy (opts);
+  // const bson_t *resume_token;
+  // bson_error_t error;
+  // if (mongoc_change_stream_error_document (stream, &error, NULL)) {
+  //   MONGOC_ERROR ("%s\n", error.message);
+  // }
+
+  mongoc_change_stream_destroy (stream);
+  bson_destroy(pipeline);
+}
+
+void AntipodeMongodb::close() {
+  mongoc_collection_destroy(_collection);
+  mongoc_database_destroy(_db);
 }
 
 } //namespace social_network

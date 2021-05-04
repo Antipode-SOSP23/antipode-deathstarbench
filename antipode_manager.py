@@ -876,9 +876,9 @@ def run__socialNetwork__gcp(args):
   ansible_playbook['start-dsb.yml', '-e', 'app=socialNetwork'] & FG
 
   # init social graph
-  print("[INFO] Sleeping before init with the social graph dataset ...")
-  time.sleep(10)
-  ansible_playbook['init-social-graph.yml', '-e', 'app=socialNetwork', '-e', f"configuration={filepath}"] & FG
+  # print("[INFO] Sleeping before init with the social graph dataset ...")
+  # time.sleep(10)
+  # ansible_playbook['init-social-graph.yml', '-e', 'app=socialNetwork', '-e', f"configuration={filepath}"] & FG
 
   print("[INFO] Run Complete!")
 
@@ -1385,7 +1385,6 @@ def gather(args):
           'post_id': None,
           'ts': None,
           'poststorage_post_written_ts': None,
-          'poststorage_replicate_start_ts': None,
           'poststorage_replicate_end_ts': None,
           'wth_end_worker_ts': None,
         }
@@ -1397,14 +1396,11 @@ def gather(args):
             trace_info['ts'] = datetime.fromtimestamp(s['startTime']/1000000.0)
 
           if s['operationName'] == 'FanoutHomeTimelines':
+            trace_info['poststorage_replicate_end_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_replicate_end_ts'))
             trace_info['wth_end_worker_ts'] = int(_fetch_span_tag(s['tags'], 'wth_end_worker_ts'))
 
           if s['operationName'] == 'StorePost':
             trace_info['poststorage_post_written_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_post_written_ts'))
-
-          if s['operationName'] == 'AntipodeCheckReplica':
-            trace_info['poststorage_replicate_start_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_replicate_start_ts'))
-            trace_info['poststorage_replicate_end_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_replicate_end_ts'))
 
         # skip if we still have -1 values
         if any(v is None for v in trace_info.values()):
@@ -1415,9 +1411,6 @@ def gather(args):
         # computes the different in ms from post to notification
         diff = datetime.fromtimestamp(trace_info['poststorage_replicate_end_ts']/1000.0) - datetime.fromtimestamp(trace_info['wth_end_worker_ts']/1000.0)
         trace_info['post_notification_diff_ms'] = float(diff.total_seconds() * 1000)
-
-        diff = datetime.fromtimestamp(trace_info['poststorage_replicate_end_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_replicate_start_ts']/1000.0)
-        trace_info['antipode_check_duration_ms'] = float(diff.total_seconds() * 1000)
 
         diff = datetime.fromtimestamp(trace_info['poststorage_replicate_end_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_post_written_ts']/1000.0)
         trace_info['replication_duration_ms'] = float(diff.total_seconds() * 1000)
@@ -1433,7 +1426,6 @@ def gather(args):
       # delete unnecessary columns
       del df['post_id']
       del df['poststorage_post_written_ts']
-      del df['poststorage_replicate_start_ts']
       del df['poststorage_replicate_end_ts']
       del df['wth_end_worker_ts']
 

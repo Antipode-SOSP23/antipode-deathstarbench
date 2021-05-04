@@ -134,16 +134,23 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
     //----------
     // DISTRIBUTED
     //----------
-    std::string cscope_id = std::to_string(req_id);
+    std::string cscope_id = std::to_string(post_id);
 
     mongoc_client_t *mongodb_client = mongoc_client_pool_pop(_mongodb_client_pool);
     AntipodeMongodb* antipode_client = new AntipodeMongodb(mongodb_client, "post");
+
     antipode_client->barrier(cscope_id);
+
+    antipode_client->close();
+    mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
     //----------
     // DISTRIBUTED
     //----------
 
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
+    ts = duration_cast<milliseconds>(t2.time_since_epoch()).count();
+    span->SetTag("poststorage_replicate_end_ts", std::to_string(ts));
+
     duration<double, std::milli> time_span = t2 - t1;
     span->SetTag("wht_antipode_duration", std::to_string(time_span.count()));
 
@@ -273,9 +280,10 @@ void WorkerThread(std::string &addr, int port) {
   channel.consume("write-home-timeline-"+zone, AMQP::noack).onReceived(
       [&channel](const AMQP::Message &msg, uint64_t deliveryTag, bool redelivered) {
         LOG(debug) << "Received: " << std::string(msg.body(), msg.bodySize());
-        if (!OnReceivedWorker(msg)) {
+        OnReceivedWorker(msg);
+        // if (!OnReceivedWorker(msg)) {
           // LOG(debug) << "MESSAGE RERROR: REPUBLISH";
-          channel.publish("write-home-timeline", "write-home-timeline-" + zone, msg);
+          // channel.publish("write-home-timeline", "write-home-timeline-" + zone, msg);
 
           // acknowledge the message if true
           // channel.ack(deliveryTag);
@@ -285,7 +293,7 @@ void WorkerThread(std::string &addr, int port) {
           // LOG(debug) << "MESSAGE REJECT";
           // channel.reject(deliveryTag, AMQP::requeue);
           // channel.reject(deliveryTag);
-        }
+        // }
       });
 
   std::thread heartbeat_thread(HeartbeatSend, std::ref(handler),

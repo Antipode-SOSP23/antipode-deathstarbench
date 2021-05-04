@@ -258,6 +258,8 @@ services:
         size: 3000000000
       type: tmpfs
   post-storage-service-eu:
+    depends_on:
+    - post-storage-mongodb-eu
     deploy:
       placement:
         constraints:
@@ -265,12 +267,15 @@ services:
     entrypoint: PostStorageService
     environment:
     - ZONE=eu
+    - MASTER=true
     hostname: post-storage-service-eu
     image: yg397/social-network-microservices:antipode
     networks:
     - deathstarbench_network
     restart: always
   post-storage-service-us:
+    depends_on:
+    - post-storage-mongodb-us
     deploy:
       placement:
         constraints:
@@ -278,6 +283,7 @@ services:
     entrypoint: PostStorageService
     environment:
     - ZONE=us
+    - MASTER=false
     hostname: post-storage-service-us
     image: yg397/social-network-microservices:antipode
     networks:
