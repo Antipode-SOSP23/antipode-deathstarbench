@@ -92,7 +92,7 @@ void PostStorageHandler::StorePost(
   // force WritHomeTimeline to an error by sleeping
 
   // LOG(debug) << "[ANTIPODE] Sleeping ...";
-  // std::this_thread::sleep_for (std::chrono::milliseconds(100));
+  // std::this_thread ::sleep_for (std::chrono::milliseconds(100));
   // LOG(debug) << "[ANTIPODE] Done Sleeping!";
 
   //----------
@@ -141,6 +141,18 @@ void PostStorageHandler::StorePost(
   }
 
   bson_t *new_doc = bson_new();
+
+  //----------
+  // ANTIPODE
+  //----------
+  // Add object ID so we have the append ID for ANTIPODE
+  bson_oid_t oid;
+  bson_oid_init (&oid, NULL);
+  BSON_APPEND_OID (new_doc, "_id", &oid);
+  //----------
+  // ANTIPODE
+  //----------
+
   BSON_APPEND_INT64(new_doc, "post_id", post.post_id);
   BSON_APPEND_INT64(new_doc, "timestamp", post.timestamp);
   BSON_APPEND_UTF8(new_doc, "text", post.text.c_str());
@@ -257,7 +269,7 @@ void PostStorageHandler::StorePost(
     }
 
     /* insert cscope_id into the transaction */
-    antipode_client->inject(cscope_id, session);
+    antipode_client->inject(session, cscope_id, "post-storage-service", "post-storage", &oid);
 
     /* in case of transient errors, retry for 5 seconds to commit transaction */
     bson_t reply = BSON_INITIALIZER;

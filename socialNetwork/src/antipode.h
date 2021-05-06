@@ -31,7 +31,7 @@ class AntipodeMongodb {
     ~AntipodeMongodb();
     static void init_store(std::string, std::string);
     std::string gen_cscope_id();
-    bool inject(std::string, mongoc_client_session_t*);
+    bool inject(mongoc_client_session_t*, std::string, std::string, std::string, bson_oid_t*);
     void barrier(std::string);
     void close();
 };
@@ -137,16 +137,57 @@ std::string AntipodeMongodb::gen_cscope_id() {
   return boost::uuids::to_string(id);
 }
 
-bool AntipodeMongodb::inject(std::string cscope_id, mongoc_client_session_t* session) {
-  bson_t* cscope_id_doc;
-  bson_error_t error;
+bson_oid_t oid;
 
-  cscope_id_doc = BCON_NEW ("cscope_id", BCON_UTF8 (cscope_id.c_str()));
-  bool r = mongoc_collection_insert_one (_collection, cscope_id_doc, nullptr, nullptr, &error);
+bool AntipodeMongodb::inject(mongoc_client_session_t* session, std::string cscope_id, std::string caller, std::string target, bson_oid_t* oid) {
+  bson_error_t error;
+  char append_id[25];
+  bson_oid_to_string(oid, append_id);
+
+  //------------
+  // INSERT
+  //------------
+  // // new cscope
+  // bson_t* cscope = bson_new();
+  // BSON_APPEND_UTF8(cscope, "cscope_id", cscope_id.c_str());
+  // BSON_APPEND_UTF8(cscope, "rendesvouz", "post-storage"); // TODO
+  // // init array
+  // bson_t append_list;
+  // BSON_APPEND_ARRAY_BEGIN(cscope, "append_list", &append_list);
+  // // list with only 1 element
+  // bson_t append_doc;
+  // BSON_APPEND_DOCUMENT_BEGIN(&append_list, append_id, &append_doc);
+  // BSON_APPEND_UTF8(&append_doc, "caller", caller.c_str());
+  // BSON_APPEND_UTF8(&append_doc, "target", target.c_str());
+  // BSON_APPEND_UTF8(&append_doc, "append_id", append_id);
+  // bson_append_document_end(&append_list, &append_doc);
+  // // close array
+  // bson_append_array_end(cscope, &append_list);
+
+  // // insert
+  // bool r = mongoc_collection_insert_one (_collection, cscope, nullptr, nullptr, &error);
+
+  //------------
+  // UPSERT
+  //------------
+  bson_t *selector = BCON_NEW("cscope_id", BCON_UTF8(cscope_id.c_str()));
+  bson_t *action = BCON_NEW(
+    // https://docs.mongodb.com/manual/reference/operator/update/addToSet/
+    "$addToSet", "{",
+      "append_list", "{",
+        "append_id", BCON_UTF8(append_id),
+        "caller", BCON_UTF8(caller.c_str()),
+        "target", BCON_UTF8(target.c_str()),
+      "}",
+    "}"
+  );
+  bson_t *opts = BCON_NEW("upsert",  BCON_BOOL(true));
+  bool r = mongoc_collection_update_one(_collection, selector, action, opts, NULL /* reply */, &error);
+
+  // debug
   if (!r) {
     MONGOC_ERROR ("[Antipode] Inject failed: %s", error.message);
   }
-
   return r;
 }
 
