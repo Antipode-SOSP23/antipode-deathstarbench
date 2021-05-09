@@ -14,12 +14,18 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
+// for change streams
+#include <tbb/tbb.h>
+#include <tbb/concurrent_hash_map.h>
+#include <boost/thread.hpp>
+
 #include "logger.h"
 
 namespace social_network {
 
 class AntipodeMongodb {
   static const std::string ANTIPODE_COLLECTION;
+  static tbb::concurrent_hash_map<std::string, bool> cscope_change_stream_cache;
 
   mongoc_client_t* _client;
   std::string _dbname;
@@ -30,13 +36,19 @@ class AntipodeMongodb {
     AntipodeMongodb(mongoc_client_t*, std::string);
     ~AntipodeMongodb();
     static void init_store(std::string, std::string);
+    static void init_cscope_listener(std::string, std::string);
     std::string gen_cscope_id();
     bool inject(mongoc_client_session_t*, std::string, std::string, std::string, bson_oid_t*);
     void barrier(std::string);
     void close();
-};
 
+  private:
+    static void _init_cscope_listener(std::string, std::string);
+    void _barrier_query(std::string);
+    void _barrier_change_stream(std::string);
+};
 const std::string AntipodeMongodb::ANTIPODE_COLLECTION = "antipode";
+tbb::concurrent_hash_map<std::string, bool> AntipodeMongodb::cscope_change_stream_cache;
 
 AntipodeMongodb::AntipodeMongodb(mongoc_client_t* client, std::string dbname) {
   _client = client;
@@ -130,14 +142,77 @@ AntipodeMongodb::~AntipodeMongodb() {
   }
 
   mongoc_client_destroy (client);
+  LOG(debug) << "[AntipodeMongodb] Finished Init Store";
+}
+
+/* static */ void AntipodeMongodb::init_cscope_listener (std::string uri, std::string dbname) {
+  boost::thread tserver(&AntipodeMongodb::_init_cscope_listener, uri, dbname);
+  // tserver.join();
+}
+/* static */ void AntipodeMongodb::_init_cscope_listener (std::string uri, std::string dbname) {
+  // init db and collection
+  bson_error_t error;
+
+  mongoc_init();
+  mongoc_client_t* client = mongoc_client_new(uri.c_str());
+  mongoc_database_t* db = mongoc_client_get_database(client, dbname.c_str());
+  mongoc_collection_t* collection = mongoc_database_get_collection(db, AntipodeMongodb::ANTIPODE_COLLECTION.c_str());
+
+  // refs:
+  // http://mongoc.org/libmongoc/1.17.0/mongoc_change_stream_t.html
+  // https://docs.mongodb.com/manual/changeStreams/
+  bson_t *pipeline = BCON_NEW("pipeline",
+    "[",
+      "{",
+        "$match", "{",
+          "$and", "[",
+            "{",
+              "operationType", "insert",
+            "}",
+          "]",
+        "}",
+      "}",
+    "]");
+
+  // if the stream finds the same cscope
+  mongoc_change_stream_t *stream;
+  stream = mongoc_collection_watch (collection, pipeline, NULL /* opts */);
+  while (true) {
+    const bson_t *change;
+    if (mongoc_change_stream_next (stream, &change)) {
+      // for debug:
+      // char *as_json = bson_as_relaxed_extended_json (change, NULL);
+      // LOG(debug) << "CHANGE JSON: " << as_json;
+      // bson_free (as_json);
+
+      // parsing ref: http://mongoc.org/libbson/current/parsing.html
+      bson_iter_t change_iter;
+      bson_iter_t cscope_id_iter;
+
+      if (bson_iter_init (&change_iter, change) && bson_iter_find_descendant (&change_iter, "fullDocument.cscope_id", &cscope_id_iter) && BSON_ITER_HOLDS_UTF8 (&cscope_id_iter)) {
+        std::string cscope_id(bson_iter_utf8(&cscope_id_iter, /* length */ NULL));
+        AntipodeMongodb::cscope_change_stream_cache.insert(std::make_pair(cscope_id, true));
+      }
+    }
+  }
+
+  // const bson_t *resume_token;
+  // bson_error_t error;
+  // if (mongoc_change_stream_error_document (stream, &error, NULL)) {
+  //   MONGOC_ERROR ("%s\n", error.message);
+  // }
+
+  mongoc_change_stream_destroy (stream);
+  bson_destroy(pipeline);
+  mongoc_collection_destroy(collection);
+  mongoc_database_destroy(db);
+  mongoc_client_destroy (client);
 }
 
 std::string AntipodeMongodb::gen_cscope_id() {
   boost::uuids::uuid id = boost::uuids::random_generator()();
   return boost::uuids::to_string(id);
 }
-
-bson_oid_t oid;
 
 bool AntipodeMongodb::inject(mongoc_client_session_t* session, std::string cscope_id, std::string caller, std::string target, bson_oid_t* oid) {
   bson_error_t error;
@@ -192,10 +267,54 @@ bool AntipodeMongodb::inject(mongoc_client_session_t* session, std::string cscop
 }
 
 void AntipodeMongodb::barrier(std::string cscope_id) {
+  tbb::concurrent_hash_map<std::string, bool>::const_accessor read_lock;
+  while(!AntipodeMongodb::cscope_change_stream_cache.find(read_lock, cscope_id));
+  read_lock.release();
+
+  LOG(debug) << "IS VISIBLE: " << cscope_id;
+
+  // Display the occurrences
+  // ref: https://www.inf.ed.ac.uk/teaching/courses/ppls/TBBtutorial.pdf
+  // for(tbb::concurrent_hash_map<std::string, bool>::iterator i=cscope_change_stream_cache.begin(); i!=cscope_change_stream_cache.end(); ++i ) {
+  //   printf("%s %d\n",i->first.c_str(),i->second);
+  // }
+}
+
+void AntipodeMongodb::_barrier_query(std::string cscope_id) {
+  //------------
+  // QUERY
+  //------------
+  bson_t* filter = BCON_NEW ("cscope_id", BCON_UTF8(cscope_id.c_str()));
+  bson_t* opts = BCON_NEW ("limit", BCON_INT64(1));
+  mongoc_cursor_t* cursor;
+
+  // blocking behaviour
+  bool cscope_id_visible = false;
+  while(!cscope_id_visible) {
+    const bson_t* doc;
+    cursor = mongoc_collection_find_with_opts(_collection, filter, opts, NULL);
+    cscope_id_visible = mongoc_cursor_next(cursor, &doc);
+
+    // debug
+    if (cscope_id_visible) {
+      char* str = bson_as_canonical_extended_json (doc, NULL);
+      LOG(debug) << " IS_VISIBLE " << str;
+      bson_free (str);
+    }
+  }
+
+  mongoc_cursor_destroy (cursor);
+  bson_destroy (filter);
+  bson_destroy (opts);
+}
+
+void AntipodeMongodb::_barrier_change_stream(std::string cscope_id) {
+  //------------
+  // CHANGE STREAM
+  //------------
   // refs:
   // http://mongoc.org/libmongoc/1.17.0/mongoc_change_stream_t.html
   // https://docs.mongodb.com/manual/changeStreams/
-
   mongoc_change_stream_t *stream;
   // bson_t pipeline = BSON_INITIALIZER;
   bson_t *pipeline = BCON_NEW("pipeline",

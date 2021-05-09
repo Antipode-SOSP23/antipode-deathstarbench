@@ -1147,6 +1147,8 @@ def wkld__socialNetwork__gcp__run(args, hosts, exe_path, exe_args):
         firewall_tags=[]
       )
 
+    time.sleep(20)
+
     # wait for instances public ips
     print("[INFO] Waiting for GCP nodes to have public IP addresses ...")
     for node_key, node_info in inventory.items():

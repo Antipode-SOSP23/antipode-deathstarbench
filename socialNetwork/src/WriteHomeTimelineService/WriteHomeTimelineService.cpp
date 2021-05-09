@@ -359,6 +359,16 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
+  //----------
+  // ANTIPODE
+  //----------
+  // init antipode tables
+  std::string mongodb_uri = mongodb_dsb_uri(config_json, "post-storage", zone);
+  AntipodeMongodb::init_cscope_listener(mongodb_uri, "post");
+  //----------
+  // ANTIPODE
+  //----------
+
   ClientPool<ThriftClient<SocialGraphServiceClient>>
       social_graph_client_pool(
           "social-graph-service", social_graph_service_addr,

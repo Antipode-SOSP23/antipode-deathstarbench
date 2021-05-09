@@ -28,6 +28,7 @@ target_link_libraries(
     jaegertracing
     xtrace
     protobuf
+    tbb
 )
 
 install(TARGETS PostStorageService DESTINATION ./)
