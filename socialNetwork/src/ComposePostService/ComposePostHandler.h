@@ -888,39 +888,39 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
     { opentracing::ChildOf(parent_span->get()) });
   opentracing::Tracer::Global()->Inject(span->context(), writer);
 
-  try {
-    std::string user_mentions_id_str = "[";
-    for (auto &i : user_mentions_id){
-      user_mentions_id_str += std::to_string(i) + ", ";
-    }
-    user_mentions_id_str = user_mentions_id_str.substr(0,
-        user_mentions_id_str.length() - 2);
-    user_mentions_id_str += "]";
-    std::string carrier_str = "{";
-    for (auto &item : writer_text_map) {
-      // baggages with chars that are NOT UTF-8
-      // this is a temporary fix so we are able to deserialize JSON with a baggage on it
-      if (item.first != "baggage") {
-        carrier_str += "\"" + item.first + "\" : \"" + item.second + "\", ";
-      }
-    }
-    carrier_str = carrier_str.substr(0, carrier_str.length() - 2);
-    carrier_str += "}";
-
+  std::string user_mentions_id_str = "[";
+  for (auto &i : user_mentions_id){
+    user_mentions_id_str += std::to_string(i) + ", ";
+  }
+  user_mentions_id_str = user_mentions_id_str.substr(0,
+      user_mentions_id_str.length() - 2);
+  user_mentions_id_str += "]";
+  std::string carrier_str = "{";
+  for (auto &item : writer_text_map) {
     // baggages with chars that are NOT UTF-8
     // this is a temporary fix so we are able to deserialize JSON with a baggage on it
-    // @jmace this should be handled on the XTrace repo
-    // ref: https://nlohmann.github.io/json/classnlohmann_1_1basic__json_a50ec80b02d0f3f51130d4abb5d1cfdc5.html
-    // json j_baggage = baggage.str();
-    // std::string baggage_str = j_baggage.dump(-1, ' ', false, json::error_handler_t::replace);
+    if (item.first != "baggage") {
+      carrier_str += "\"" + item.first + "\" : \"" + item.second + "\", ";
+    }
+  }
+  carrier_str = carrier_str.substr(0, carrier_str.length() - 2);
+  carrier_str += "}";
 
-    std::string msg_str = "{ \"req_id\": " + std::to_string(req_id) +
-        ", \"post_id\": " + std::to_string(post_id) +
-        ", \"user_id\": " + std::to_string(user_id) +
-        ", \"timestamp\": " + std::to_string(timestamp) +
-        ", \"user_mentions_id\": " + user_mentions_id_str +
-        ", \"carrier\": " + carrier_str + " }";
+  // baggages with chars that are NOT UTF-8
+  // this is a temporary fix so we are able to deserialize JSON with a baggage on it
+  // @jmace this should be handled on the XTrace repo
+  // ref: https://nlohmann.github.io/json/classnlohmann_1_1basic__json_a50ec80b02d0f3f51130d4abb5d1cfdc5.html
+  // json j_baggage = baggage.str();
+  // std::string baggage_str = j_baggage.dump(-1, ' ', false, json::error_handler_t::replace);
 
+  std::string msg_str = "{ \"req_id\": " + std::to_string(req_id) +
+      ", \"post_id\": " + std::to_string(post_id) +
+      ", \"user_id\": " + std::to_string(user_id) +
+      ", \"timestamp\": " + std::to_string(timestamp) +
+      ", \"user_mentions_id\": " + user_mentions_id_str +
+      ", \"carrier\": " + carrier_str + " }";
+
+  try {
     auto rabbitmq_client_wrapper = _rabbitmq_client_pool->Pop();
     if (!rabbitmq_client_wrapper) {
       ServiceException se;

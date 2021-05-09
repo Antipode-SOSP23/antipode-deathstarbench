@@ -3,6 +3,7 @@
 #include <thrift/transport/TServerSocket.h>
 #include <thrift/transport/TBufferTransports.h>
 #include <signal.h>
+#include <chrono>
 
 #include "../utils.h"
 #include "ComposePostHandler.h"
@@ -21,6 +22,11 @@ void sigintHandler(int sig) {
 int main(int argc, char *argv[]) {
   signal(SIGINT, sigintHandler);
   init_logger();
+
+  // Sleep to control startup order
+  LOG(info) << "Sleeping compose-post-service ...";
+  std::this_thread ::sleep_for (std::chrono::seconds(60));
+  LOG(info) << "DONE!";
 
   std::string zone = load_zone();
   std::vector<std::string> interest_zones = load_interest_zones();
