@@ -241,7 +241,8 @@ ARG RUN_DEPS="g++ \
               lua5.1 \
               lua5.1-dev \
               libicu-dev \
-              libtbb-dev"
+              libtbb-dev \
+              libcereal-dev"
 # Development dependencies - comment if not needed
 ARG DEV_DEPS="tree \
               less \

@@ -36,6 +36,7 @@ using namespace  ::social_network;
 
 // for clock usage
 using namespace std::chrono;
+using namespace antipode;
 
 namespace social_network {
 

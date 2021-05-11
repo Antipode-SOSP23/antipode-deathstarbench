@@ -9,6 +9,7 @@ add_executable(
 
 target_include_directories(
     ComposePostService PRIVATE
+    ${MONGOC_INCLUDE_DIRS}
     /usr/local/include/jaegertracing
     /usr/local/include/cpp_redis
     /usr/local/include/xtrace
@@ -16,6 +17,7 @@ target_include_directories(
 
 target_link_libraries(
     ComposePostService
+    ${MONGOC_LIBRARIES}
     ${THRIFT_LIB}
     ${CMAKE_THREAD_LIBS_INIT}
     ${Boost_LIBRARIES}
@@ -29,6 +31,7 @@ target_link_libraries(
     /usr/local/lib/libSimpleAmqpClient.so
     xtrace
     protobuf
+    tbb
 )
 
 install(TARGETS ComposePostService DESTINATION ./)

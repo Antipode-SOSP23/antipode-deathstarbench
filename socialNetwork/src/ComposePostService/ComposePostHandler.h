@@ -16,6 +16,7 @@
 #include "../ClientPool.h"
 #include "../logger.h"
 #include "../tracing.h"
+#include "../antipode.h"
 #include "../RedisClient.h"
 #include "../ThriftClient.h"
 #include "RabbitmqClient.h"
@@ -24,6 +25,8 @@
 
 #define NUM_COMPONENTS 6
 #define REDIS_EXPIRE_TIME 10
+
+using namespace antipode;
 
 namespace social_network {
 using json = nlohmann::json;
@@ -700,6 +703,17 @@ void ComposePostHandler::_ComposeAndUpload(
 
   // XTRACE("Compose Post complete");
   span->SetTag("composepost_id", post.post_id);
+
+  //----------
+  // ANTIPODE
+  //----------
+
+  Cscope cs = antipode::Cscope("post-storage");
+  LOG(debug) << cs.to_json();
+
+  //----------
+  // ANTIPODE
+  //----------
 
   // Upload the post
   // XTRACE("Upload Post start");

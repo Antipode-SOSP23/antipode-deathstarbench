@@ -1,5 +1,5 @@
-#ifndef SOCIAL_NETWORK_MICROSERVICES_ANTIPODE_H
-#define SOCIAL_NETWORK_MICROSERVICES_ANTIPODE_H
+#ifndef ANTIPODE_H
+#define ANTIPODE_H
 
 #include <string>
 #include <fstream>
@@ -8,6 +8,7 @@
 // mongolib
 #include <bson/bson.h>
 #include <mongoc/mongoc.h>
+#include <nlohmann/json.hpp>
 
 // to generate id
 #include <boost/uuid/uuid.hpp>
@@ -19,9 +20,121 @@
 #include <tbb/concurrent_hash_map.h>
 #include <boost/thread.hpp>
 
+// for serialization
+#include <sstream>
+#include <cereal/types/string.hpp>
+#include <cereal/types/list.hpp>
+#include <cereal/archives/json.hpp>
+
+// DSB debug
 #include "logger.h"
 
-namespace social_network {
+
+namespace antipode {
+
+class Cscope {
+  public:
+    struct append_t {
+      std::string txid;
+      std::string caller;
+      std::string target;
+
+      friend std::ostream& operator<<(std::ostream& os, append_t const& a) {
+        os << "<#" << a.txid << "|" << a.target << "@" << a.caller << ">";
+      }
+
+      std::string to_string(append_t const& a) {
+        std::ostringstream ss;
+        ss << a;
+        return ss.str();
+      }
+
+      // This method lets cereal know which data members to serialize
+      template<class Archive>
+      void serialize(Archive& archive) {
+        archive( CEREAL_NVP(txid), CEREAL_NVP(caller), CEREAL_NVP(target) );
+      }
+    };
+
+    std::string _id;
+    std::string _rendezvous;
+    std::list<append_t> _append_list;
+
+    Cscope(); // no rendezvous
+    Cscope(std::string); // with rendezvous
+    Cscope(std::string, std::string, std::list<append_t>); // copy of existing
+
+    Cscope append(std::string, std::string, std::string); // append
+
+    friend std::ostream & operator<<(std::ostream &os, const Cscope& c) {
+      os << " #" << c._id << " ; @" << c._rendezvous << " ; [";
+      for (auto& a : c._append_list) {
+        os << a;
+      }
+      os << "]";
+      return os;
+    }
+
+    friend class cereal::access;
+    template <class Archive>
+    void serialize(Archive& archive) {
+      archive( CEREAL_NVP(_id), CEREAL_NVP(_rendezvous), CEREAL_NVP(_append_list) );
+    }
+
+    std::string to_json() {
+      std::stringstream ss;
+      {
+        cereal::JSONOutputArchive out(ss);
+        out(*this);
+      } // archive goes out of scope, ensuring all contents are flushed
+      return ss.str();
+    }
+
+    static Cscope from_json(std::string s) {
+      Cscope c;
+      std::stringstream ss;
+      ss << s;
+      {
+        cereal::JSONInputArchive iarchive(ss); // Create an input archive
+        iarchive(c); // Read the data from the archive
+      } // archive goes out of scope, ensuring all contents are flushed
+      return c;
+    }
+};
+
+// constructors
+Cscope::Cscope() {
+  boost::uuids::uuid id = boost::uuids::random_generator()();
+  _id = boost::uuids::to_string(id);
+}
+Cscope::Cscope(std::string rendezvous) {
+  boost::uuids::uuid id = boost::uuids::random_generator()();
+  _id = boost::uuids::to_string(id);
+  _rendezvous = rendezvous;
+}
+Cscope::Cscope(std::string id, std::string rendezvous, std::list<append_t> append_list) {
+  _id = id;
+  _rendezvous = rendezvous;
+  _append_list = append_list;
+}
+
+// API
+Cscope Cscope::append(std::string txid, std::string caller, std::string target) {
+  append_t new_append;
+  new_append.txid = txid;
+  new_append.caller = caller;
+  new_append.target = target;
+
+  std::list<append_t> new_append_list = _append_list;
+  new_append_list.push_back(new_append);
+
+  return Cscope(_id, _rendezvous, new_append_list);
+}
+
+
+//----------------------
+// MongoDB
+//----------------------
 
 class AntipodeMongodb {
   static const std::string ANTIPODE_COLLECTION;
@@ -35,10 +148,13 @@ class AntipodeMongodb {
   public:
     AntipodeMongodb(mongoc_client_t*, std::string);
     ~AntipodeMongodb();
+
     static void init_store(std::string, std::string);
     static void init_cscope_listener(std::string, std::string);
-    std::string gen_cscope_id();
+
+    std::string begin_cscope(std::string);
     bool inject(mongoc_client_session_t*, std::string, std::string, std::string, bson_oid_t*);
+
     void barrier(std::string);
     void close();
 
@@ -90,7 +206,7 @@ AntipodeMongodb::~AntipodeMongodb() {
   mongoc_server_description_destroy(sd);
 
   // parse bson to json and get the ismaster flag
-  bool is_master = json::parse(ismaster_description_json)["ismaster"];
+  bool is_master = nlohmann::json::parse(ismaster_description_json)["ismaster"];
 
   // only create collection on the master
   if (is_master) {
@@ -209,7 +325,7 @@ AntipodeMongodb::~AntipodeMongodb() {
   mongoc_client_destroy (client);
 }
 
-std::string AntipodeMongodb::gen_cscope_id() {
+std::string AntipodeMongodb::begin_cscope(std::string rendesvouz) {
   boost::uuids::uuid id = boost::uuids::random_generator()();
   return boost::uuids::to_string(id);
 }
@@ -373,6 +489,6 @@ void AntipodeMongodb::close() {
   mongoc_database_destroy(_db);
 }
 
-} //namespace social_network
+} // namespace antipode
 
-#endif //SOCIAL_NETWORK_MICROSERVICES_UTILS_H
+#endif //ANTIPODE_H

@@ -28,6 +28,7 @@
 
 // for clock usage
 using namespace std::chrono;
+using namespace antipode;
 
 namespace social_network {
 using json = nlohmann::json;
@@ -245,7 +246,7 @@ void PostStorageHandler::StorePost(
 
   /* Step 2: Start Antipode client */
   AntipodeMongodb* antipode_client = new AntipodeMongodb(mongodb_client, "post");
-  // std::string cscope_id = antipode_client->gen_cscope_id();
+  // std::string cscope_id = antipode_client->begin_cscope("post-storage");
   std::string cscope_id = std::to_string(post.post_id);
   LOG(debug) << "[Antipode] CSCOPE_ID = " << cscope_id;
 
