@@ -44,7 +44,7 @@ class PostStorageHandler : public PostStorageServiceIf {
   ~PostStorageHandler() override = default;
 
   void StorePost(BaseRpcResponse& response, int64_t req_id, const Post &post,
-      const std::map<std::string, std::string> &carrier) override;
+      const std::string& cscope_str, const std::map<std::string, std::string> &carrier) override;
 
   bool AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier) override;
 
@@ -84,6 +84,7 @@ boost::asio::thread_pool pool(num_threads);
 void PostStorageHandler::StorePost(
     BaseRpcResponse &response,
     int64_t req_id, const social_network::Post &post,
+    const std::string& cscope_str,
     const std::map<std::string, std::string> &carrier) {
 
   //----------
@@ -243,13 +244,9 @@ void PostStorageHandler::StorePost(
     throw se;
   }
 
-
   /* Step 2: Start Antipode client */
   AntipodeMongodb* antipode_client = new AntipodeMongodb(mongodb_client, "post");
-  // std::string cscope_id = antipode_client->begin_cscope("post-storage");
-  std::string cscope_id = std::to_string(post.post_id);
-  LOG(debug) << "[Antipode] CSCOPE_ID = " << cscope_id;
-
+  Cscope cscope = Cscope::from_json(cscope_str);
 
   /* Step 3: Use mongoc_client_session_with_transaction to start a transaction,
   * execute the callback, and commit (or abort on error). */
@@ -270,7 +267,10 @@ void PostStorageHandler::StorePost(
     }
 
     /* insert cscope_id into the transaction */
-    antipode_client->inject(session, cscope_id, "post-storage-service", "post-storage", &oid);
+    // antipode_client->inject(session, cscope_id, "post-storage-service", "post-storage", &oid);
+    char append_id[25];
+    bson_oid_to_string(&oid, append_id);
+    cscope = cscope.append(std::string(append_id), "post-storage-service", "post-storage");
 
     /* in case of transient errors, retry for 5 seconds to commit transaction */
     bson_t reply = BSON_INITIALIZER;
@@ -293,6 +293,9 @@ void PostStorageHandler::StorePost(
         break;
       }
     }
+
+    // close scope
+    antipode_client->close_scope(session, cscope);
 
     // clean objects
     mongoc_client_session_destroy (session);

@@ -91,6 +91,7 @@ class Cscope {
     }
 
     static Cscope from_json(std::string s) {
+      // Dynamic exception type: nlohmann::detail::type_error
       Cscope c;
       std::stringstream ss;
       ss << s;
@@ -148,15 +149,14 @@ class AntipodeMongodb {
   public:
     AntipodeMongodb(mongoc_client_t*, std::string);
     ~AntipodeMongodb();
+    void close();
 
     static void init_store(std::string, std::string);
     static void init_cscope_listener(std::string, std::string);
 
-    std::string begin_cscope(std::string);
-    bool inject(mongoc_client_session_t*, std::string, std::string, std::string, bson_oid_t*);
 
-    void barrier(std::string);
-    void close();
+    void barrier(Cscope);
+    bool close_scope(mongoc_client_session_t*, Cscope);
 
   private:
     static void _init_cscope_listener(std::string, std::string);
@@ -325,16 +325,8 @@ AntipodeMongodb::~AntipodeMongodb() {
   mongoc_client_destroy (client);
 }
 
-std::string AntipodeMongodb::begin_cscope(std::string rendesvouz) {
-  boost::uuids::uuid id = boost::uuids::random_generator()();
-  return boost::uuids::to_string(id);
-}
-
-bool AntipodeMongodb::inject(mongoc_client_session_t* session, std::string cscope_id, std::string caller, std::string target, bson_oid_t* oid) {
+bool AntipodeMongodb::close_scope(mongoc_client_session_t* session, Cscope cscope) {
   bson_error_t error;
-  char append_id[25];
-  bson_oid_to_string(oid, append_id);
-
   //------------
   // INSERT
   //------------
@@ -361,17 +353,49 @@ bool AntipodeMongodb::inject(mongoc_client_session_t* session, std::string cscop
   //------------
   // UPSERT
   //------------
-  bson_t *selector = BCON_NEW("cscope_id", BCON_UTF8(cscope_id.c_str()));
-  bson_t *action = BCON_NEW(
-    // https://docs.mongodb.com/manual/reference/operator/update/addToSet/
-    "$addToSet", "{",
-      "append_list", "{",
-        "append_id", BCON_UTF8(append_id),
-        "caller", BCON_UTF8(caller.c_str()),
-        "target", BCON_UTF8(target.c_str()),
-      "}",
-    "}"
-  );
+  bson_t *selector = BCON_NEW("cscope_id", BCON_UTF8(cscope._id.c_str()));
+
+  bson_t *action = bson_new();
+  bson_t action__add_to_set;
+  bson_t action__add_to_set__append_list;
+  bson_t action__add_to_set__append_list__each;
+  bson_t action__set;
+
+  BSON_APPEND_DOCUMENT_BEGIN(action, "$addToSet", &action__add_to_set);
+    BSON_APPEND_DOCUMENT_BEGIN(&action__add_to_set, "_append_list", &action__add_to_set__append_list);
+      BSON_APPEND_ARRAY_BEGIN(&action__add_to_set__append_list, "$each", &action__add_to_set__append_list__each);
+        int idx = 0;
+        const char *key;
+        char buf[16]; // fix: Length of append_list
+        for (auto &a : cscope._append_list) {
+          bson_uint32_to_string(idx, &key, buf, sizeof buf);
+          bson_t append_doc;
+          BSON_APPEND_DOCUMENT_BEGIN(&action__add_to_set__append_list__each, key, &append_doc);
+            BSON_APPEND_UTF8(&append_doc, "txid", a.txid.c_str());
+            BSON_APPEND_UTF8(&append_doc, "caller", a.caller.c_str());
+            BSON_APPEND_UTF8(&append_doc, "target", a.target.c_str());
+          bson_append_document_end(&action__add_to_set__append_list__each, &append_doc);
+          idx++;
+        }
+      bson_append_array_end(&action__add_to_set__append_list, &action__add_to_set__append_list__each);
+    bson_append_document_end(&action__add_to_set, &action__add_to_set__append_list);
+  bson_append_document_end(action, &action__add_to_set);
+
+  BSON_APPEND_DOCUMENT_BEGIN(action, "$set", &action__set);
+    BSON_APPEND_UTF8(&action__set, "_rendezvous", cscope._rendezvous.c_str());
+  bson_append_document_end(action, &action__set);
+
+  //---------
+  // DEBUG
+  //---------
+  // size_t len;
+  // char *str;
+  // str = bson_as_relaxed_extended_json (action, &len);
+  // LOG(debug) << "DBEUG CLOSE";
+  // LOG(debug) << str;
+  // bson_free (str);
+  //---------
+
   bson_t *opts = BCON_NEW("upsert",  BCON_BOOL(true));
   bool r = mongoc_collection_update_one(_collection, selector, action, opts, NULL /* reply */, &error);
 
@@ -382,18 +406,20 @@ bool AntipodeMongodb::inject(mongoc_client_session_t* session, std::string cscop
   return r;
 }
 
-void AntipodeMongodb::barrier(std::string cscope_id) {
+void AntipodeMongodb::barrier(Cscope cscope) {
   tbb::concurrent_hash_map<std::string, bool>::const_accessor read_lock;
-  while(!AntipodeMongodb::cscope_change_stream_cache.find(read_lock, cscope_id));
+  LOG(debug) << "IS VISIBLE START: " << cscope._id;
+
+  while(!AntipodeMongodb::cscope_change_stream_cache.find(read_lock, cscope._id));
   read_lock.release();
 
-  LOG(debug) << "IS VISIBLE: " << cscope_id;
+  LOG(debug) << "IS VISIBLE END: " << cscope._id;
 
   // Display the occurrences
   // ref: https://www.inf.ed.ac.uk/teaching/courses/ppls/TBBtutorial.pdf
-  // for(tbb::concurrent_hash_map<std::string, bool>::iterator i=cscope_change_stream_cache.begin(); i!=cscope_change_stream_cache.end(); ++i ) {
-  //   printf("%s %d\n",i->first.c_str(),i->second);
-  // }
+  for(tbb::concurrent_hash_map<std::string, bool>::iterator i=cscope_change_stream_cache.begin(); i!=cscope_change_stream_cache.end(); ++i ) {
+    printf("%s %d\n",i->first.c_str(),i->second);
+  }
 }
 
 void AntipodeMongodb::_barrier_query(std::string cscope_id) {

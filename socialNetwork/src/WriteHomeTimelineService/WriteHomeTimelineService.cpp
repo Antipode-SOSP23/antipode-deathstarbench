@@ -104,6 +104,8 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
     bool check = false;
 
+    Cscope cscope = Cscope::from_json(msg_json["cscope_str"].dump());
+
     //----------
     // CENTRALIZED
     //----------
@@ -134,14 +136,12 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
     //----------
     // DISTRIBUTED
     //----------
-    std::string cscope_id = std::to_string(post_id);
-
     mongoc_client_t *mongodb_client = mongoc_client_pool_pop(_mongodb_client_pool);
-    AntipodeMongodb* antipode_client = new AntipodeMongodb(mongodb_client, "post");
+    AntipodeMongodb antipode_client = AntipodeMongodb(mongodb_client, "post");
 
-    antipode_client->barrier(cscope_id);
+    antipode_client.barrier(cscope);
 
-    antipode_client->close();
+    antipode_client.close();
     mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
     //----------
     // DISTRIBUTED
@@ -223,7 +223,7 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
     DELETE_CURRENT_BAGGAGE();
     return true;
   } catch (...) {
-    LOG(error) << "OnReveived worker error";
+    LOG(error) << "OnReceived worker error: " << boost::current_exception_diagnostic_information();
     return false;
   }
 }

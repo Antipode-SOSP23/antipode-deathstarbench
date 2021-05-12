@@ -21,7 +21,7 @@ namespace social_network {
 class PostStorageServiceIf {
  public:
   virtual ~PostStorageServiceIf() {}
-  virtual void StorePost(BaseRpcResponse& _return, const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier) = 0;
+  virtual void StorePost(BaseRpcResponse& _return, const int64_t req_id, const Post& post, const std::string& cscope_str, const std::map<std::string, std::string> & carrier) = 0;
   virtual void ReadPost(PostRpcResponse& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier) = 0;
   virtual void ReadPosts(PostListRpcResponse& _return, const int64_t req_id, const std::vector<int64_t> & post_ids, const std::map<std::string, std::string> & carrier) = 0;
   virtual bool AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier) = 0;
@@ -54,7 +54,7 @@ class PostStorageServiceIfSingletonFactory : virtual public PostStorageServiceIf
 class PostStorageServiceNull : virtual public PostStorageServiceIf {
  public:
   virtual ~PostStorageServiceNull() {}
-  void StorePost(BaseRpcResponse& /* _return */, const int64_t /* req_id */, const Post& /* post */, const std::map<std::string, std::string> & /* carrier */) {
+  void StorePost(BaseRpcResponse& /* _return */, const int64_t /* req_id */, const Post& /* post */, const std::string& /* cscope_str */, const std::map<std::string, std::string> & /* carrier */) {
     return;
   }
   void ReadPost(PostRpcResponse& /* _return */, const int64_t /* req_id */, const int64_t /* post_id */, const std::map<std::string, std::string> & /* carrier */) {
@@ -70,9 +70,10 @@ class PostStorageServiceNull : virtual public PostStorageServiceIf {
 };
 
 typedef struct _PostStorageService_StorePost_args__isset {
-  _PostStorageService_StorePost_args__isset() : req_id(false), post(false), carrier(false) {}
+  _PostStorageService_StorePost_args__isset() : req_id(false), post(false), cscope_str(false), carrier(false) {}
   bool req_id :1;
   bool post :1;
+  bool cscope_str :1;
   bool carrier :1;
 } _PostStorageService_StorePost_args__isset;
 
@@ -81,12 +82,13 @@ class PostStorageService_StorePost_args {
 
   PostStorageService_StorePost_args(const PostStorageService_StorePost_args&);
   PostStorageService_StorePost_args& operator=(const PostStorageService_StorePost_args&);
-  PostStorageService_StorePost_args() : req_id(0) {
+  PostStorageService_StorePost_args() : req_id(0), cscope_str() {
   }
 
   virtual ~PostStorageService_StorePost_args() throw();
   int64_t req_id;
   Post post;
+  std::string cscope_str;
   std::map<std::string, std::string>  carrier;
 
   _PostStorageService_StorePost_args__isset __isset;
@@ -95,6 +97,8 @@ class PostStorageService_StorePost_args {
 
   void __set_post(const Post& val);
 
+  void __set_cscope_str(const std::string& val);
+
   void __set_carrier(const std::map<std::string, std::string> & val);
 
   bool operator == (const PostStorageService_StorePost_args & rhs) const
@@ -102,6 +106,8 @@ class PostStorageService_StorePost_args {
     if (!(req_id == rhs.req_id))
       return false;
     if (!(post == rhs.post))
+      return false;
+    if (!(cscope_str == rhs.cscope_str))
       return false;
     if (!(carrier == rhs.carrier))
       return false;
@@ -126,6 +132,7 @@ class PostStorageService_StorePost_pargs {
   virtual ~PostStorageService_StorePost_pargs() throw();
   const int64_t* req_id;
   const Post* post;
+  const std::string* cscope_str;
   const std::map<std::string, std::string> * carrier;
 
   uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
@@ -591,8 +598,8 @@ class PostStorageServiceClient : virtual public PostStorageServiceIf {
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> getOutputProtocol() {
     return poprot_;
   }
-  void StorePost(BaseRpcResponse& _return, const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier);
-  void send_StorePost(const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier);
+  void StorePost(BaseRpcResponse& _return, const int64_t req_id, const Post& post, const std::string& cscope_str, const std::map<std::string, std::string> & carrier);
+  void send_StorePost(const int64_t req_id, const Post& post, const std::string& cscope_str, const std::map<std::string, std::string> & carrier);
   void recv_StorePost(BaseRpcResponse& _return);
   void ReadPost(PostRpcResponse& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier);
   void send_ReadPost(const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier);
@@ -657,13 +664,13 @@ class PostStorageServiceMultiface : virtual public PostStorageServiceIf {
     ifaces_.push_back(iface);
   }
  public:
-  void StorePost(BaseRpcResponse& _return, const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier) {
+  void StorePost(BaseRpcResponse& _return, const int64_t req_id, const Post& post, const std::string& cscope_str, const std::map<std::string, std::string> & carrier) {
     size_t sz = ifaces_.size();
     size_t i = 0;
     for (; i < (sz - 1); ++i) {
-      ifaces_[i]->StorePost(_return, req_id, post, carrier);
+      ifaces_[i]->StorePost(_return, req_id, post, cscope_str, carrier);
     }
-    ifaces_[i]->StorePost(_return, req_id, post, carrier);
+    ifaces_[i]->StorePost(_return, req_id, post, cscope_str, carrier);
     return;
   }
 
@@ -726,8 +733,8 @@ class PostStorageServiceConcurrentClient : virtual public PostStorageServiceIf {
   apache::thrift::stdcxx::shared_ptr< ::apache::thrift::protocol::TProtocol> getOutputProtocol() {
     return poprot_;
   }
-  void StorePost(BaseRpcResponse& _return, const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier);
-  int32_t send_StorePost(const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier);
+  void StorePost(BaseRpcResponse& _return, const int64_t req_id, const Post& post, const std::string& cscope_str, const std::map<std::string, std::string> & carrier);
+  int32_t send_StorePost(const int64_t req_id, const Post& post, const std::string& cscope_str, const std::map<std::string, std::string> & carrier);
   void recv_StorePost(BaseRpcResponse& _return, const int32_t seqid);
   void ReadPost(PostRpcResponse& _return, const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier);
   int32_t send_ReadPost(const int64_t req_id, const int64_t post_id, const std::map<std::string, std::string> & carrier);

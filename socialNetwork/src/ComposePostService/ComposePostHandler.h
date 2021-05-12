@@ -89,12 +89,14 @@ class ComposePostHandler : public ComposePostServiceIf {
       Baggage& baggage, std::promise<Baggage> baggage_promise);
 
   void _UploadPostHelper(int64_t req_id, const Post &post,
+      Cscope &cscope,
       const std::map<std::string, std::string> &carrier,
       Baggage& baggage, std::promise<Baggage> baggage_promise);
 
   void _UploadHomeTimelineHelper(int64_t req_id, int64_t post_id,
       int64_t user_id, int64_t timestamp,
       const std::vector<int64_t> &user_mentions_id,
+      Cscope &cscope,
       const std::map<std::string, std::string> &carrier,
       Baggage& baggage, std::promise<Baggage> baggage_promise);
 };
@@ -707,10 +709,7 @@ void ComposePostHandler::_ComposeAndUpload(
   //----------
   // ANTIPODE
   //----------
-
-  Cscope cs = antipode::Cscope("post-storage");
-  LOG(debug) << cs.to_json();
-
+  Cscope cscope = antipode::Cscope("post-storage");
   //----------
   // ANTIPODE
   //----------
@@ -721,7 +720,7 @@ void ComposePostHandler::_ComposeAndUpload(
   std::promise<Baggage> upload_post_promise;
   std::future<Baggage> upload_post_future = upload_post_promise.get_future();
   std::thread upload_post_worker(&ComposePostHandler::_UploadPostHelper,
-                                   this, req_id, std::ref(post), std::ref(carrier), std::ref(upload_post_helper_baggage), std::move(upload_post_promise));
+                                   this, req_id, std::ref(post), std::ref(cscope), std::ref(carrier), std::ref(upload_post_helper_baggage), std::move(upload_post_promise));
 
   Baggage upload_user_timeline_helper_baggage = BRANCH_CURRENT_BAGGAGE();
   std::promise<Baggage> upload_user_promise;
@@ -736,7 +735,7 @@ void ComposePostHandler::_ComposeAndUpload(
   std::thread upload_home_timeline_worker(
       &ComposePostHandler::_UploadHomeTimelineHelper, this, req_id,
       post.post_id, post.creator.user_id, post.timestamp,
-      std::ref(user_mentions_id), std::ref(carrier), std::ref(upload_home_timeline_helper_baggage), std::move(upload_home_promise));
+      std::ref(user_mentions_id), std::ref(cscope), std::ref(carrier), std::ref(upload_home_timeline_helper_baggage), std::move(upload_home_promise));
 
   upload_post_worker.join();
   upload_user_timeline_worker.join();
@@ -793,6 +792,7 @@ void ComposePostHandler::_ComposeAndUpload(
 void ComposePostHandler::_UploadPostHelper(
     int64_t req_id,
     const Post &post,
+    Cscope &cscope,
     const std::map<std::string, std::string> &carrier,
     Baggage& baggage, std::promise<Baggage> baggage_promise) {
 
@@ -814,7 +814,7 @@ void ComposePostHandler::_UploadPostHelper(
     try {
       writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
       BaseRpcResponse response;
-      post_storage_client->StorePost(response, req_id, post, writer_text_map);
+      post_storage_client->StorePost(response, req_id, post, cscope.to_json(), writer_text_map);
       Baggage b = Baggage::deserialize(response.baggage);
       JOIN_CURRENT_BAGGAGE(b);
     } catch (...) {
@@ -883,6 +883,7 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
     int64_t user_id,
     int64_t timestamp,
     const std::vector<int64_t> &user_mentions_id,
+    Cscope &cscope,
     const std::map<std::string, std::string> &carrier,
     Baggage& baggage, std::promise<Baggage> baggage_promise) {
   //
@@ -932,6 +933,7 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
       ", \"user_id\": " + std::to_string(user_id) +
       ", \"timestamp\": " + std::to_string(timestamp) +
       ", \"user_mentions_id\": " + user_mentions_id_str +
+      ", \"cscope_str\": " + cscope.to_json() +
       ", \"carrier\": " + carrier_str + " }";
 
   try {

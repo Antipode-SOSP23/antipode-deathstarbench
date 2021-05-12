@@ -211,7 +211,8 @@ service PostStorageService {
   BaseRpcResponse StorePost(
     1: i64 req_id,
     2: Post post,
-    3: map<string, string> carrier
+    3: string cscope_str,
+    4: map<string, string> carrier
   ) throws (1: ServiceException se)
 
   PostRpcResponse ReadPost(

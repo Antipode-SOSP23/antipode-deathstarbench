@@ -20,7 +20,7 @@ class PostStorageServiceHandler : virtual public PostStorageServiceIf {
     // Your initialization goes here
   }
 
-  void StorePost(BaseRpcResponse& _return, const int64_t req_id, const Post& post, const std::map<std::string, std::string> & carrier) {
+  void StorePost(BaseRpcResponse& _return, const int64_t req_id, const Post& post, const std::string& cscope_str, const std::map<std::string, std::string> & carrier) {
     // Your implementation goes here
     printf("StorePost\n");
   }
