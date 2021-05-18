@@ -139,6 +139,11 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
     mongoc_client_t *mongodb_client = mongoc_client_pool_pop(_mongodb_client_pool);
     AntipodeMongodb antipode_client = AntipodeMongodb(mongodb_client, "post");
 
+    // gets cscopes with writes by caller
+    std::list<std::string> wanted_callers {"post-storage-service"};
+
+    // ok force it without checking first - TODO
+    cscope = antipode_client.pull(cscope);
     antipode_client.barrier(cscope);
 
     antipode_client.close();
@@ -363,8 +368,8 @@ int main(int argc, char *argv[]) {
   // ANTIPODE
   //----------
   // init antipode tables
-  std::string mongodb_uri = mongodb_dsb_uri(config_json, "post-storage", zone);
-  AntipodeMongodb::init_cscope_listener(mongodb_uri, "post");
+  // std::string mongodb_uri = mongodb_dsb_uri(config_json, "post-storage", zone);
+  // AntipodeMongodb::init_cscope_listener(mongodb_uri, "post");
   //----------
   // ANTIPODE
   //----------

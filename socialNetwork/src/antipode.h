@@ -64,7 +64,9 @@ class Cscope {
     Cscope(std::string); // with rendezvous
     Cscope(std::string, std::string, std::list<append_t>); // copy of existing
 
-    Cscope append(std::string, std::string, std::string); // append
+    Cscope append(std::string, std::string, std::string);
+    Cscope update(const bson_t*);
+    bool find_by_caller(std::list<std::string>);
 
     friend std::ostream & operator<<(std::ostream &os, const Cscope& c) {
       os << " #" << c._id << " ; @" << c._rendezvous << " ; [";
@@ -120,6 +122,44 @@ Cscope::Cscope(std::string id, std::string rendezvous, std::list<append_t> appen
 }
 
 // API
+Cscope Cscope::update(const bson_t* doc) {
+  // parsing ref: http://mongoc.org/libbson/current/parsing.html
+  bson_iter_t cscope_iter;
+  bson_iter_t append_list_iter;
+
+  // we will ignore _id and _rendesvouz - those should be the same
+  if (bson_iter_init_find (&cscope_iter, doc, "_append_list") && BSON_ITER_HOLDS_ARRAY (&cscope_iter) && bson_iter_recurse (&cscope_iter, &append_list_iter)) {
+    std::list<append_t> new_append_list = _append_list;
+
+    while (bson_iter_next (&append_list_iter)) {
+      // each key is the index of a new append and each value is a document
+      bson_iter_t append_t_iter;
+      bson_iter_t appent_t_attr_iter;
+      bson_iter_recurse (&append_list_iter, &append_t_iter);
+
+      bson_iter_find_descendant(&append_t_iter,"txid",&appent_t_attr_iter);
+      std::string txid(bson_iter_utf8(&appent_t_attr_iter, /* length */ NULL));
+
+      bson_iter_find_descendant(&append_t_iter,"caller",&appent_t_attr_iter);
+      std::string caller(bson_iter_utf8(&appent_t_attr_iter, /* length */ NULL));
+
+      bson_iter_find_descendant(&append_t_iter,"target",&appent_t_attr_iter);
+      std::string target(bson_iter_utf8(&appent_t_attr_iter, /* length */ NULL));
+
+      append_t new_append;
+      new_append.txid = txid;
+      new_append.caller = caller;
+      new_append.target = target;
+
+      new_append_list.push_back(new_append);
+    }
+
+    return Cscope(_id, _rendezvous, new_append_list);
+  } else {
+    return *this;
+  }
+}
+
 Cscope Cscope::append(std::string txid, std::string caller, std::string target) {
   append_t new_append;
   new_append.txid = txid;
@@ -130,6 +170,21 @@ Cscope Cscope::append(std::string txid, std::string caller, std::string target) 
   new_append_list.push_back(new_append);
 
   return Cscope(_id, _rendezvous, new_append_list);
+}
+
+bool Cscope::find_by_caller(std::list<std::string> callers) {
+  std::list<std::string> append_list_callers;
+  for (append_t &append: _append_list) {
+    append_list_callers.push_back(append.caller);
+  }
+
+  for (std::string caller: callers) {
+    if (std::find(std::begin(append_list_callers), std::end(append_list_callers), caller) == std::end(append_list_callers)) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 
@@ -157,11 +212,13 @@ class AntipodeMongodb {
 
     void barrier(Cscope);
     bool close_scope(mongoc_client_session_t*, Cscope);
+    Cscope pull(Cscope);
 
   private:
     static void _init_cscope_listener(std::string, std::string);
     void _barrier_query(std::string);
     void _barrier_change_stream(std::string);
+    void _barrier_change_stream_listener(std::string);
 };
 const std::string AntipodeMongodb::ANTIPODE_COLLECTION = "antipode";
 tbb::concurrent_hash_map<std::string, bool> AntipodeMongodb::cscope_change_stream_cache;
@@ -406,20 +463,29 @@ bool AntipodeMongodb::close_scope(mongoc_client_session_t* session, Cscope cscop
   return r;
 }
 
-void AntipodeMongodb::barrier(Cscope cscope) {
-  tbb::concurrent_hash_map<std::string, bool>::const_accessor read_lock;
-  LOG(debug) << "IS VISIBLE START: " << cscope._id;
+Cscope AntipodeMongodb::pull(Cscope cscope) {
+  bson_t* filter = BCON_NEW ("cscope_id", BCON_UTF8(cscope._id.c_str()));
+  bson_t* opts = BCON_NEW ("limit", BCON_INT64(1));
+  mongoc_cursor_t* cursor;
 
-  while(!AntipodeMongodb::cscope_change_stream_cache.find(read_lock, cscope._id));
-  read_lock.release();
+  const bson_t* doc;
+  cursor = mongoc_collection_find_with_opts(_collection, filter, opts, NULL);
+  bool cscope_id_visible = mongoc_cursor_next(cursor, &doc);
 
-  LOG(debug) << "IS VISIBLE END: " << cscope._id;
-
-  // Display the occurrences
-  // ref: https://www.inf.ed.ac.uk/teaching/courses/ppls/TBBtutorial.pdf
-  for(tbb::concurrent_hash_map<std::string, bool>::iterator i=cscope_change_stream_cache.begin(); i!=cscope_change_stream_cache.end(); ++i ) {
-    printf("%s %d\n",i->first.c_str(),i->second);
+  // it might yet not be visible
+  if (cscope_id_visible) {
+    cscope = cscope.update(doc);
   }
+
+  mongoc_cursor_destroy (cursor);
+  bson_destroy (filter);
+  bson_destroy (opts);
+
+  return cscope;
+}
+
+void AntipodeMongodb::barrier(Cscope cscope) {
+  _barrier_query(cscope._id);
 }
 
 void AntipodeMongodb::_barrier_query(std::string cscope_id) {
@@ -439,9 +505,9 @@ void AntipodeMongodb::_barrier_query(std::string cscope_id) {
 
     // debug
     if (cscope_id_visible) {
-      char* str = bson_as_canonical_extended_json (doc, NULL);
-      LOG(debug) << " IS_VISIBLE " << str;
-      bson_free (str);
+      // char* str = bson_as_canonical_extended_json (doc, NULL);
+      // LOG(debug) << " IS_VISIBLE DONE: " << str;
+      // bson_free (str);
     }
   }
 
@@ -508,6 +574,19 @@ void AntipodeMongodb::_barrier_change_stream(std::string cscope_id) {
 
   mongoc_change_stream_destroy (stream);
   bson_destroy(pipeline);
+}
+
+void AntipodeMongodb::_barrier_change_stream_listener(std::string cscope_id) {
+  tbb::concurrent_hash_map<std::string, bool>::const_accessor read_lock;
+  while(!AntipodeMongodb::cscope_change_stream_cache.find(read_lock, cscope_id));
+  read_lock.release();
+
+
+  // Display the occurrences
+  // ref: https://www.inf.ed.ac.uk/teaching/courses/ppls/TBBtutorial.pdf
+  // for(tbb::concurrent_hash_map<std::string, bool>::iterator i=cscope_change_stream_cache.begin(); i!=cscope_change_stream_cache.end(); ++i ) {
+  //   printf("%s %d\n",i->first.c_str(),i->second);
+  // }
 }
 
 void AntipodeMongodb::close() {
