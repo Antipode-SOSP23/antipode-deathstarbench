@@ -24,6 +24,7 @@
 #include <sstream>
 #include <cereal/types/string.hpp>
 #include <cereal/types/list.hpp>
+#include <cereal/types/set.hpp>
 #include <cereal/archives/json.hpp>
 
 // DSB debug
@@ -59,18 +60,30 @@ class Cscope {
     std::string _id;
     std::string _rendezvous;
     std::list<append_t> _append_list;
+    std::set<std::string> _open_branches;
+    std::set<std::string> _closed_branches;
 
     Cscope(); // no rendezvous
     Cscope(std::string); // with rendezvous
-    Cscope(std::string, std::string, std::list<append_t>); // copy of existing
+    Cscope(std::string, std::string, std::list<append_t>, std::set<std::string>, std::set<std::string>); // copy of existing
 
     Cscope append(std::string, std::string, std::string);
-    Cscope update(const bson_t*);
+    Cscope open_branch(std::string);
+    Cscope close_branch(std::string);
+    Cscope merge(Cscope cscope);
     bool find_by_caller(std::list<std::string>);
 
     friend std::ostream & operator<<(std::ostream &os, const Cscope& c) {
       os << " #" << c._id << " ; @" << c._rendezvous << " ; [";
       for (auto& a : c._append_list) {
+        os << a;
+      }
+      os << "] ; O[";
+      for (auto& a : c._open_branches) {
+        os << a;
+      }
+      os << "] - C[";
+      for (auto& a : c._closed_branches) {
         os << a;
       }
       os << "]";
@@ -80,7 +93,7 @@ class Cscope {
     friend class cereal::access;
     template <class Archive>
     void serialize(Archive& archive) {
-      archive( CEREAL_NVP(_id), CEREAL_NVP(_rendezvous), CEREAL_NVP(_append_list) );
+      archive( CEREAL_NVP(_id), CEREAL_NVP(_rendezvous), CEREAL_NVP(_append_list), CEREAL_NVP(_open_branches), CEREAL_NVP(_closed_branches) );
     }
 
     std::string to_json() {
@@ -115,51 +128,15 @@ Cscope::Cscope(std::string rendezvous) {
   _id = boost::uuids::to_string(id);
   _rendezvous = rendezvous;
 }
-Cscope::Cscope(std::string id, std::string rendezvous, std::list<append_t> append_list) {
+Cscope::Cscope(std::string id, std::string rendezvous, std::list<append_t> append_list, std::set<std::string> open_branches, std::set<std::string> closed_branches) {
   _id = id;
   _rendezvous = rendezvous;
   _append_list = append_list;
+  _open_branches = open_branches;
+  _closed_branches = closed_branches;
 }
 
 // API
-Cscope Cscope::update(const bson_t* doc) {
-  // parsing ref: http://mongoc.org/libbson/current/parsing.html
-  bson_iter_t cscope_iter;
-  bson_iter_t append_list_iter;
-
-  // we will ignore _id and _rendesvouz - those should be the same
-  if (bson_iter_init_find (&cscope_iter, doc, "_append_list") && BSON_ITER_HOLDS_ARRAY (&cscope_iter) && bson_iter_recurse (&cscope_iter, &append_list_iter)) {
-    std::list<append_t> new_append_list = _append_list;
-
-    while (bson_iter_next (&append_list_iter)) {
-      // each key is the index of a new append and each value is a document
-      bson_iter_t append_t_iter;
-      bson_iter_t appent_t_attr_iter;
-      bson_iter_recurse (&append_list_iter, &append_t_iter);
-
-      bson_iter_find_descendant(&append_t_iter,"txid",&appent_t_attr_iter);
-      std::string txid(bson_iter_utf8(&appent_t_attr_iter, /* length */ NULL));
-
-      bson_iter_find_descendant(&append_t_iter,"caller",&appent_t_attr_iter);
-      std::string caller(bson_iter_utf8(&appent_t_attr_iter, /* length */ NULL));
-
-      bson_iter_find_descendant(&append_t_iter,"target",&appent_t_attr_iter);
-      std::string target(bson_iter_utf8(&appent_t_attr_iter, /* length */ NULL));
-
-      append_t new_append;
-      new_append.txid = txid;
-      new_append.caller = caller;
-      new_append.target = target;
-
-      new_append_list.push_back(new_append);
-    }
-
-    return Cscope(_id, _rendezvous, new_append_list);
-  } else {
-    return *this;
-  }
-}
-
 Cscope Cscope::append(std::string txid, std::string caller, std::string target) {
   append_t new_append;
   new_append.txid = txid;
@@ -169,7 +146,24 @@ Cscope Cscope::append(std::string txid, std::string caller, std::string target) 
   std::list<append_t> new_append_list = _append_list;
   new_append_list.push_back(new_append);
 
-  return Cscope(_id, _rendezvous, new_append_list);
+  return Cscope(_id, _rendezvous, new_append_list, _open_branches, _closed_branches);
+}
+
+Cscope Cscope::open_branch(std::string service_id) {
+  std::set<std::string> new_open_branches = _open_branches;
+  new_open_branches.insert(service_id);
+
+  return Cscope(_id, _rendezvous, _append_list, new_open_branches, _closed_branches);
+}
+
+Cscope Cscope::close_branch(std::string service_id) {
+  std::set<std::string> new_open_branches = _open_branches;
+  new_open_branches.erase(service_id);
+
+  std::set<std::string> new_closed_branches = _closed_branches;
+  new_closed_branches.insert(service_id);
+
+  return Cscope(_id, _rendezvous, _append_list, new_open_branches, new_closed_branches);
 }
 
 bool Cscope::find_by_caller(std::list<std::string> callers) {
@@ -210,13 +204,11 @@ class AntipodeMongodb {
     static void init_cscope_listener(std::string, std::string);
 
 
-    void barrier(Cscope);
-    bool close_scope(mongoc_client_session_t*, Cscope);
-    Cscope pull(Cscope);
+    Cscope barrier(Cscope);
+    bool close_scope(Cscope);
 
   private:
     static void _init_cscope_listener(std::string, std::string);
-    void _barrier_query(std::string);
     void _barrier_change_stream(std::string);
     void _barrier_change_stream_listener(std::string);
 };
@@ -382,78 +374,18 @@ AntipodeMongodb::~AntipodeMongodb() {
   mongoc_client_destroy (client);
 }
 
-bool AntipodeMongodb::close_scope(mongoc_client_session_t* session, Cscope cscope) {
+bool AntipodeMongodb::close_scope(Cscope cscope) {
   bson_error_t error;
-  //------------
-  // INSERT
-  //------------
-  // // new cscope
-  // bson_t* cscope = bson_new();
-  // BSON_APPEND_UTF8(cscope, "cscope_id", cscope_id.c_str());
-  // BSON_APPEND_UTF8(cscope, "rendesvouz", "post-storage"); // TODO
-  // // init array
-  // bson_t append_list;
-  // BSON_APPEND_ARRAY_BEGIN(cscope, "append_list", &append_list);
-  // // list with only 1 element
-  // bson_t append_doc;
-  // BSON_APPEND_DOCUMENT_BEGIN(&append_list, append_id, &append_doc);
-  // BSON_APPEND_UTF8(&append_doc, "caller", caller.c_str());
-  // BSON_APPEND_UTF8(&append_doc, "target", target.c_str());
-  // BSON_APPEND_UTF8(&append_doc, "append_id", append_id);
-  // bson_append_document_end(&append_list, &append_doc);
-  // // close array
-  // bson_append_array_end(cscope, &append_list);
-
-  // // insert
-  // bool r = mongoc_collection_insert_one (_collection, cscope, nullptr, nullptr, &error);
-
-  //------------
-  // UPSERT
-  //------------
   bson_t *selector = BCON_NEW("cscope_id", BCON_UTF8(cscope._id.c_str()));
 
   bson_t *action = bson_new();
-  bson_t action__add_to_set;
-  bson_t action__add_to_set__append_list;
-  bson_t action__add_to_set__append_list__each;
   bson_t action__set;
-
-  BSON_APPEND_DOCUMENT_BEGIN(action, "$addToSet", &action__add_to_set);
-    BSON_APPEND_DOCUMENT_BEGIN(&action__add_to_set, "_append_list", &action__add_to_set__append_list);
-      BSON_APPEND_ARRAY_BEGIN(&action__add_to_set__append_list, "$each", &action__add_to_set__append_list__each);
-        int idx = 0;
-        const char *key;
-        char buf[16]; // fix: Length of append_list
-        for (auto &a : cscope._append_list) {
-          bson_uint32_to_string(idx, &key, buf, sizeof buf);
-          bson_t append_doc;
-          BSON_APPEND_DOCUMENT_BEGIN(&action__add_to_set__append_list__each, key, &append_doc);
-            BSON_APPEND_UTF8(&append_doc, "txid", a.txid.c_str());
-            BSON_APPEND_UTF8(&append_doc, "caller", a.caller.c_str());
-            BSON_APPEND_UTF8(&append_doc, "target", a.target.c_str());
-          bson_append_document_end(&action__add_to_set__append_list__each, &append_doc);
-          idx++;
-        }
-      bson_append_array_end(&action__add_to_set__append_list, &action__add_to_set__append_list__each);
-    bson_append_document_end(&action__add_to_set, &action__add_to_set__append_list);
-  bson_append_document_end(action, &action__add_to_set);
-
   BSON_APPEND_DOCUMENT_BEGIN(action, "$set", &action__set);
-    BSON_APPEND_UTF8(&action__set, "_rendezvous", cscope._rendezvous.c_str());
+    BSON_APPEND_UTF8(&action__set, "object", cscope.to_json().c_str());
   bson_append_document_end(action, &action__set);
 
-  //---------
-  // DEBUG
-  //---------
-  // size_t len;
-  // char *str;
-  // str = bson_as_relaxed_extended_json (action, &len);
-  // LOG(debug) << "DBEUG CLOSE";
-  // LOG(debug) << str;
-  // bson_free (str);
-  //---------
-
   bson_t *opts = BCON_NEW("upsert",  BCON_BOOL(true));
+
   bool r = mongoc_collection_update_one(_collection, selector, action, opts, NULL /* reply */, &error);
 
   // debug
@@ -463,18 +395,31 @@ bool AntipodeMongodb::close_scope(mongoc_client_session_t* session, Cscope cscop
   return r;
 }
 
-Cscope AntipodeMongodb::pull(Cscope cscope) {
+Cscope AntipodeMongodb::barrier(Cscope cscope) {
   bson_t* filter = BCON_NEW ("cscope_id", BCON_UTF8(cscope._id.c_str()));
   bson_t* opts = BCON_NEW ("limit", BCON_INT64(1));
   mongoc_cursor_t* cursor;
 
-  const bson_t* doc;
-  cursor = mongoc_collection_find_with_opts(_collection, filter, opts, NULL);
-  bool cscope_id_visible = mongoc_cursor_next(cursor, &doc);
+  // blocking behaviour
+  while(!cscope._open_branches.empty()) {
+    const bson_t* doc;
+    cursor = mongoc_collection_find_with_opts(_collection, filter, opts, NULL);
+    bool cscope_id_visible = mongoc_cursor_next(cursor, &doc);
 
-  // it might yet not be visible
-  if (cscope_id_visible) {
-    cscope = cscope.update(doc);
+    if (cscope_id_visible) {
+      // -- debug
+      // char* str = bson_as_canonical_extended_json (doc, NULL);
+      // LOG(debug) << " IS_VISIBLE DONE: " << str;
+      // bson_free (str);
+      // --
+
+      // -- Update with new cscope
+      bson_iter_t cscope_iter;
+      if (bson_iter_init_find (&cscope_iter, doc, "object") && BSON_ITER_HOLDS_UTF8 (&cscope_iter)) {
+        std::string cscope_serialized(bson_iter_utf8(&cscope_iter, /* length */ NULL));
+        cscope = Cscope::from_json(cscope_serialized);
+      }
+    }
   }
 
   mongoc_cursor_destroy (cursor);
@@ -482,38 +427,6 @@ Cscope AntipodeMongodb::pull(Cscope cscope) {
   bson_destroy (opts);
 
   return cscope;
-}
-
-void AntipodeMongodb::barrier(Cscope cscope) {
-  _barrier_query(cscope._id);
-}
-
-void AntipodeMongodb::_barrier_query(std::string cscope_id) {
-  //------------
-  // QUERY
-  //------------
-  bson_t* filter = BCON_NEW ("cscope_id", BCON_UTF8(cscope_id.c_str()));
-  bson_t* opts = BCON_NEW ("limit", BCON_INT64(1));
-  mongoc_cursor_t* cursor;
-
-  // blocking behaviour
-  bool cscope_id_visible = false;
-  while(!cscope_id_visible) {
-    const bson_t* doc;
-    cursor = mongoc_collection_find_with_opts(_collection, filter, opts, NULL);
-    cscope_id_visible = mongoc_cursor_next(cursor, &doc);
-
-    // debug
-    if (cscope_id_visible) {
-      // char* str = bson_as_canonical_extended_json (doc, NULL);
-      // LOG(debug) << " IS_VISIBLE DONE: " << str;
-      // bson_free (str);
-    }
-  }
-
-  mongoc_cursor_destroy (cursor);
-  bson_destroy (filter);
-  bson_destroy (opts);
 }
 
 void AntipodeMongodb::_barrier_change_stream(std::string cscope_id) {

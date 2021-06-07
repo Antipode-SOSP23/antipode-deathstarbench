@@ -295,7 +295,8 @@ void PostStorageHandler::StorePost(
     }
 
     // close scope
-    antipode_client->close_scope(session, cscope);
+    cscope = cscope.close_branch("post-storage");
+    antipode_client->close_scope(cscope);
 
     // clean objects
     mongoc_client_session_destroy (session);

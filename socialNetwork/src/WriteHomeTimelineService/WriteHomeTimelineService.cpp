@@ -142,9 +142,7 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
     // gets cscopes with writes by caller
     std::list<std::string> wanted_callers {"post-storage-service"};
 
-    // ok force it without checking first - TODO
-    cscope = antipode_client.pull(cscope);
-    antipode_client.barrier(cscope);
+    cscope = antipode_client.barrier(cscope);
 
     antipode_client.close();
     mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
