@@ -35,11 +35,6 @@ class PostStorageServiceHandler : virtual public PostStorageServiceIf {
     printf("ReadPosts\n");
   }
 
-  bool AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier) {
-    // Your implementation goes here
-    printf("AntipodeCheckReplica\n");
-  }
-
 };
 
 int main(int argc, char **argv) {

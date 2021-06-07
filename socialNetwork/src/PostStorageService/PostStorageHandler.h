@@ -46,8 +46,6 @@ class PostStorageHandler : public PostStorageServiceIf {
   void StorePost(BaseRpcResponse& response, int64_t req_id, const Post &post,
       const std::string& cscope_str, const std::map<std::string, std::string> &carrier) override;
 
-  bool AntipodeCheckReplica(const int64_t post_id, const std::map<std::string, std::string> & carrier) override;
-
   void ReadPost(PostRpcResponse& response, int64_t req_id, int64_t post_id,
                  const std::map<std::string, std::string> &carrier) override;
 
@@ -90,13 +88,10 @@ void PostStorageHandler::StorePost(
   //----------
   // ANTIPODE
   //----------
-
   // force WritHomeTimeline to an error by sleeping
-
   // LOG(debug) << "[ANTIPODE] Sleeping ...";
   // std::this_thread ::sleep_for (std::chrono::milliseconds(100));
   // LOG(debug) << "[ANTIPODE] Done Sleeping!";
-
   //----------
   // ANTIPODE
   //----------
@@ -144,16 +139,10 @@ void PostStorageHandler::StorePost(
 
   bson_t *new_doc = bson_new();
 
-  //----------
-  // ANTIPODE
-  //----------
   // Add object ID so we have the append ID for ANTIPODE
   bson_oid_t oid;
   bson_oid_init (&oid, NULL);
   BSON_APPEND_OID (new_doc, "_id", &oid);
-  //----------
-  // ANTIPODE
-  //----------
 
   BSON_APPEND_INT64(new_doc, "post_id", post.post_id);
   BSON_APPEND_INT64(new_doc, "timestamp", post.timestamp);
@@ -339,100 +328,6 @@ void PostStorageHandler::StorePost(
   response.baggage = GET_CURRENT_BAGGAGE().str();
   DELETE_CURRENT_BAGGAGE();
 }
-
-//----------
-// ANTIPODE
-//----------
-bool PostStorageHandler::AntipodeCheckReplica(
-    const int64_t post_id,
-    const std::map<std::string, std::string> & carrier) {
-  //
-  // This method is called by WriteHomeTimeline replica
-  LOG(debug) << "[ANTIPODE] Start Check Replica on zone '" << _zone << "' for post_id: " << post_id ;
-
-  // Initialize a span
-  TextMapReader reader(carrier);
-  std::map<std::string, std::string> writer_text_map;
-  TextMapWriter writer(writer_text_map);
-  auto parent_span = opentracing::Tracer::Global()->Extract(reader);
-  auto span = opentracing::Tracer::Global()->StartSpan(
-      "AntipodeCheckReplica",
-      { opentracing::ChildOf(parent_span->get()) });
-  opentracing::Tracer::Global()->Inject(span->context(), writer);
-
-  high_resolution_clock::time_point start_antipode_ts = high_resolution_clock::now();
-  uint64_t ts = duration_cast<milliseconds>(start_antipode_ts.time_since_epoch()).count();
-  span->SetTag("poststorage_replicate_start_ts", std::to_string(ts));
-
-  // Check if post is available on MongoDB
-  bool read_post = false;
-  // loop so we retry on errors from mongo or query
-  while(true) {
-    mongoc_client_t *mongodb_client = mongoc_client_pool_pop(_mongodb_client_pool);
-    if (!mongodb_client) {
-      LOG(warning) << "[ANTIPODE] Could not open mongo connection: client";
-      continue;
-    }
-    auto collection = mongoc_client_get_collection(mongodb_client, "post", "post");
-    if (!collection) {
-      mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
-      LOG(warning) << "[ANTIPODE] Could not open mongo connection: collection";
-      continue;
-    }
-
-    bson_t *query = bson_new();
-    BSON_APPEND_INT64(query, "post_id", post_id);
-    mongoc_cursor_t *cursor = mongoc_collection_find_with_opts(
-        collection, query, nullptr, nullptr);
-    const bson_t *doc;
-    read_post = mongoc_cursor_next(cursor, &doc);
-
-    LOG(debug) << "[ANTIPODE] Was post #" << post_id << " found at " << std::getenv("ZONE") << " replica? " << read_post;
-
-    bson_destroy(query);
-    mongoc_cursor_destroy(cursor);
-    mongoc_collection_destroy(collection);
-    mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
-    break;
-  }
-
-  //----------
-  // CENTRALIZED
-  //----------
-  // LOG(debug) << "[ANTIPODE][CENTRALIZED] Checking replica";
-  // auto antipode_oracle_client_wrapper = _antipode_oracle_client_pool->Pop();
-  // if (!antipode_oracle_client_wrapper) {
-  //   ServiceException se;
-  //   se.errorCode = ErrorCode::SE_THRIFT_CONN_ERROR;
-  //   se.message = "[ANTIPODE][CENTRALIZED] Failed to connect to antipode-oracle";
-  //   throw se;
-  // }
-
-  // auto antipode_oracle_client = antipode_oracle_client_wrapper->GetClient();
-  // bool antipode_oracle_response;
-  // try {
-  //   antipode_oracle_response = antipode_oracle_client->MakeVisible(post_id, writer_text_map);
-  //   LOG(debug) << "[ANTIPODE][CENTRALIZED] Post successfuly marked as visible in Oracle with response: " << antipode_oracle_response;
-  // } catch (...) {
-  //   LOG(error) << "[ANTIPODE][CENTRALIZED] Failed to write post visibility to Oracle";
-  //   _antipode_oracle_client_pool->Push(antipode_oracle_client_wrapper);
-  //   throw;
-  // }
-  // _antipode_oracle_client_pool->Push(antipode_oracle_client_wrapper);
-  //----------
-  // CENTRALIZED
-  //----------
-
-  high_resolution_clock::time_point end_antipode_ts = high_resolution_clock::now();
-  ts = duration_cast<milliseconds>(end_antipode_ts.time_since_epoch()).count();
-  span->SetTag("poststorage_replicate_end_ts", std::to_string(ts));
-  span->Finish();
-
-  return read_post;
-};
-//----------
-// ANTIPODE
-//----------
 
 void PostStorageHandler::ReadPost(
     PostRpcResponse& response,

@@ -46,17 +46,17 @@ uint32_t AntipodeOracle_MakeVisible_args::read(::apache::thrift::protocol::TProt
         if (ftype == ::apache::thrift::protocol::T_MAP) {
           {
             this->carrier.clear();
-            uint32_t _size419;
-            ::apache::thrift::protocol::TType _ktype420;
-            ::apache::thrift::protocol::TType _vtype421;
-            xfer += iprot->readMapBegin(_ktype420, _vtype421, _size419);
-            uint32_t _i423;
-            for (_i423 = 0; _i423 < _size419; ++_i423)
+            uint32_t _size410;
+            ::apache::thrift::protocol::TType _ktype411;
+            ::apache::thrift::protocol::TType _vtype412;
+            xfer += iprot->readMapBegin(_ktype411, _vtype412, _size410);
+            uint32_t _i414;
+            for (_i414 = 0; _i414 < _size410; ++_i414)
             {
-              std::string _key424;
-              xfer += iprot->readString(_key424);
-              std::string& _val425 = this->carrier[_key424];
-              xfer += iprot->readString(_val425);
+              std::string _key415;
+              xfer += iprot->readString(_key415);
+              std::string& _val416 = this->carrier[_key415];
+              xfer += iprot->readString(_val416);
             }
             xfer += iprot->readMapEnd();
           }
@@ -89,11 +89,11 @@ uint32_t AntipodeOracle_MakeVisible_args::write(::apache::thrift::protocol::TPro
   xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 2);
   {
     xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->carrier.size()));
-    std::map<std::string, std::string> ::const_iterator _iter426;
-    for (_iter426 = this->carrier.begin(); _iter426 != this->carrier.end(); ++_iter426)
+    std::map<std::string, std::string> ::const_iterator _iter417;
+    for (_iter417 = this->carrier.begin(); _iter417 != this->carrier.end(); ++_iter417)
     {
-      xfer += oprot->writeString(_iter426->first);
-      xfer += oprot->writeString(_iter426->second);
+      xfer += oprot->writeString(_iter417->first);
+      xfer += oprot->writeString(_iter417->second);
     }
     xfer += oprot->writeMapEnd();
   }
@@ -121,11 +121,11 @@ uint32_t AntipodeOracle_MakeVisible_pargs::write(::apache::thrift::protocol::TPr
   xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 2);
   {
     xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>((*(this->carrier)).size()));
-    std::map<std::string, std::string> ::const_iterator _iter427;
-    for (_iter427 = (*(this->carrier)).begin(); _iter427 != (*(this->carrier)).end(); ++_iter427)
+    std::map<std::string, std::string> ::const_iterator _iter418;
+    for (_iter418 = (*(this->carrier)).begin(); _iter418 != (*(this->carrier)).end(); ++_iter418)
     {
-      xfer += oprot->writeString(_iter427->first);
-      xfer += oprot->writeString(_iter427->second);
+      xfer += oprot->writeString(_iter418->first);
+      xfer += oprot->writeString(_iter418->second);
     }
     xfer += oprot->writeMapEnd();
   }
@@ -302,17 +302,17 @@ uint32_t AntipodeOracle_IsVisible_args::read(::apache::thrift::protocol::TProtoc
         if (ftype == ::apache::thrift::protocol::T_MAP) {
           {
             this->carrier.clear();
-            uint32_t _size428;
-            ::apache::thrift::protocol::TType _ktype429;
-            ::apache::thrift::protocol::TType _vtype430;
-            xfer += iprot->readMapBegin(_ktype429, _vtype430, _size428);
-            uint32_t _i432;
-            for (_i432 = 0; _i432 < _size428; ++_i432)
+            uint32_t _size419;
+            ::apache::thrift::protocol::TType _ktype420;
+            ::apache::thrift::protocol::TType _vtype421;
+            xfer += iprot->readMapBegin(_ktype420, _vtype421, _size419);
+            uint32_t _i423;
+            for (_i423 = 0; _i423 < _size419; ++_i423)
             {
-              std::string _key433;
-              xfer += iprot->readString(_key433);
-              std::string& _val434 = this->carrier[_key433];
-              xfer += iprot->readString(_val434);
+              std::string _key424;
+              xfer += iprot->readString(_key424);
+              std::string& _val425 = this->carrier[_key424];
+              xfer += iprot->readString(_val425);
             }
             xfer += iprot->readMapEnd();
           }
@@ -345,11 +345,11 @@ uint32_t AntipodeOracle_IsVisible_args::write(::apache::thrift::protocol::TProto
   xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 2);
   {
     xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->carrier.size()));
-    std::map<std::string, std::string> ::const_iterator _iter435;
-    for (_iter435 = this->carrier.begin(); _iter435 != this->carrier.end(); ++_iter435)
+    std::map<std::string, std::string> ::const_iterator _iter426;
+    for (_iter426 = this->carrier.begin(); _iter426 != this->carrier.end(); ++_iter426)
     {
-      xfer += oprot->writeString(_iter435->first);
-      xfer += oprot->writeString(_iter435->second);
+      xfer += oprot->writeString(_iter426->first);
+      xfer += oprot->writeString(_iter426->second);
     }
     xfer += oprot->writeMapEnd();
   }
@@ -377,11 +377,11 @@ uint32_t AntipodeOracle_IsVisible_pargs::write(::apache::thrift::protocol::TProt
   xfer += oprot->writeFieldBegin("carrier", ::apache::thrift::protocol::T_MAP, 2);
   {
     xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>((*(this->carrier)).size()));
-    std::map<std::string, std::string> ::const_iterator _iter436;
-    for (_iter436 = (*(this->carrier)).begin(); _iter436 != (*(this->carrier)).end(); ++_iter436)
+    std::map<std::string, std::string> ::const_iterator _iter427;
+    for (_iter427 = (*(this->carrier)).begin(); _iter427 != (*(this->carrier)).end(); ++_iter427)
     {
-      xfer += oprot->writeString(_iter436->first);
-      xfer += oprot->writeString(_iter436->second);
+      xfer += oprot->writeString(_iter427->first);
+      xfer += oprot->writeString(_iter427->second);
     }
     xfer += oprot->writeMapEnd();
   }

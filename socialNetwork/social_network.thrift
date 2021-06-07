@@ -226,11 +226,6 @@ service PostStorageService {
     2: list<i64> post_ids,
     3: map<string, string> carrier
   ) throws (1: ServiceException se)
-
-  bool AntipodeCheckReplica(
-    1: i64 post_id,
-    2: map<string, string> carrier
-  ) throws (1: ServiceException se)
 }
 
 service HomeTimelineService {
