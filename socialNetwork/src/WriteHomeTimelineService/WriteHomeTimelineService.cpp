@@ -99,7 +99,7 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
     std::vector<int64_t> user_mentions_id = msg_json["user_mentions_id"];
 
     //----------
-    // ANTIPODE
+    // -ANTIPODE
     //----------
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
     bool check = false;
@@ -158,7 +158,7 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
     span->SetTag("wht_antipode_duration", std::to_string(time_span.count()));
 
     //----------
-    // ANTIPODE
+    // -ANTIPODE
     //----------
 
     // Find followers of the user
@@ -363,13 +363,13 @@ int main(int argc, char *argv[]) {
   }
 
   //----------
-  // ANTIPODE
+  // -ANTIPODE
   //----------
   // init antipode tables
   // std::string mongodb_uri = mongodb_dsb_uri(config_json, "post-storage", zone);
   // AntipodeMongodb::init_cscope_listener(mongodb_uri, "post");
   //----------
-  // ANTIPODE
+  // -ANTIPODE
   //----------
 
   ClientPool<ThriftClient<SocialGraphServiceClient>>

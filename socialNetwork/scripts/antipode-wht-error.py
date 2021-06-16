@@ -102,12 +102,13 @@ def _read_user_timeline(user_id):
   else:
     print(f"[Read User Timeline] ERROR {r.status_code}, {r.reason}")
 
+user_id = 962
+# user_id = random.randrange(1, 962)
+follower_id = 624
 
 #---------
 # Create main user
 #
-# user_id = random.randrange(1, 962)
-user_id = 962
 _register_user(user_id)
 
 
@@ -128,7 +129,6 @@ _register_user(user_id)
 #   _follow_user(fid, user_id)
 #   follower_ids.append(fid)
 
-follower_id = 624
 _register_user(follower_id)
 _follow_user(user_id, follower_id)
 
@@ -137,7 +137,7 @@ _follow_user(user_id, follower_id)
 #
 _create_post(user_id)
 
-time.sleep(30)
+# time.sleep(30)
 
 #---------
 # Read user timeline

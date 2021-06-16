@@ -1,13 +1,19 @@
 #!/bin/bash
 echo "*********************************"
-echo "Build RabbitMQ Federation"
+echo "Wait for RabbitMQ nodes"
 echo "*********************************"
-
-sleep 60 | echo "Sleeping"
-
 # test connection with
 # rabbitmqctl -n rabbit@<server> environment
+dockerize -wait tcp://write-home-timeline-rabbitmq-us:5672 -wait tcp://write-home-timeline-rabbitmq-eu:5672 -wait-retry-interval 30s echo "[INFO] write-home-timeline-rabbitmq ready!"
+rabbitmqctl -n rabbit@write-home-timeline-rabbitmq-us await_startup
+rabbitmqctl -n rabbit@write-home-timeline-rabbitmq-eu await_startup
+echo "*********************************"
+echo "RabbitMQ nodes READY!"
+echo "*********************************"
 
+echo "*********************************"
+echo "Build RabbitMQ Federation"
+echo "*********************************"
 # federate write-home-timeline-rabbitmq-us to write-home-timeline-rabbitmq-eu
 config='{"max-hops": 1, "uri": ["amqp://admin:admin@write-home-timeline-rabbitmq-eu"]}'
 rabbitmqctl -n rabbit@write-home-timeline-rabbitmq-us set_parameter federation-upstream cluster1 "${config}"
@@ -37,4 +43,15 @@ rabbitmqctl -n rabbit@write-home-timeline-rabbitmq-eu set_policy ha-federation "
 
 echo "*********************************"
 echo "RabbitMQ Federation DONE!"
+echo "*********************************"
+
+
+echo "*********************************"
+echo "Opening HTTP:8000 server for dockerize coordination"
+echo "*********************************"
+
+python -m http.server
+
+echo "*********************************"
+echo "HTTP:8000 server for dockerize coordination DONE!"
 echo "*********************************"

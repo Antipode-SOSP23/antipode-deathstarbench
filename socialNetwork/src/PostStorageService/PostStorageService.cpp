@@ -43,8 +43,7 @@ int main(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  memcached_client_pool =
-      init_memcached_client_pool(config_json, "post-storage", 32, 1024);
+  memcached_client_pool = init_memcached_client_pool(config_json, "post-storage", 32, 1024);
 
   int port = config_json[service_name]["port"];
 
@@ -96,13 +95,13 @@ int main(int argc, char *argv[]) {
     }
 
     //----------
-    // ANTIPODE
+    // -ANTIPODE
     //----------
     // init antipode tables
     std::string mongodb_uri = mongodb_dsb_uri(config_json, "post-storage", zone);
     AntipodeMongodb::init_store(mongodb_uri, "post");
     //----------
-    // ANTIPODE
+    // -ANTIPODE
     //----------
   }
   mongoc_client_pool_push(mongodb_client_pool, mongodb_client);
@@ -110,16 +109,9 @@ int main(int argc, char *argv[]) {
   int antipode_oracle_port = config_json["antipode-oracle"]["port"];
   std::string antipode_oracle_addr = config_json["antipode-oracle"]["addr"];
 
-  int write_home_timeline_service_port = config_json["write-home-timeline-service-eu"]["port"];
-  std::string write_home_timeline_service_addr = config_json["write-home-timeline-service-eu"]["addr"];
-
   ClientPool<ThriftClient<AntipodeOracleClient>>
       antipode_oracle_client_pool("antipode-oracle", antipode_oracle_addr,
                                 antipode_oracle_port, 0, 10000, 1000);
-
-  ClientPool<ThriftClient<WriteHomeTimelineServiceClient>>
-      write_home_timeline_service_client_pool("write-home-timeline-service-eu", write_home_timeline_service_addr,
-                                write_home_timeline_service_port, 0, 10000, 1000);
 
   TThreadedServer server (
       std::make_shared<PostStorageServiceProcessor>(
@@ -127,7 +119,6 @@ int main(int argc, char *argv[]) {
               memcached_client_pool,
               mongodb_client_pool,
               &antipode_oracle_client_pool,
-              &write_home_timeline_service_client_pool,
               zone)),
       std::make_shared<TServerSocket>("0.0.0.0", port),
       std::make_shared<TFramedTransportFactory>(),

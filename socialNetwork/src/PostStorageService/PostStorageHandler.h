@@ -39,7 +39,6 @@ class PostStorageHandler : public PostStorageServiceIf {
       memcached_pool_st *,
       mongoc_client_pool_t *,
       ClientPool<ThriftClient<AntipodeOracleClient>> *,
-      ClientPool<ThriftClient<WriteHomeTimelineServiceClient>> *,
       std::string);
   ~PostStorageHandler() override = default;
 
@@ -57,7 +56,6 @@ class PostStorageHandler : public PostStorageServiceIf {
   memcached_pool_st *_memcached_client_pool;
   mongoc_client_pool_t *_mongodb_client_pool;
   ClientPool<ThriftClient<AntipodeOracleClient>> *_antipode_oracle_client_pool;
-  ClientPool<ThriftClient<WriteHomeTimelineServiceClient>> *_write_home_timeline_client_pool;
   std::string _zone;
   std::exception_ptr _post_storage_teptr;
 };
@@ -66,12 +64,10 @@ PostStorageHandler::PostStorageHandler(
     memcached_pool_st *memcached_client_pool,
     mongoc_client_pool_t *mongodb_client_pool,
     ClientPool<social_network::ThriftClient<AntipodeOracleClient>> *antipode_oracle_client_pool,
-    ClientPool<social_network::ThriftClient<WriteHomeTimelineServiceClient>> *write_home_timeline_client_pool,
     std::string zone) {
   _memcached_client_pool = memcached_client_pool;
   _mongodb_client_pool = mongodb_client_pool;
   _antipode_oracle_client_pool = antipode_oracle_client_pool;
-  _write_home_timeline_client_pool = write_home_timeline_client_pool;
   _zone = zone;
 }
 
@@ -86,14 +82,18 @@ void PostStorageHandler::StorePost(
     const std::map<std::string, std::string> &carrier) {
 
   //----------
-  // ANTIPODE
+  // -ANTIPODE
   //----------
+  high_resolution_clock::time_point ts;
+  duration<double, std::milli> time_diff;
+  uint64_t ts_int;
+
   // force WritHomeTimeline to an error by sleeping
   // LOG(debug) << "[ANTIPODE] Sleeping ...";
   // std::this_thread ::sleep_for (std::chrono::milliseconds(100));
   // LOG(debug) << "[ANTIPODE] Done Sleeping!";
   //----------
-  // ANTIPODE
+  // -ANTIPODE
   //----------
 
   auto baggage_it = carrier.find("baggage");
@@ -209,17 +209,14 @@ void PostStorageHandler::StorePost(
       "MongoInsertPost", { opentracing::ChildOf(&span->context()) });
 
   //----------
-  // ANTIPODE
+  // -ANTIPODE
   //----------
   // Replacing the mongoc_collection_insert_one with a transaction so we can store the
   // ctx_id on Antipode table
   //
-  // original:
-  // bool inserted = mongoc_collection_insert_one (collection, new_doc, nullptr, nullptr, &error);
-  //
   // ref: http://mongoc.org/libmongoc/1.14.0/mongoc_transaction_opt_t.html#
 
-  /* Step 1: Start a client session. */
+  // Step 1: Start a client session.
   mongoc_client_session_t *session = NULL;
   session = mongoc_client_start_session (mongodb_client, NULL /* opts */, &error);
   if (!session) {
@@ -233,12 +230,12 @@ void PostStorageHandler::StorePost(
     throw se;
   }
 
-  /* Step 2: Start Antipode client */
+  // Step 2: Start Antipode client
   AntipodeMongodb* antipode_client = new AntipodeMongodb(mongodb_client, "post");
   Cscope cscope = Cscope::from_json(cscope_str);
 
-  /* Step 3: Use mongoc_client_session_with_transaction to start a transaction,
-  * execute the callback, and commit (or abort on error). */
+  // Step 3: Use mongoc_client_session_with_transaction to start a transaction
+  // execute the callback, and commit (or abort on error)
   while(true) {
     bool r;
     r = mongoc_client_session_start_transaction(session, NULL /* txn_opts */, &error);
@@ -247,37 +244,36 @@ void PostStorageHandler::StorePost(
       continue;
     }
 
-    /* Step 4: Insert objects into transaction
-    * insert post into the transaction */
+    // Step 4: Insert objects into transaction insert post into the transaction
     r = mongoc_collection_insert_one (collection, new_doc, nullptr, nullptr, &error);
     if (!r) {
       LOG(error) << "Error: Failed to insert post to MongoDB: " << error.message;
       continue;
     }
 
-    /* insert cscope_id into the transaction */
+    // insert cscope_id into the transaction
     // antipode_client->inject(session, cscope_id, "post-storage-service", "post-storage", &oid);
     char append_id[25];
     bson_oid_to_string(&oid, append_id);
     cscope = cscope.append(std::string(append_id), "post-storage-service", "post-storage");
 
-    /* in case of transient errors, retry for 5 seconds to commit transaction */
+    // in case of transient errors, retry for 5 seconds to commit transaction
     bson_t reply = BSON_INITIALIZER;
     int64_t start = bson_get_monotonic_time ();
     while (bson_get_monotonic_time () - start < 5 * 1000 * 1000) {
       bson_destroy (&reply);
       r = mongoc_client_session_commit_transaction (session, &reply, &error);
       if (r) {
-        /* success */
+        // success
         bson_destroy (&reply);
         break;
       } else {
         MONGOC_ERROR ("Warning: commit failed: %s", error.message);
         if (mongoc_error_has_label (&reply, "UnknownTransactionCommitResult")) {
-          /* try again to commit */
+          // try again to commit
           continue;
         }
-        /* unrecoverable error trying to commit */
+        // unrecoverable error trying to commit
         bson_destroy (&reply);
         break;
       }
@@ -291,10 +287,12 @@ void PostStorageHandler::StorePost(
     mongoc_client_session_destroy (session);
     break;
   }
+  //----------
+  // -ANTIPODE
+  //----------
 
-  //----------
-  // ANTIPODE
-  //----------
+  // original:
+  // bool inserted = mongoc_collection_insert_one (collection, new_doc, nullptr, nullptr, &error);
 
   insert_span->Finish();
   // XTRACE("MongoInsertPost complete");
@@ -316,9 +314,6 @@ void PostStorageHandler::StorePost(
   mongoc_client_pool_push (_mongodb_client_pool, mongodb_client);
 
   // eval
-  high_resolution_clock::time_point ts;
-  uint64_t ts_int;
-
   ts = high_resolution_clock::now();
   ts_int = duration_cast<milliseconds>(ts.time_since_epoch()).count();
   span->SetTag("poststorage_post_written_ts", std::to_string(ts_int));

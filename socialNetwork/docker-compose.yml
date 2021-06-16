@@ -17,7 +17,7 @@ services:
     hostname: social-graph-service
     # ports:
       # - 10000:9090
-    restart: always
+    restart: 'no'
     entrypoint: SocialGraphService
     deploy:
       placement:
@@ -29,7 +29,7 @@ services:
     command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata"
     # ports:
       # - 27018:27017
-    # restart: always
+    # restart: 'no'
     volumes:
       - type: tmpfs
         target: /ramdata
@@ -44,7 +44,7 @@ services:
     hostname: social-graph-redis
     # ports:
       # - 6380:6379
-    restart: always
+    restart: 'no'
     deploy:
       placement:
         constraints: [node.hostname == node02]
@@ -54,10 +54,8 @@ services:
     hostname: write-home-timeline-service-eu
     environment:
       - ZONE=eu
-    restart: always
-    entrypoint: WriteHomeTimelineService
-    depends_on:
-      - write-home-timeline-rabbitmq-eu
+    restart: 'no'
+    command: dockerize -wait tcp://write-home-timeline-rabbitmq-eu:5672 -wait-retry-interval 10s -timeout 300s WriteHomeTimelineService
     deploy:
       placement:
         constraints: [node.hostname == node02]
@@ -67,10 +65,8 @@ services:
     hostname: write-home-timeline-service-us
     environment:
       - ZONE=us
-    restart: always
-    entrypoint: WriteHomeTimelineService
-    depends_on:
-      - write-home-timeline-rabbitmq-us
+    restart: 'no'
+    command: dockerize -wait tcp://write-home-timeline-rabbitmq-us:5672 -wait-retry-interval 10s -timeout 300s WriteHomeTimelineService
     deploy:
       placement:
         constraints: [node.hostname == node02]
@@ -85,7 +81,7 @@ services:
     ports:
       - 15672:15672
       - 5672:5672
-    restart: always
+    restart: 'no'
     volumes:
       - ./config/rabbitmq/write-home-timeline-rabbitmq-eu-definitions.json:/etc/rabbitmq/definitions.json:ro
       - ./config/rabbitmq/write-home-timeline-rabbitmq-eu.conf:/etc/rabbitmq/rabbitmq.conf:ro
@@ -104,13 +100,11 @@ services:
     ports:
       - 15673:15672
       - 5673:5672
-    restart: always
+    restart: 'no'
     volumes:
       - ./config/rabbitmq/write-home-timeline-rabbitmq-us-definitions.json:/etc/rabbitmq/definitions.json:ro
       - ./config/rabbitmq/write-home-timeline-rabbitmq-us.conf:/etc/rabbitmq/rabbitmq.conf:ro
       - ./config/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins
-    depends_on:
-      - write-home-timeline-rabbitmq-eu
     deploy:
       placement:
         constraints: [node.hostname == node02]
@@ -121,7 +115,7 @@ services:
     command: redis-server --port 6379
     # ports:
       # 6381:6379
-    restart: always
+    restart: 'no'
     deploy:
       placement:
         constraints: [node.hostname == node02]
@@ -135,7 +129,7 @@ services:
     # ports:
       # - 6381:6379
     command: redis-server --slaveof home-timeline-redis-eu 6379 --replica-read-only no
-    restart: always
+    restart: 'no'
     links:
       - home-timeline-redis-eu
     deploy:
@@ -147,7 +141,7 @@ services:
     hostname: home-timeline-service
     # ports:
       # - 10010:9090
-    restart: always
+    restart: 'no'
     entrypoint: HomeTimelineService
     deploy:
       placement:
@@ -164,20 +158,19 @@ services:
       - MASTER=true
     # ports:
     #   - 10002:9090
-    restart: always
-    entrypoint: PostStorageService
-    depends_on:
-      - post-storage-mongodb-eu
+    restart: 'always'
+    command: dockerize -wait tcp://post-storage-mongodb-setup:8000 -wait tcp://post-storage-mongodb-eu:27017 -wait-retry-interval 10s -timeout 300s PostStorageService
     deploy:
       placement:
         constraints: [node.hostname == node04]
 
   post-storage-memcached-eu:
     image: memcached
+    command: memcached -m 1024
     hostname: post-storage-memcached-eu
     # ports:
       # - 11212:11211
-    restart: always
+    restart: 'no'
     deploy:
       placement:
         constraints: [node.hostname == node04]
@@ -186,10 +179,10 @@ services:
     image: mongo
     hostname: post-storage-mongodb-eu
     # command: --replSet rs0 --oplogSize 128
-    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata  --replSet rs0 --oplogSize 128"
+    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata --syncdelay 0 --journalCommitInterval 500 --wiredTigerCacheSizeGB 1 --replSet rs0 --oplogSize 128"
     # ports:
       # - 27018:27017
-    # restart: always
+    # restart: 'no'
     volumes:
       - type: tmpfs
         target: /ramdata
@@ -207,23 +200,22 @@ services:
     hostname: post-storage-service-us
     # ports:
       # - 10002:9090
-    restart: always
-    entrypoint: PostStorageService
+    restart: 'always'
+    command: dockerize -wait tcp://post-storage-mongodb-setup:8000 -wait tcp://post-storage-mongodb-us:27017 -wait-retry-interval 10s -timeout 300s PostStorageService
     environment:
       - ZONE=us
       - MASTER=false
-    depends_on:
-      - post-storage-mongodb-us
     deploy:
       placement:
         constraints: [node.hostname == node06]
 
   post-storage-memcached-us:
     image: memcached
+    command: memcached -m 1024
     hostname: post-storage-memcached-us
     # ports:
       # - 11212:11211
-    restart: always
+    restart: 'no'
     deploy:
       placement:
         constraints: [node.hostname == node06]
@@ -232,10 +224,10 @@ services:
     image: mongo
     hostname: post-storage-mongodb-us
     # command: --replSet rs0 --oplogSize 128
-    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata --replSet rs0 --oplogSize 128"
+    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata --syncdelay 0 --journalCommitInterval 500 --wiredTigerCacheSizeGB 1 --replSet rs0 --oplogSize 128"
     # ports:
       # - 27018:27017
-    # restart: always
+    # restart: 'no'
     volumes:
       - type: tmpfs
         target: /ramdata
@@ -253,10 +245,8 @@ services:
     hostname: user-timeline-service
     # ports:
       # - 10003:9090
-    restart: always
+    restart: 'no'
     entrypoint: UserTimelineService
-    depends_on:
-      - user-timeline-mongodb
     deploy:
       placement:
         constraints: [node.hostname == node11]
@@ -266,7 +256,7 @@ services:
     hostname: user-timeline-redis
     # ports:
       # - 6383:6379
-    restart: always
+    restart: 'no'
     deploy:
       placement:
         constraints: [node.hostname == node11]
@@ -276,10 +266,10 @@ services:
     # `--slowms 999999`: to avoid spammy "slow query" messages should be using logLevel config but that would require custom docker image
     # `--dbpath`: for an in-memory database
     # `--nojournal`: returning some errors - skipping for now
-    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata"
+    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata  --syncdelay 0 --journalCommitInterval 500 --wiredTigerCacheSizeGB 1"
     # ports:
       # - 27018:27017
-    # restart: always
+    # restart: 'no'
     volumes:
       - type: tmpfs
         target: /ramdata
@@ -294,7 +284,7 @@ services:
     hostname: compose-post-redis
     # ports:
       # - 6382:6379
-    restart: always
+    restart: 'no'
     deploy:
       placement:
         constraints: [node.hostname == node11]
@@ -306,10 +296,8 @@ services:
       - ZONE=eu
     # ports:
       # - 10001:9090
-    restart: always
-    entrypoint: ComposePostService
-    depends_on:
-      - write-home-timeline-rabbitmq-eu
+    restart: 'no'
+    command: dockerize -wait tcp://write-home-timeline-rabbitmq-setup:8000 -wait tcp://post-storage-service-eu:9090 -wait-retry-interval 10s -timeout 300s ComposePostService
     deploy:
       placement:
         constraints: [node.hostname == node11]
@@ -319,18 +307,20 @@ services:
     hostname: url-shorten-service
     # ports:
       # - 10004:9090
-    restart: always
+    restart: 'always'
     entrypoint: UrlShortenService
+    command: dockerize -wait tcp://compose-post-service:9090 -wait-retry-interval 10s -timeout 300s UrlShortenService
     deploy:
       placement:
         constraints: [node.hostname == node11]
 
   url-shorten-memcached:
     image: memcached
+    command: memcached -m 1024
     hostname: url-shorten-memcached
     # ports:
       # - 11213:11211
-    restart: always
+    restart: 'no'
     deploy:
       placement:
         constraints: [node.hostname == node11]
@@ -338,10 +328,10 @@ services:
   url-shorten-mongodb:
     image: mongo
     hostname: url-shorten-mongodb
-    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata"
+    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata --syncdelay 0 --journalCommitInterval 500 --wiredTigerCacheSizeGB 1"
     # ports:
       # - 27018:27017
-    # restart: always
+    # restart: 'no'
     volumes:
       - type: tmpfs
         target: /ramdata
@@ -356,18 +346,19 @@ services:
     hostname: user-service
     # ports:
       # - 10005:9090
-    restart: always
-    entrypoint: UserService
+    restart: 'no'
+    command: dockerize -wait tcp://compose-post-service:9090 -wait-retry-interval 10s -timeout 300s UserService
     deploy:
       placement:
         constraints: [node.hostname == node11]
 
   user-memcached:
     image: memcached
+    command: memcached -m 1024
     hostname: user-memcached
     # ports:
       # - 11214:11211
-    restart: always
+    restart: 'no'
     deploy:
       placement:
         constraints: [node.hostname == node11]
@@ -375,10 +366,10 @@ services:
   user-mongodb:
     image: mongo
     hostname: user-mongodb
-    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata"
+    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata --syncdelay 0 --journalCommitInterval 500 --wiredTigerCacheSizeGB 1"
     # ports:
       # - 27018:27017
-    # restart: always
+    # restart: 'no'
     volumes:
       - type: tmpfs
         target: /ramdata
@@ -393,18 +384,19 @@ services:
     hostname: media-service
     # ports:
       # - 10006:9090
-    restart: always
-    entrypoint: MediaService
+    restart: 'no'
+    command: dockerize -wait tcp://compose-post-service:9090 -wait-retry-interval 10s -timeout 300s MediaService
     deploy:
       placement:
         constraints: [node.hostname == node11]
 
   media-memcached:
     image: memcached
+    command: memcached -m 1024
     hostname: media-memcached
     # ports:
       # - 11215:11211
-    restart: always
+    restart: 'no'
     deploy:
       placement:
         constraints: [node.hostname == node11]
@@ -412,10 +404,10 @@ services:
   media-mongodb:
     image: mongo
     hostname: media-mongodb
-    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata"
+    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata --syncdelay 0 --journalCommitInterval 500 --wiredTigerCacheSizeGB 1"
     # ports:
       # - 27018:27017
-    # restart: always
+    # restart: 'no'
     volumes:
       - type: tmpfs
         target: /ramdata
@@ -430,7 +422,7 @@ services:
     hostname: media-frontend
     ports:
       - 8081:8080
-    restart: always
+    restart: 'no'
     volumes:
       - ./media-frontend/lua-scripts:/usr/local/openresty/nginx/lua-scripts
       - ./media-frontend/conf/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
@@ -443,8 +435,8 @@ services:
     hostname: text-service
     # ports:
       # - 10007:9090
-    restart: always
-    entrypoint: TextService
+    restart: 'no'
+    command: dockerize -wait tcp://url-shorten-service:9090 -wait tcp://user-mention-service:9090 -wait tcp://compose-post-service:9090 -wait-retry-interval 10s -timeout 300s TextService
     deploy:
       placement:
         constraints: [node.hostname == node11]
@@ -454,8 +446,8 @@ services:
     hostname: unique-id-service
     # ports:
       # - 10008:9090
-    restart: always
-    entrypoint: UniqueIdService
+    restart: 'no'
+    command: dockerize -wait tcp://compose-post-service:9090 -wait-retry-interval 10s -timeout 300s UniqueIdService
     deploy:
       placement:
         constraints: [node.hostname == node11]
@@ -465,7 +457,7 @@ services:
     hostname: user-mention-service
     # ports:
       # - 10009:9090
-    restart: always
+    restart: 'always'
     entrypoint: UserMentionService
     deploy:
       placement:
@@ -479,7 +471,7 @@ services:
     hostname: antipode-oracle
     # ports:
       # - 10001:9090
-    restart: always
+    restart: 'no'
     entrypoint: /usr/local/bin/AntipodeOracle
     deploy:
       placement:
@@ -493,7 +485,7 @@ services:
     hostname: nginx-thrift
     ports:
       - 8080:8080
-    restart: always
+    restart: 'no'
     volumes:
       - ./nginx-web-server/lua-scripts:/usr/local/openresty/nginx/lua-scripts
       - ./nginx-web-server/pages:/usr/local/openresty/nginx/pages
@@ -512,7 +504,7 @@ services:
     hostname: nginx-thrift
     ports:
       - 8082:8080
-    restart: always
+    restart: 'no'
     volumes:
       - ./nginx-web-server/lua-scripts:/usr/local/openresty/nginx/lua-scripts
       - ./nginx-web-server/pages:/usr/local/openresty/nginx/pages
@@ -537,7 +529,7 @@ services:
       - 16686:16686
       # - 14268:14268
       # - 9411:9411
-    restart: always
+    restart: 'no'
     environment:
       - COLLECTOR_ZIPKIN_HTTP_PORT=9411
     deploy:
@@ -550,7 +542,7 @@ services:
     ports:
       - 4080:4080
       - 5563:5563
-    restart: always
+    restart: 'no'
     # disable logging for this container - too spammy
     logging:
       driver: none
@@ -560,7 +552,7 @@ services:
 
   mongodb-admin:
     image: mrvautin/adminmongo
-    restart: always
+    restart: 'no'
     environment:
       - HOST=0.0.0.0
     ports:
@@ -571,9 +563,6 @@ services:
 
   post-storage-mongodb-setup:
     image: mongodb-setup
-    depends_on:
-      - post-storage-mongodb-eu
-      - post-storage-mongodb-us
     restart: 'no'
     deploy:
       placement:
@@ -585,9 +574,6 @@ services:
 
   write-home-timeline-rabbitmq-setup:
     image: rabbitmq-setup
-    depends_on:
-      - write-home-timeline-rabbitmq-eu
-      - write-home-timeline-rabbitmq-us
     environment:
       RABBITMQ_ERLANG_COOKIE: "WRITE-HOME-TIMELINE-RABBITMQ"
     restart: 'no'

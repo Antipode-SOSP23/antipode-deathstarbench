@@ -10,6 +10,9 @@
 #include <cpp_redis/cpp_redis>
 #include <nlohmann/json.hpp>
 
+#include <boost/asio/thread_pool.hpp>
+#include <boost/asio/post.hpp>
+
 #include "../../gen-cpp/ComposePostService.h"
 #include "../../gen-cpp/PostStorageService.h"
 #include "../../gen-cpp/UserTimelineService.h"
@@ -29,11 +32,13 @@
 using namespace antipode;
 
 namespace social_network {
+
 using json = nlohmann::json;
 using std::chrono::milliseconds;
 using std::chrono::duration_cast;
 using std::chrono::system_clock;
 using std::chrono::high_resolution_clock;
+using std::chrono::duration;
 
 
 class ComposePostHandler : public ComposePostServiceIf {
@@ -118,6 +123,10 @@ ComposePostHandler::ComposePostHandler(
   _zone = zone;
   _interest_zones = interest_zones;
 }
+
+// Launch the pool with as much threads as cores
+int num_threads = std::thread::hardware_concurrency() * 8;
+boost::asio::thread_pool compose_and_upload_pool(num_threads);
 
 void ComposePostHandler::UploadCreator(
     BaseRpcResponse& response,
@@ -706,41 +715,59 @@ void ComposePostHandler::_ComposeAndUpload(
   // XTRACE("Compose Post complete");
   span->SetTag("composepost_id", post.post_id);
 
+  high_resolution_clock::time_point ts;
+  duration<double, std::milli> time_diff;
+
+  high_resolution_clock::time_point start_ts = high_resolution_clock::now();
+
   //----------
-  // ANTIPODE
+  // -ANTIPODE
   //----------
   Cscope cscope = antipode::Cscope("post-storage");
   cscope = cscope.open_branch("post-storage");
   //----------
-  // ANTIPODE
+  // -ANTIPODE
   //----------
+
+  ts = high_resolution_clock::now();
+  time_diff = ts - start_ts;
+  LOG(debug) << "AFTER CSCOPE: " << std::to_string(time_diff.count());
 
   // Upload the post
   // XTRACE("Upload Post start");
   Baggage upload_post_helper_baggage = BRANCH_CURRENT_BAGGAGE();
   std::promise<Baggage> upload_post_promise;
   std::future<Baggage> upload_post_future = upload_post_promise.get_future();
-  std::thread upload_post_worker(&ComposePostHandler::_UploadPostHelper,
-                                   this, req_id, std::ref(post), std::ref(cscope), std::ref(carrier), std::ref(upload_post_helper_baggage), std::move(upload_post_promise));
+  // std::thread upload_post_worker(&ComposePostHandler::_UploadPostHelper, this, req_id, std::ref(post), std::ref(cscope), std::ref(carrier), std::ref(upload_post_helper_baggage), std::move(upload_post_promise));
+  _UploadPostHelper(req_id, post, cscope, carrier, upload_post_helper_baggage, std::move(upload_post_promise));
+
+  ts = high_resolution_clock::now();
+  time_diff = ts - start_ts;
+  LOG(debug) << "AFTER upload_post_helper_baggage: " << std::to_string(time_diff.count());
 
   Baggage upload_user_timeline_helper_baggage = BRANCH_CURRENT_BAGGAGE();
   std::promise<Baggage> upload_user_promise;
   std::future<Baggage> upload_user_future = upload_user_promise.get_future();
-  std::thread upload_user_timeline_worker(
-      &ComposePostHandler::_UploadUserTimelineHelper, this, req_id,
-      post.post_id, post.creator.user_id, post.timestamp, std::ref(carrier), std::ref(upload_user_timeline_helper_baggage), std::move(upload_user_promise));
+  // std::thread upload_user_timeline_worker(&ComposePostHandler::_UploadUserTimelineHelper, this, req_id, post.post_id, post.creator.user_id, post.timestamp, std::ref(carrier), std::ref(upload_user_timeline_helper_baggage), std::move(upload_user_promise));
+  _UploadUserTimelineHelper(req_id, post.post_id, post.creator.user_id, post.timestamp, carrier, upload_user_timeline_helper_baggage, std::move(upload_user_promise));
+
+  ts = high_resolution_clock::now();
+  time_diff = ts - start_ts;
+  LOG(debug) << "AFTER upload_user_timeline_helper_baggage: " << std::to_string(time_diff.count());
 
   Baggage upload_home_timeline_helper_baggage = BRANCH_CURRENT_BAGGAGE();
   std::promise<Baggage> upload_home_promise;
   std::future<Baggage> upload_home_future = upload_home_promise.get_future();
-  std::thread upload_home_timeline_worker(
-      &ComposePostHandler::_UploadHomeTimelineHelper, this, req_id,
-      post.post_id, post.creator.user_id, post.timestamp,
-      std::ref(user_mentions_id), std::ref(cscope), std::ref(carrier), std::ref(upload_home_timeline_helper_baggage), std::move(upload_home_promise));
+  // std::thread upload_home_timeline_worker(&ComposePostHandler::_UploadHomeTimelineHelper, this, req_id, post.post_id, post.creator.user_id, post.timestamp, std::ref(user_mentions_id), std::ref(cscope), std::ref(carrier), std::ref(upload_home_timeline_helper_baggage), std::move(upload_home_promise));
+  _UploadHomeTimelineHelper(req_id, post.post_id, post.creator.user_id, post.timestamp, user_mentions_id, cscope, carrier, upload_home_timeline_helper_baggage, std::move(upload_home_promise));
 
-  upload_post_worker.join();
-  upload_user_timeline_worker.join();
-  upload_home_timeline_worker.join();
+  ts = high_resolution_clock::now();
+  time_diff = ts - start_ts;
+  LOG(debug) << "AFTER upload_home_timeline_helper_baggage: " << std::to_string(time_diff.count());
+
+  // upload_post_worker.join();
+  // upload_user_timeline_worker.join();
+  // upload_home_timeline_worker.join();
 
   try {
     upload_post_helper_baggage = upload_post_future.get();
@@ -787,7 +814,6 @@ void ComposePostHandler::_ComposeAndUpload(
   // XTRACE("ComposePostService::_ComposeAndUpload complete");
 
   DELETE_CURRENT_BAGGAGE();
-
 }
 
 void ComposePostHandler::_UploadPostHelper(

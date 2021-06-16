@@ -43,7 +43,7 @@ ARG LIB_BOOST_VERSION=1.68.0
 RUN set -ex ;\
   cd /tmp ;\
   export LIB_BOOST_VERSION_UNDERSCORED=$(echo "$LIB_BOOST_VERSION" | tr '.' '_') ;\
-  wget https://dl.bintray.com/boostorg/release/$LIB_BOOST_VERSION/source/boost_$LIB_BOOST_VERSION_UNDERSCORED.tar.gz ;\
+  wget https://boostorg.jfrog.io/artifactory/main/release/$LIB_BOOST_VERSION/source/boost_$LIB_BOOST_VERSION_UNDERSCORED.tar.gz ;\
   tar -xzvf boost_${LIB_BOOST_VERSION_UNDERSCORED}.tar.gz ;\
   cd boost_${LIB_BOOST_VERSION_UNDERSCORED} ;\
   ./bootstrap.sh ;\
