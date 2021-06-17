@@ -738,7 +738,7 @@ void ComposePostHandler::_ComposeAndUpload(
   Baggage upload_post_helper_baggage = BRANCH_CURRENT_BAGGAGE();
   std::promise<Baggage> upload_post_promise;
   std::future<Baggage> upload_post_future = upload_post_promise.get_future();
-  // std::thread upload_post_worker(&ComposePostHandler::_UploadPostHelper, this, req_id, std::ref(post), std::ref(cscope), std::ref(carrier), std::ref(upload_post_helper_baggage), std::move(upload_post_promise));
+  // std::thread upload_post_worker(&ComposePostHandler::_UploadPostHelper, this, req_id, std::ref(post), std::ref(cscope), std::ref(carrier), std::ref(upload_post_helper_baggage), std::ref(upload_post_promise));
   _UploadPostHelper(req_id, post, cscope, carrier, upload_post_helper_baggage, std::move(upload_post_promise));
 
   ts = high_resolution_clock::now();
