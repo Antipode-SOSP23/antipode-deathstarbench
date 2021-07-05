@@ -137,7 +137,7 @@ _follow_user(user_id, follower_id)
 #
 _create_post(user_id)
 
-# time.sleep(30)
+time.sleep(10)
 
 #---------
 # Read user timeline

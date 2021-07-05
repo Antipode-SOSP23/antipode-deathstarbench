@@ -16,26 +16,6 @@
       register: out
       failed_when: "not(out.rc == 0) or 'fail' in out.stderr"
 
-    - name: Ensure MongoDB setup is finished
-      # mongodb-setup has to run before DSB stack is deployed
-      shell: >
-            docker stack services {{ stack }} --format {% raw %}'{{.Name}};{{.Replicas}}'{%endraw%} | grep 'post-storage-mongodb-setup' | grep '0/1' | wc -l
-      register: cmd_res
-      # 1 minute
-      retries: 6
-      delay: 30
-      until: (cmd_res.stdout | int) == 1
-
-    - name: Ensure RabbitMQ setup is finished
-      # mongodb-setup has to run before DSB stack is deployed
-      shell: >
-            docker stack services {{ stack }} --format {% raw %}'{{.Name}};{{.Replicas}}'{%endraw%} | grep 'write-home-timeline-rabbitmq-setup' | grep '0/1' | wc -l
-      register: cmd_res
-      # 1 minute
-      retries: 6
-      delay: 30
-      until: (cmd_res.stdout | int) == 1
-
     - name: Ensure DSB stack is deployed
       # mongodb-setup has to run before DSB stack is deployed
       shell: >

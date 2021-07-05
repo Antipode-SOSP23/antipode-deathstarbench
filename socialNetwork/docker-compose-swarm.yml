@@ -13,7 +13,7 @@ services:
     image: yg397/social-network-microservices:antipode
     networks:
     - deathstarbench_network
-    restart: always
+    restart: 'no'
   compose-post-redis:
     deploy:
       placement:
@@ -23,22 +23,21 @@ services:
     image: redis
     networks:
     - deathstarbench_network
-    restart: always
+    restart: 'no'
   compose-post-service:
-    depends_on:
-    - write-home-timeline-rabbitmq-eu
+    command: dockerize -wait tcp://write-home-timeline-rabbitmq-setup:8000 -wait tcp://post-storage-service-eu:9090
+      -wait-retry-interval 10s -timeout 300s ComposePostService
     deploy:
       placement:
         constraints:
         - node.hostname == compose-post
-    entrypoint: ComposePostService
     environment:
     - ZONE=eu
     hostname: compose-post-service
     image: yg397/social-network-microservices:antipode
     networks:
     - deathstarbench_network
-    restart: always
+    restart: 'no'
   home-timeline-redis-eu:
     command: redis-server --port 6379
     deploy:
@@ -49,7 +48,7 @@ services:
     image: redis
     networks:
     - deathstarbench_network
-    restart: always
+    restart: 'no'
   home-timeline-redis-us:
     command: redis-server --slaveof home-timeline-redis-eu 6379 --replica-read-only
       no
@@ -63,7 +62,7 @@ services:
     - home-timeline-redis-eu
     networks:
     - deathstarbench_network
-    restart: always
+    restart: 'no'
   home-timeline-service:
     deploy:
       placement:
@@ -74,7 +73,7 @@ services:
     image: yg397/social-network-microservices:antipode
     networks:
     - deathstarbench_network
-    restart: always
+    restart: 'no'
   jaeger:
     deploy:
       placement:
@@ -88,7 +87,7 @@ services:
     - deathstarbench_network
     ports:
     - 16686:16686
-    restart: always
+    restart: 'no'
   media-frontend:
     deploy:
       placement:
@@ -100,11 +99,12 @@ services:
     - deathstarbench_network
     ports:
     - 8081:8080
-    restart: always
+    restart: 'no'
     volumes:
     - ./media-frontend/lua-scripts:/usr/local/openresty/nginx/lua-scripts
     - ./media-frontend/conf/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
   media-memcached:
+    command: memcached -m 1024
     deploy:
       placement:
         constraints:
@@ -113,9 +113,10 @@ services:
     image: memcached
     networks:
     - deathstarbench_network
-    restart: always
+    restart: 'no'
   media-mongodb:
-    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata"
+    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata --syncdelay
+      0 --journalCommitInterval 500 --wiredTigerCacheSizeGB 1"
     deploy:
       placement:
         constraints:
@@ -130,16 +131,17 @@ services:
         size: 3000000000
       type: tmpfs
   media-service:
+    command: dockerize -wait tcp://compose-post-service:9090 -wait-retry-interval
+      10s -timeout 300s MediaService
     deploy:
       placement:
         constraints:
         - node.hostname == compose-others
-    entrypoint: MediaService
     hostname: media-service
     image: yg397/social-network-microservices:antipode
     networks:
     - deathstarbench_network
-    restart: always
+    restart: 'no'
   mongodb-admin:
     deploy:
       placement:
@@ -152,7 +154,7 @@ services:
     - deathstarbench_network
     ports:
     - 1234:1234
-    restart: always
+    restart: 'no'
   nginx-thrift:
     deploy:
       placement:
@@ -164,7 +166,7 @@ services:
     - deathstarbench_network
     ports:
     - 8080:8080
-    restart: always
+    restart: 'no'
     volumes:
     - ./nginx-web-server/lua-scripts:/usr/local/openresty/nginx/lua-scripts
     - ./nginx-web-server/pages:/usr/local/openresty/nginx/pages
@@ -182,7 +184,7 @@ services:
     - deathstarbench_network
     ports:
     - 8082:8080
-    restart: always
+    restart: 'no'
     volumes:
     - ./nginx-web-server/lua-scripts:/usr/local/openresty/nginx/lua-scripts
     - ./nginx-web-server/pages:/usr/local/openresty/nginx/pages
@@ -190,6 +192,7 @@ services:
     - ./nginx-web-server/jaeger-config.json:/usr/local/openresty/nginx/jaeger-config.json
     - ./gen-lua:/gen-lua
   post-storage-memcached-eu:
+    command: memcached -m 1024
     deploy:
       placement:
         constraints:
@@ -198,8 +201,9 @@ services:
     image: memcached
     networks:
     - deathstarbench_network
-    restart: always
+    restart: 'no'
   post-storage-memcached-us:
+    command: memcached -m 1024
     deploy:
       placement:
         constraints:
@@ -208,10 +212,11 @@ services:
     image: memcached
     networks:
     - deathstarbench_network
-    restart: always
+    restart: 'no'
   post-storage-mongodb-eu:
-    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata  --replSet
-      rs0 --oplogSize 128"
+    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata --syncdelay
+      0 --journalCommitInterval 500 --wiredTigerCacheSizeGB 1 --replSet rs0 --oplogSize
+      128"
     deploy:
       placement:
         constraints:
@@ -226,9 +231,6 @@ services:
         size: 3000000000
       type: tmpfs
   post-storage-mongodb-setup:
-    depends_on:
-    - post-storage-mongodb-eu
-    - post-storage-mongodb-us
     deploy:
       placement:
         constraints:
@@ -242,8 +244,9 @@ services:
     - deathstarbench_network
     restart: 'no'
   post-storage-mongodb-us:
-    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata --replSet
-      rs0 --oplogSize 128"
+    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata --syncdelay
+      0 --journalCommitInterval 500 --wiredTigerCacheSizeGB 1 --replSet rs0 --oplogSize
+      128"
     deploy:
       placement:
         constraints:
@@ -258,13 +261,12 @@ services:
         size: 3000000000
       type: tmpfs
   post-storage-service-eu:
-    depends_on:
-    - post-storage-mongodb-eu
+    command: dockerize -wait tcp://post-storage-mongodb-setup:8000 -wait tcp://post-storage-mongodb-eu:27017
+      -wait-retry-interval 10s -timeout 300s PostStorageService
     deploy:
       placement:
         constraints:
         - node.hostname == post-storage-eu
-    entrypoint: PostStorageService
     environment:
     - ZONE=eu
     - MASTER=true
@@ -274,13 +276,12 @@ services:
     - deathstarbench_network
     restart: always
   post-storage-service-us:
-    depends_on:
-    - post-storage-mongodb-us
+    command: dockerize -wait tcp://post-storage-mongodb-setup:8000 -wait tcp://post-storage-mongodb-us:27017
+      -wait-retry-interval 10s -timeout 300s PostStorageService
     deploy:
       placement:
         constraints:
         - node.hostname == post-storage-us
-    entrypoint: PostStorageService
     environment:
     - ZONE=us
     - MASTER=false
@@ -313,7 +314,7 @@ services:
     image: redis
     networks:
     - deathstarbench_network
-    restart: always
+    restart: 'no'
   social-graph-service:
     deploy:
       placement:
@@ -326,28 +327,32 @@ services:
     - deathstarbench_network
     restart: always
   text-service:
+    command: dockerize -wait tcp://url-shorten-service:9090 -wait tcp://user-mention-service:9090
+      -wait tcp://compose-post-service:9090 -wait-retry-interval 10s -timeout 300s
+      TextService
     deploy:
       placement:
         constraints:
         - node.hostname == compose-post
-    entrypoint: TextService
     hostname: text-service
     image: yg397/social-network-microservices:antipode
     networks:
     - deathstarbench_network
-    restart: always
+    restart: 'no'
   unique-id-service:
+    command: dockerize -wait tcp://compose-post-service:9090 -wait-retry-interval
+      10s -timeout 300s UniqueIdService
     deploy:
       placement:
         constraints:
         - node.hostname == compose-post
-    entrypoint: UniqueIdService
     hostname: unique-id-service
     image: yg397/social-network-microservices:antipode
     networks:
     - deathstarbench_network
-    restart: always
+    restart: 'no'
   url-shorten-memcached:
+    command: memcached -m 1024
     deploy:
       placement:
         constraints:
@@ -356,9 +361,10 @@ services:
     image: memcached
     networks:
     - deathstarbench_network
-    restart: always
+    restart: 'no'
   url-shorten-mongodb:
-    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata"
+    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata --syncdelay
+      0 --journalCommitInterval 500 --wiredTigerCacheSizeGB 1"
     deploy:
       placement:
         constraints:
@@ -373,6 +379,8 @@ services:
         size: 3000000000
       type: tmpfs
   url-shorten-service:
+    command: dockerize -wait tcp://compose-post-service:9090 -wait-retry-interval
+      10s -timeout 300s UrlShortenService
     deploy:
       placement:
         constraints:
@@ -384,6 +392,7 @@ services:
     - deathstarbench_network
     restart: always
   user-memcached:
+    command: memcached -m 1024
     deploy:
       placement:
         constraints:
@@ -392,7 +401,7 @@ services:
     image: memcached
     networks:
     - deathstarbench_network
-    restart: always
+    restart: 'no'
   user-mention-service:
     deploy:
       placement:
@@ -405,7 +414,8 @@ services:
     - deathstarbench_network
     restart: always
   user-mongodb:
-    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata"
+    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata --syncdelay
+      0 --journalCommitInterval 500 --wiredTigerCacheSizeGB 1"
     deploy:
       placement:
         constraints:
@@ -420,18 +430,20 @@ services:
         size: 3000000000
       type: tmpfs
   user-service:
+    command: dockerize -wait tcp://compose-post-service:9090 -wait-retry-interval
+      10s -timeout 300s UserService
     deploy:
       placement:
         constraints:
         - node.hostname == compose-others
-    entrypoint: UserService
     hostname: user-service
     image: yg397/social-network-microservices:antipode
     networks:
     - deathstarbench_network
-    restart: always
+    restart: 'no'
   user-timeline-mongodb:
-    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata"
+    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata  --syncdelay
+      0 --journalCommitInterval 500 --wiredTigerCacheSizeGB 1"
     deploy:
       placement:
         constraints:
@@ -453,10 +465,8 @@ services:
     image: redis
     networks:
     - deathstarbench_network
-    restart: always
+    restart: 'no'
   user-timeline-service:
-    depends_on:
-    - user-timeline-mongodb
     deploy:
       placement:
         constraints:
@@ -466,7 +476,7 @@ services:
     image: yg397/social-network-microservices:antipode
     networks:
     - deathstarbench_network
-    restart: always
+    restart: 'no'
   write-home-timeline-rabbitmq-eu:
     deploy:
       placement:
@@ -483,15 +493,12 @@ services:
     ports:
     - 15672:15672
     - 5672:5672
-    restart: always
+    restart: 'no'
     volumes:
     - ./config/rabbitmq/write-home-timeline-rabbitmq-eu-definitions.json:/etc/rabbitmq/definitions.json:ro
     - ./config/rabbitmq/write-home-timeline-rabbitmq-eu.conf:/etc/rabbitmq/rabbitmq.conf:ro
     - ./config/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins
   write-home-timeline-rabbitmq-setup:
-    depends_on:
-    - write-home-timeline-rabbitmq-eu
-    - write-home-timeline-rabbitmq-us
     deploy:
       placement:
         constraints:
@@ -507,8 +514,6 @@ services:
     - deathstarbench_network
     restart: 'no'
   write-home-timeline-rabbitmq-us:
-    depends_on:
-    - write-home-timeline-rabbitmq-eu
     deploy:
       placement:
         constraints:
@@ -524,41 +529,39 @@ services:
     ports:
     - 15673:15672
     - 5673:5672
-    restart: always
+    restart: 'no'
     volumes:
     - ./config/rabbitmq/write-home-timeline-rabbitmq-us-definitions.json:/etc/rabbitmq/definitions.json:ro
     - ./config/rabbitmq/write-home-timeline-rabbitmq-us.conf:/etc/rabbitmq/rabbitmq.conf:ro
     - ./config/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins
   write-home-timeline-service-eu:
-    depends_on:
-    - write-home-timeline-rabbitmq-eu
+    command: dockerize -wait tcp://write-home-timeline-rabbitmq-eu:5672 -wait-retry-interval
+      10s -timeout 300s WriteHomeTimelineService
     deploy:
       placement:
         constraints:
         - node.hostname == home-timeline-eu
-    entrypoint: WriteHomeTimelineService
     environment:
     - ZONE=eu
     hostname: write-home-timeline-service-eu
     image: yg397/social-network-microservices:antipode
     networks:
     - deathstarbench_network
-    restart: always
+    restart: 'no'
   write-home-timeline-service-us:
-    depends_on:
-    - write-home-timeline-rabbitmq-us
+    command: dockerize -wait tcp://write-home-timeline-rabbitmq-us:5672 -wait-retry-interval
+      10s -timeout 300s WriteHomeTimelineService
     deploy:
       placement:
         constraints:
         - node.hostname == home-timeline-us
-    entrypoint: WriteHomeTimelineService
     environment:
     - ZONE=us
     hostname: write-home-timeline-service-us
     image: yg397/social-network-microservices:antipode
     networks:
     - deathstarbench_network
-    restart: always
+    restart: 'no'
   xtrace-server:
     deploy:
       placement:
@@ -573,5 +576,5 @@ services:
     ports:
     - 4080:4080
     - 5563:5563
-    restart: always
+    restart: 'no'
 version: '3.7'

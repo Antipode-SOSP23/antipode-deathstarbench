@@ -124,6 +124,7 @@ SOCIAL_NETWORK_DEFAULT_SERVICES = {
   }
 }
 CONTAINERS_BUILT = [
+  'mongodb-delayed',
   'mongodb-setup',
   'rabbitmq-setup',
   'yg397/openresty-thrift:latest',
@@ -373,6 +374,10 @@ def build__socialNetwork__local(args):
   # Build the nginx server image. We modified this to add X-Trace and protocol buffers
   os.chdir(app_dir.joinpath('docker', 'openresty-thrift'))
   docker[openresty_thrift_args] & FG
+
+  # Build the mongodb-delayed setup image
+  os.chdir(app_dir.joinpath('docker', 'mongodb-delayed'))
+  docker['build', '-t', 'mongodb-delayed', '.'] & FG
 
   # Build the mongodb setup image
   os.chdir(app_dir.joinpath('docker', 'mongodb-setup', 'post-storage'))
@@ -935,6 +940,26 @@ def clean__socialNetwork__gcp(args):
     for name,host in client_inventory.items():
       _gcp_delete_instance(host['zone'], name)
 
+#############################
+# DELAY
+#
+def delay(args):
+  try:
+    # params - TODO move to args later on
+    src_container = 'post-storage-mongodb-us'
+    dst_container = 'post-storage-mongodb-eu'
+    delay_ms = 100
+
+    getattr(sys.modules[__name__], f"delay__{args['app']}__{_deploy_type(args)}")(args, src_container, dst_container, delay_ms)
+  except KeyboardInterrupt:
+    # if the compose gets interrupted we just continue with the script
+    pass
+
+def delay__socialNetwork__local(args, src_container, dst_container, delay_ms):
+  from plumbum.cmd import docker_compose, docker
+
+  os.chdir(ROOT_PATH / args['app'])
+  docker_compose['exec', src_container, '/home/delay.sh', dst_container, f'{delay_ms}ms'] & FG
 
 #############################
 # WORKLOAD
@@ -1221,7 +1246,7 @@ def wkld__socialNetwork__gcp__run(args, hosts, exe_path, exe_args):
 
   # sleep before gather
   if args['duration'] is not None:
-    sleep_for = args['duration'] + 60
+    sleep_for = args['duration'] + 30
     print(f"[INFO] Waiting {sleep_for} seconds for workload to be ready ...")
     time.sleep(sleep_for)
   else:
@@ -1411,7 +1436,7 @@ def gather(args):
           continue
 
         # computes the different in ms from post to notification
-        diff = datetime.fromtimestamp(trace_info['poststorage_replicate_end_ts']/1000.0) - datetime.fromtimestamp(trace_info['wth_end_worker_ts']/1000.0)
+        diff = datetime.fromtimestamp(trace_info['poststorage_post_written_ts']/1000.0) - datetime.fromtimestamp(trace_info['wth_end_worker_ts']/1000.0)
         trace_info['post_notification_diff_ms'] = float(diff.total_seconds() * 1000)
 
         diff = datetime.fromtimestamp(trace_info['poststorage_replicate_end_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_post_written_ts']/1000.0)
@@ -1506,6 +1531,9 @@ if __name__ == "__main__":
   clean_parser = subparsers.add_parser('clean', help='Clean application')
   clean_parser.add_argument('-s', '--strong', action='store_true', help="delete images")
   clean_parser.add_argument('-j', '--jaeger', action='store_true', help="delete jaeger container")
+
+  # delay application
+  delay_parser = subparsers.add_parser('delay', help='Delay application')
 
   # run application
   run_parser = subparsers.add_parser('run', help='Run application')

@@ -242,10 +242,13 @@ ARG RUN_DEPS="g++ \
               lua5.1-dev \
               libicu-dev \
               libtbb-dev \
-              libcereal-dev"
+              libcereal-dev \
+              net-tools \
+              iproute2"
 # Development dependencies - comment if not needed
 ARG DEV_DEPS="tree \
               less \
+              iputils-ping \
               vim"
 ENV LD_LIBRARY_PATH /usr/local/lib:${LD_LIBRARY_PATH}
 

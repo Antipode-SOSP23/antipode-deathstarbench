@@ -17,7 +17,7 @@ services:
     hostname: social-graph-service
     # ports:
       # - 10000:9090
-    restart: 'no'
+    restart: 'always'
     entrypoint: SocialGraphService
     deploy:
       placement:
@@ -221,7 +221,12 @@ services:
         constraints: [node.hostname == node06]
 
   post-storage-mongodb-us:
-    image: mongo
+    image: mongodb-delayed
+    # run docker exec post-storage-mongodb-us ./home/delay <DELAY_FROM> <DELAY_MS>
+    # eg: the following cmd delays traffic from post-storage-mongodb-us to post-storage-mongodb-eu in 100ms
+    #     `docker exec post-storage-mongodb-us ./home/delay post-storage-mongodb-eu 100ms`
+    cap_add:
+      - NET_ADMIN
     hostname: post-storage-mongodb-us
     # command: --replSet rs0 --oplogSize 128
     command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata --syncdelay 0 --journalCommitInterval 500 --wiredTigerCacheSizeGB 1 --replSet rs0 --oplogSize 128"

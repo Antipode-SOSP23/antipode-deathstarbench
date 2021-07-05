@@ -72,8 +72,8 @@ PostStorageHandler::PostStorageHandler(
 }
 
 // Launch the pool with as much threads as cores
-int num_threads = std::thread::hardware_concurrency() * 8;
-boost::asio::thread_pool pool(num_threads);
+// int num_threads = std::thread::hardware_concurrency() * 8;
+// boost::asio::thread_pool async_store_post_pool(num_threads);
 
 void PostStorageHandler::StorePost(
     BaseRpcResponse &response,
