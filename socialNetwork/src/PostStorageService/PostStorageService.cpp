@@ -95,13 +95,13 @@ int main(int argc, char *argv[]) {
     }
 
     //----------
-    // -ANTIPODE
+    // +ANTIPODE
     //----------
     // init antipode tables
     std::string mongodb_uri = mongodb_dsb_uri(config_json, "post-storage", zone);
     AntipodeMongodb::init_store(mongodb_uri, "post");
     //----------
-    // -ANTIPODE
+    // +ANTIPODE
     //----------
   }
   mongoc_client_pool_push(mongodb_client_pool, mongodb_client);

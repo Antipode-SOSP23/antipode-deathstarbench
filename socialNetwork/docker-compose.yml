@@ -55,7 +55,7 @@ services:
     environment:
       - ZONE=eu
     restart: 'no'
-    command: dockerize -wait tcp://write-home-timeline-rabbitmq-eu:5672 -wait-retry-interval 10s -timeout 300s WriteHomeTimelineService
+    command: dockerize -wait tcp://write-home-timeline-rabbitmq-setup:8000 -wait tcp://write-home-timeline-rabbitmq-eu:5672 -wait-retry-interval 10s -timeout 300s WriteHomeTimelineService
     deploy:
       placement:
         constraints: [node.hostname == node02]
@@ -66,7 +66,7 @@ services:
     environment:
       - ZONE=us
     restart: 'no'
-    command: dockerize -wait tcp://write-home-timeline-rabbitmq-us:5672 -wait-retry-interval 10s -timeout 300s WriteHomeTimelineService
+    command: dockerize -wait tcp://write-home-timeline-rabbitmq-setup:8000 -wait tcp://write-home-timeline-rabbitmq-us:5672 -wait-retry-interval 10s -timeout 300s WriteHomeTimelineService
     deploy:
       placement:
         constraints: [node.hostname == node02]
@@ -142,7 +142,7 @@ services:
     # ports:
       # - 10010:9090
     restart: 'no'
-    entrypoint: HomeTimelineService
+    entrypoint: dockerize -wait tcp://home-timeline-redis-us:6379 -wait tcp://post-storage-service-us:9090 -timeout 300s HomeTimelineService
     deploy:
       placement:
         constraints: [node.hostname == node03]
@@ -176,7 +176,12 @@ services:
         constraints: [node.hostname == node04]
 
   post-storage-mongodb-eu:
-    image: mongo
+    image: mongodb-delayed
+    # run docker exec post-storage-mongodb-us ./home/delay <DELAY_FROM> <DELAY_MS>
+    # eg: the following cmd delays traffic from post-storage-mongodb-us to post-storage-mongodb-eu in 100ms
+    #     `docker exec post-storage-mongodb-us ./home/delay post-storage-mongodb-eu 100ms`
+    cap_add:
+      - NET_ADMIN
     hostname: post-storage-mongodb-eu
     # command: --replSet rs0 --oplogSize 128
     command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata --syncdelay 0 --journalCommitInterval 500 --wiredTigerCacheSizeGB 1 --replSet rs0 --oplogSize 128"
@@ -251,7 +256,7 @@ services:
     # ports:
       # - 10003:9090
     restart: 'no'
-    entrypoint: UserTimelineService
+    command: dockerize -wait tcp://post-storage-service-eu:9090 -wait tcp://user-timeline-redis:6379 -wait tcp://write-home-timeline-rabbitmq-us:5672 -wait tcp://write-home-timeline-service-eu:9090 -wait tcp://write-home-timeline-service-us:9090 -wait tcp://post-storage-service-eu:9090 -wait-retry-interval 10s -timeout 300s UserTimelineService
     deploy:
       placement:
         constraints: [node.hostname == node11]
@@ -302,7 +307,7 @@ services:
     # ports:
       # - 10001:9090
     restart: 'no'
-    command: dockerize -wait tcp://write-home-timeline-rabbitmq-setup:8000 -wait tcp://post-storage-service-eu:9090 -wait-retry-interval 10s -timeout 300s ComposePostService
+    command: dockerize -wait tcp://write-home-timeline-rabbitmq-setup:8000 -wait tcp://write-home-timeline-service-eu:9090 -wait tcp://write-home-timeline-service-us:9090 -wait tcp://post-storage-service-eu:9090 -wait-retry-interval 10s -timeout 300s ComposePostService
     deploy:
       placement:
         constraints: [node.hostname == node11]
@@ -313,7 +318,6 @@ services:
     # ports:
       # - 10004:9090
     restart: 'always'
-    entrypoint: UrlShortenService
     command: dockerize -wait tcp://compose-post-service:9090 -wait-retry-interval 10s -timeout 300s UrlShortenService
     deploy:
       placement:
@@ -490,7 +494,7 @@ services:
     hostname: nginx-thrift
     ports:
       - 8080:8080
-    restart: 'no'
+    restart: 'always'
     volumes:
       - ./nginx-web-server/lua-scripts:/usr/local/openresty/nginx/lua-scripts
       - ./nginx-web-server/pages:/usr/local/openresty/nginx/pages
@@ -509,7 +513,7 @@ services:
     hostname: nginx-thrift
     ports:
       - 8082:8080
-    restart: 'no'
+    restart: 'always'
     volumes:
       - ./nginx-web-server/lua-scripts:/usr/local/openresty/nginx/lua-scripts
       - ./nginx-web-server/pages:/usr/local/openresty/nginx/pages
@@ -568,7 +572,7 @@ services:
 
   post-storage-mongodb-setup:
     image: mongodb-setup
-    restart: 'no'
+    restart: 'always'
     deploy:
       placement:
         constraints: [node.hostname == node25]

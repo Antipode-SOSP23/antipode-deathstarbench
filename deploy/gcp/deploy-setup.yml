@@ -85,6 +85,7 @@
         docker pull gcr.io/pluribus/{{item}} &&
         docker tag gcr.io/pluribus/{{item}} {{item}}
       with_items:
+        - mongodb-delayed
         - mongodb-setup
         - rabbitmq-setup
         - yg397/openresty-thrift:latest

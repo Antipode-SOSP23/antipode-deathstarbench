@@ -35,8 +35,7 @@ int main(int argc, char *argv[]) {
   }
 
   int port = config_json["user-timeline-service"]["port"];
-  std::string redis_addr =
-      config_json["user-timeline-redis"]["addr"];
+  std::string redis_addr = config_json["user-timeline-redis"]["addr"];
   int redis_port = config_json["user-timeline-redis"]["port"];
 
   int post_storage_port = config_json["post-storage-service-eu"]["port"];

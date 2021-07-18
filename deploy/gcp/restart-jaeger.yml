@@ -1,0 +1,12 @@
+---
+- hosts: swarm_manager
+  any_errors_fatal: true
+  gather_facts: no
+  become: yes
+
+  tasks:
+    - name: Scale Jaeger to 0
+      shell: docker service scale deathstarbench_jaeger=0
+
+    - name: Scale Jaeger to 1
+      shell: docker service scale deathstarbench_jaeger=1

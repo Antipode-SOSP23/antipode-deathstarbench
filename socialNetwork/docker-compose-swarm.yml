@@ -25,7 +25,9 @@ services:
     - deathstarbench_network
     restart: 'no'
   compose-post-service:
-    command: dockerize -wait tcp://write-home-timeline-rabbitmq-setup:8000 -wait tcp://post-storage-service-eu:9090
+    command: dockerize -wait tcp://write-home-timeline-rabbitmq-setup:8000 -wait tcp://write-home-timeline-rabbitmq-eu:5672
+      -wait tcp://write-home-timeline-rabbitmq-us:5672 -wait tcp://write-home-timeline-service-eu:9090
+      -wait tcp://write-home-timeline-service-us:9090 -wait tcp://post-storage-service-eu:9090
       -wait-retry-interval 10s -timeout 300s ComposePostService
     deploy:
       placement:
@@ -68,7 +70,8 @@ services:
       placement:
         constraints:
         - node.hostname == home-timeline-us
-    entrypoint: HomeTimelineService
+    entrypoint: dockerize -wait tcp://home-timeline-redis-us:6379 -wait tcp://post-storage-service-us:9090
+      HomeTimelineService
     hostname: home-timeline-service
     image: yg397/social-network-microservices:antipode
     networks:
@@ -131,8 +134,7 @@ services:
         size: 3000000000
       type: tmpfs
   media-service:
-    command: dockerize -wait tcp://compose-post-service:9090 -wait-retry-interval
-      10s -timeout 300s MediaService
+    command: dockerize -wait tcp://compose-post-service:9090 -wait-retry-interval 10s -timeout 300s MediaService
     deploy:
       placement:
         constraints:
@@ -166,7 +168,7 @@ services:
     - deathstarbench_network
     ports:
     - 8080:8080
-    restart: 'no'
+    restart: always
     volumes:
     - ./nginx-web-server/lua-scripts:/usr/local/openresty/nginx/lua-scripts
     - ./nginx-web-server/pages:/usr/local/openresty/nginx/pages
@@ -184,7 +186,7 @@ services:
     - deathstarbench_network
     ports:
     - 8082:8080
-    restart: 'no'
+    restart: always
     volumes:
     - ./nginx-web-server/lua-scripts:/usr/local/openresty/nginx/lua-scripts
     - ./nginx-web-server/pages:/usr/local/openresty/nginx/pages
@@ -214,6 +216,8 @@ services:
     - deathstarbench_network
     restart: 'no'
   post-storage-mongodb-eu:
+    cap_add:
+    - NET_ADMIN
     command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata --syncdelay
       0 --journalCommitInterval 500 --wiredTigerCacheSizeGB 1 --replSet rs0 --oplogSize
       128"
@@ -222,7 +226,7 @@ services:
         constraints:
         - node.hostname == post-storage-mongo-eu
     hostname: post-storage-mongodb-eu
-    image: mongo
+    image: mongodb-delayed
     networks:
     - deathstarbench_network
     volumes:
@@ -242,8 +246,10 @@ services:
     image: mongodb-setup
     networks:
     - deathstarbench_network
-    restart: 'no'
+    restart: always
   post-storage-mongodb-us:
+    cap_add:
+    - NET_ADMIN
     command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata --syncdelay
       0 --journalCommitInterval 500 --wiredTigerCacheSizeGB 1 --replSet rs0 --oplogSize
       128"
@@ -252,7 +258,7 @@ services:
         constraints:
         - node.hostname == post-storage-mongo-us
     hostname: post-storage-mongodb-us
-    image: mongo
+    image: mongodb-delayed
     networks:
     - deathstarbench_network
     volumes:
@@ -467,11 +473,13 @@ services:
     - deathstarbench_network
     restart: 'no'
   user-timeline-service:
+    command: dockerize -wait tcp://post-storage-service-eu:9090 -wait tcp://user-timeline-redis:6379
+      UserTimelineService
     deploy:
       placement:
         constraints:
         - node.hostname == user-timeline
-    entrypoint: UserTimelineService
+    entrypoint: null
     hostname: user-timeline-service
     image: yg397/social-network-microservices:antipode
     networks:
@@ -535,8 +543,8 @@ services:
     - ./config/rabbitmq/write-home-timeline-rabbitmq-us.conf:/etc/rabbitmq/rabbitmq.conf:ro
     - ./config/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins
   write-home-timeline-service-eu:
-    command: dockerize -wait tcp://write-home-timeline-rabbitmq-eu:5672 -wait-retry-interval
-      10s -timeout 300s WriteHomeTimelineService
+    command: dockerize -wait tcp://write-home-timeline-rabbitmq-setup:8000 -wait tcp://write-home-timeline-rabbitmq-eu:5672
+      -wait-retry-interval 10s -timeout 300s WriteHomeTimelineService
     deploy:
       placement:
         constraints:
@@ -549,8 +557,8 @@ services:
     - deathstarbench_network
     restart: 'no'
   write-home-timeline-service-us:
-    command: dockerize -wait tcp://write-home-timeline-rabbitmq-us:5672 -wait-retry-interval
-      10s -timeout 300s WriteHomeTimelineService
+    command: dockerize -wait tcp://write-home-timeline-rabbitmq-setup:8000 -wait tcp://write-home-timeline-rabbitmq-us:5672
+      -wait-retry-interval 10s -timeout 300s WriteHomeTimelineService
     deploy:
       placement:
         constraints:

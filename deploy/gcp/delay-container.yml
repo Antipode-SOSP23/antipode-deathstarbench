@@ -1,0 +1,61 @@
+
+---
+- hosts: post-storage-mongo-us.pluribus
+  gather_facts: no
+  become: yes
+  any_errors_fatal: true
+  vars:
+    - stack: deathstarbench
+    - app: socialNetwork
+
+  tasks:
+    # - name: Get IP address from delay destination container via exec
+    #   shell: >
+    #     docker exec $( docker ps -a --filter name='post-storage-mongodb-us' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) hostname -I | cut -d ' ' -f 1
+    #   register: dst_ip
+
+    - name: Get IP address from delay destination container via inspect
+      shell: >
+        docker inspect --format {% raw %}'{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}'{% endraw %} $( docker ps -a --filter name='post-storage-mongodb-us' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} )
+      register: dst_ip
+
+    - name: Set fact with destination container IP
+      set_fact:
+        delay_ip: "{{ dst_ip.stdout }}"
+
+    - name: IP from destination container
+      debug:
+        msg: "{{ delay_ip }}"
+
+
+- hosts: post-storage-mongo-eu.pluribus
+  gather_facts: no
+  become: yes
+  any_errors_fatal: true
+  vars:
+    - stack: deathstarbench
+    - app: socialNetwork
+
+  tasks:
+    - name: Bring fact with delay_ip from destination container
+      set_fact:
+        delay_ip: "{{ hostvars['post-storage-mongo-us.pluribus']['delay_ip'] }}"
+
+    - name: IP from destination container
+      debug:
+        msg: "{{ delay_ip }}"
+
+    - name: Delay container
+      shell: >
+          docker exec $( docker ps -a --filter name='post-storage-mongodb-eu' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) /home/delay.sh {{ delay_ip }} 200ms
+      ignore_errors: True
+
+    - name: Spam ping to kickstart delay
+      shell: >
+          docker exec $( docker ps -a --filter name='post-storage-mongodb-eu' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) ping -c 200 -f {{ delay_ip }} 2>&1
+      register: ping_out
+
+    - name: Check delay
+      debug:
+        msg: "{{ ping_out.stdout }}"
+

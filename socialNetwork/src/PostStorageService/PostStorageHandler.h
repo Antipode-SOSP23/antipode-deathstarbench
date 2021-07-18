@@ -296,27 +296,16 @@ void PostStorageHandler::StorePost(
 
   insert_span->Finish();
   // XTRACE("MongoInsertPost complete");
-  // if (!inserted) {
-  //   LOG(error) << "Error: Failed to insert post to MongoDB: "
-  //               << error.message;
-  //   ServiceException se;
-  //   se.errorCode = ErrorCode::SE_MONGODB_ERROR;
-  //   se.message = error.message;
-  //   bson_destroy(new_doc);
-  //   mongoc_collection_destroy(collection);
-  //   mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
-  //   // XTRACE("Failed to insert post to MongoDB");
-  //   throw se;
-  // }
-
-  bson_destroy (new_doc);
-  mongoc_collection_destroy (collection);
-  mongoc_client_pool_push (_mongodb_client_pool, mongodb_client);
+  }
 
   // eval
   ts = high_resolution_clock::now();
   ts_int = duration_cast<milliseconds>(ts.time_since_epoch()).count();
   span->SetTag("poststorage_post_written_ts", std::to_string(ts_int));
+
+  bson_destroy (new_doc);
+  mongoc_collection_destroy (collection);
+  mongoc_client_pool_push (_mongodb_client_pool, mongodb_client);
 
   span->Finish();
   // XTRACE("PostStorageHandler::StorePost complete");

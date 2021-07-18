@@ -152,10 +152,62 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
 
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     ts = duration_cast<milliseconds>(t2.time_since_epoch()).count();
-    span->SetTag("poststorage_replicate_end_ts", std::to_string(ts));
+    span->SetTag("poststorage_read_notification_ts", std::to_string(ts));
 
     duration<double, std::milli> time_span = t2 - t1;
     span->SetTag("wht_antipode_duration", std::to_string(time_span.count()));
+
+    //----------
+    // -EVAL CONSISTENCY ERRORS
+    //----------
+
+    // force WritHomeTimeline to an error by sleeping
+    // LOG(debug) << "[ANTIPODE] Sleeping ...";
+    // std::this_thread ::sleep_for(std::chrono::milliseconds(10000));
+    // LOG(debug) << "[ANTIPODE] Done Sleeping!";
+
+    // sleep while post is not ready at US replica
+    bool read_post = false;
+    int attempts = 0;
+    // bool read_post = true;
+    while(!read_post) {
+      mongoc_client_t *mongodb_client = mongoc_client_pool_pop(_mongodb_client_pool);
+      if (!mongodb_client) {
+        LOG(warning) << "[ANTIPODE] Could not open mongo connection: client";
+        continue;
+      }
+      auto collection = mongoc_client_get_collection(mongodb_client, "post", "post");
+      if (!collection) {
+        mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
+        LOG(warning) << "[ANTIPODE] Could not open mongo connection: collection";
+        continue;
+      }
+
+      bson_t *query = bson_new();
+      BSON_APPEND_INT64(query, "post_id", post_id);
+      mongoc_cursor_t *cursor = mongoc_collection_find_with_opts(
+          collection, query, nullptr, nullptr);
+      const bson_t *doc;
+      read_post = mongoc_cursor_next(cursor, &doc);
+
+      LOG(debug) << "[ANTIPODE] Was post #" << post_id << " found at " << std::getenv("ZONE") << " replica? " << read_post;
+
+      bson_destroy(query);
+      mongoc_cursor_destroy(cursor);
+      mongoc_collection_destroy(collection);
+      mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
+      attempts++;
+    }
+
+    // use the same timestamp as the notification if the attempts are the same
+    // so when we gather eval we dont deal with small lags between these 2 timestamps
+    high_resolution_clock::time_point consistency_ts = (attempts > 1) ? high_resolution_clock::now() : t2;
+    ts = duration_cast<milliseconds>(consistency_ts.time_since_epoch()).count();
+    span->SetTag("consistency_ts", std::to_string(ts));
+
+    //----------
+    // -EVAL CONSISTENCY ERRORS
+    //----------
 
     //----------
     // -ANTIPODE
@@ -363,13 +415,13 @@ int main(int argc, char *argv[]) {
   }
 
   //----------
-  // -ANTIPODE
+  // +ANTIPODE
   //----------
   // init antipode tables
   // std::string mongodb_uri = mongodb_dsb_uri(config_json, "post-storage", zone);
   // AntipodeMongodb::init_cscope_listener(mongodb_uri, "post");
   //----------
-  // -ANTIPODE
+  // +ANTIPODE
   //----------
 
   ClientPool<ThriftClient<SocialGraphServiceClient>>

@@ -4,7 +4,7 @@ echo "Wait for RabbitMQ nodes"
 echo "*********************************"
 # test connection with
 # rabbitmqctl -n rabbit@<server> environment
-dockerize -wait tcp://write-home-timeline-rabbitmq-us:5672 -wait tcp://write-home-timeline-rabbitmq-eu:5672 -wait-retry-interval 30s echo "[INFO] write-home-timeline-rabbitmq ready!"
+dockerize -wait tcp://write-home-timeline-rabbitmq-us:5672 -wait tcp://write-home-timeline-rabbitmq-eu:5672 -wait-retry-interval 30s -timeout 300s echo "[INFO] write-home-timeline-rabbitmq ready!"
 rabbitmqctl -n rabbit@write-home-timeline-rabbitmq-us await_startup
 rabbitmqctl -n rabbit@write-home-timeline-rabbitmq-eu await_startup
 echo "*********************************"
@@ -33,13 +33,6 @@ config='{"federation-upstream-set": "cluster2_federators"}'
 rabbitmqctl -n rabbit@write-home-timeline-rabbitmq-eu set_policy --apply-to exchanges federation_test "write\-home\-timeline\-*" "${config}"
 config='{"ha-mode": "all"}'
 rabbitmqctl -n rabbit@write-home-timeline-rabbitmq-eu set_policy ha-federation "^federation:*" "${config}"
-
-# restart servers?
-# rabbitmqctl -n rabbit@write-home-timeline-rabbitmq-us stop
-# rabbitmqctl -n rabbit@write-home-timeline-rabbitmq-eu stop
-# rabbitmqctl -n rabbit@write-home-timeline-rabbitmq-us start_app
-# rabbitmqctl -n rabbit@write-home-timeline-rabbitmq-eu start_app
-
 
 echo "*********************************"
 echo "RabbitMQ Federation DONE!"

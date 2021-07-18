@@ -788,6 +788,10 @@ def run(args):
 def run__socialNetwork__local(args):
   from plumbum.cmd import docker_compose, docker
 
+  if args['info']:
+    print("NOT IMPLEMENTED!")
+    return
+
   run_args = ['up']
   # run containers in detached mode
   if args['detached']:
@@ -930,25 +934,30 @@ def clean__socialNetwork__gcp(args):
   inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'inventory.cfg')
   client_inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'clients_inventory.cfg')
 
-  ansible_playbook['undeploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
-  print("[INFO] Clean Complete!")
-
   # delete instances if strong enabled
   if args['strong']:
+    ansible_playbook['undeploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
     for name,host in inventory.items():
       _gcp_delete_instance(host['zone'], name)
     for name,host in client_inventory.items():
       _gcp_delete_instance(host['zone'], name)
+  elif args['jaeger']:
+    ansible_playbook['restart-jaeger.yml', '-e', 'app=socialNetwork'] & FG
+  else:
+    ansible_playbook['undeploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
+
+  print("[INFO] Clean Complete!")
+
 
 #############################
 # DELAY
 #
 def delay(args):
   try:
+    delay_ms = args['duration']
     # params - TODO move to args later on
-    src_container = 'post-storage-mongodb-us'
-    dst_container = 'post-storage-mongodb-eu'
-    delay_ms = 100
+    src_container = 'post-storage-mongodb-eu'
+    dst_container = 'post-storage-mongodb-us'
 
     getattr(sys.modules[__name__], f"delay__{args['app']}__{_deploy_type(args)}")(args, src_container, dst_container, delay_ms)
   except KeyboardInterrupt:
@@ -959,7 +968,114 @@ def delay__socialNetwork__local(args, src_container, dst_container, delay_ms):
   from plumbum.cmd import docker_compose, docker
 
   os.chdir(ROOT_PATH / args['app'])
-  docker_compose['exec', src_container, '/home/delay.sh', dst_container, f'{delay_ms}ms'] & FG
+
+  # get ip of the dst container since delay only accepts ips
+  dst_container_id = docker_compose['ps', '-q', dst_container].run()[1].rstrip()
+  dst_ip = docker['inspect', '-f' '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}', dst_container_id].run()[1].rstrip()
+
+  docker_compose['exec', src_container, '/home/delay.sh', dst_ip, f'{delay_ms}ms'] & FG
+
+def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms):
+  _force_docker()
+  from plumbum.cmd import ansible_playbook
+  from jinja2 import Environment
+  import textwrap
+  import yaml
+
+  filepath = args['configuration_path']
+  with open(filepath, 'r') as f_conf:
+    conf = yaml.load(f_conf, Loader=yaml.FullLoader)
+
+  # change path to playbooks folder
+  os.chdir(ROOT_PATH / 'deploy' / 'gcp')
+
+  # checks the configuration for the hostname of the delayed container
+  src_gcp_container_hostname = conf['nodes'][conf['services'][src_container]]['hostname']
+  dst_gcp_container_hostname = conf['nodes'][conf['services'][dst_container]]['hostname']
+
+  template = """
+    ---
+    - hosts: {{ dst_gcp_container_hostname }}
+      gather_facts: no
+      become: yes
+      any_errors_fatal: true
+      vars:
+        - stack: deathstarbench
+        - app: socialNetwork
+
+      tasks:
+        # - name: Get IP address from delay destination container via exec
+        #   shell: >
+        #     docker exec $( docker ps -a --filter name='{{ dst_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) hostname -I | cut -d ' ' -f 1
+        #   register: dst_ip
+
+        - name: Get IP address from delay destination container via inspect
+          shell: >
+            docker inspect --format {{ "{% raw %}'{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}'{% endraw %}" }} $( docker ps -a --filter name='{{ dst_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} )
+          register: dst_ip
+
+        - name: Set fact with destination container IP
+          set_fact:
+            delay_ip: {% raw %}"{{ dst_ip.stdout }}"{% endraw %}
+
+        - name: IP from destination container
+          debug:
+            msg: {% raw %}"{{ delay_ip }}"{% endraw %}
+
+
+    - hosts: {{ src_gcp_container_hostname }}
+      gather_facts: no
+      become: yes
+      any_errors_fatal: true
+      vars:
+        - stack: deathstarbench
+        - app: socialNetwork
+
+      tasks:
+        - name: Bring fact with delay_ip from destination container
+          set_fact:
+            delay_ip: {% raw %}"{{ hostvars['{% endraw %}{{ dst_gcp_container_hostname }}{% raw %}']['delay_ip'] }}"{% endraw %}
+
+        - name: IP from destination container
+          debug:
+            msg: {% raw %}"{{ delay_ip }}"{% endraw %}
+
+        - name: Delay container
+          shell: >
+              docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) /home/delay.sh {% raw %}{{ delay_ip }}{% endraw %} {{ delay_ms }}ms
+          ignore_errors: True
+
+        - name: Spam ping to kickstart delay
+          shell: >
+              docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) ping -c 200 -f {% raw %}{{ delay_ip }}{% endraw %} 2>&1
+          register: ping_out
+
+        - name: Check delay
+          debug:
+            msg: {% raw %}"{{ ping_out.stdout }}"{% endraw %}
+
+  """
+  playbook = Environment().from_string(template).render({
+    'src_gcp_container_hostname': src_gcp_container_hostname,
+    'dst_gcp_container_hostname': dst_gcp_container_hostname,
+    'src_container': src_container,
+    'dst_container': dst_container,
+    'delay_ms': delay_ms,
+  })
+
+  playbook_filepath = ROOT_PATH / 'deploy' / 'gcp' / 'delay-container.yml'
+  with open(playbook_filepath, 'w') as f:
+    # remove empty lines and dedent for easier read
+    f.write(textwrap.dedent(playbook))
+    print(f"[SAVED] '{playbook_filepath}'")
+
+  ansible_playbook['delay-container.yml',
+    '-e', 'app=socialNetwork',
+    '-e', f'src_container={src_container}',
+    '-e', f'dst_container={dst_container}',
+    '-e', f'delay_ms={delay_ms}',
+  ] & FG
+  print("[INFO] Delay Complete!")
 
 #############################
 # WORKLOAD
@@ -1297,6 +1413,7 @@ def gather(args):
     jaeger_host = getattr(sys.modules[__name__], f"gather__{args['app']}__{_deploy_type(args)}")(args)
 
     limit = int(input(f"Visit {jaeger_host}/dependencies to check number of flowing requests: "))
+    tag = int(input(f"Input any tag for this gather: "))
     traces = []
 
     # curl -X GET "jaeger:16686/api/traces?service=write-home-timeline-service&prettyPrint=true
@@ -1396,6 +1513,10 @@ def gather(args):
 
       # print to file and to output
       with open('antipode_ts.out', 'w') as f:
+        if tag:
+          print(f"GATHER TAG: {tag}", file=f)
+          print("", file=f)
+
         print(f"{missing_info} messages missing information", file=f)
         print("", file=f)
         print(df.describe(percentiles=PERCENTILES_TO_PRINT), file=f)
@@ -1412,7 +1533,8 @@ def gather(args):
           'post_id': None,
           'ts': None,
           'poststorage_post_written_ts': None,
-          'poststorage_replicate_end_ts': None,
+          'poststorage_read_notification_ts': None,
+          'consistency_ts': None,
           'wth_end_worker_ts': None,
         }
 
@@ -1423,7 +1545,8 @@ def gather(args):
             trace_info['ts'] = datetime.fromtimestamp(s['startTime']/1000000.0)
 
           if s['operationName'] == 'FanoutHomeTimelines':
-            trace_info['poststorage_replicate_end_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_replicate_end_ts'))
+            trace_info['poststorage_read_notification_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_read_notification_ts'))
+            trace_info['consistency_ts'] = int(_fetch_span_tag(s['tags'], 'consistency_ts'))
             trace_info['wth_end_worker_ts'] = int(_fetch_span_tag(s['tags'], 'wth_end_worker_ts'))
 
           if s['operationName'] == 'StorePost':
@@ -1435,17 +1558,20 @@ def gather(args):
           missing_info += 1
           continue
 
-        # computes the different in ms from post to notification
-        diff = datetime.fromtimestamp(trace_info['poststorage_post_written_ts']/1000.0) - datetime.fromtimestamp(trace_info['wth_end_worker_ts']/1000.0)
+        # computes the difference in ms from post to notification
+        diff = datetime.fromtimestamp(trace_info['poststorage_read_notification_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_post_written_ts']/1000.0)
         trace_info['post_notification_diff_ms'] = float(diff.total_seconds() * 1000)
 
-        diff = datetime.fromtimestamp(trace_info['poststorage_replicate_end_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_post_written_ts']/1000.0)
-        trace_info['replication_duration_ms'] = float(diff.total_seconds() * 1000)
-
-        diff = datetime.fromtimestamp(trace_info['wth_end_worker_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_post_written_ts']/1000.0)
-        trace_info['post_storage_to_notification_sent_ms'] = float(diff.total_seconds() * 1000)
+        # computes the difference in ms from post to post-ready
+        diff = datetime.fromtimestamp(trace_info['consistency_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_read_notification_ts']/1000.0)
+        trace_info['post_consistency_diff_ms'] = float(diff.total_seconds() * 1000)
 
         traces.append(trace_info)
+
+        consistency_ts = 100
+        poststorage_read_notification_ts = 100
+
+
 
 
       df = pd.DataFrame(traces)
@@ -1453,16 +1579,20 @@ def gather(args):
       # delete unnecessary columns
       del df['post_id']
       del df['poststorage_post_written_ts']
-      del df['poststorage_replicate_end_ts']
+      del df['poststorage_read_notification_ts']
+      del df['consistency_ts']
       del df['wth_end_worker_ts']
 
       df.to_csv('vl_single.csv', sep=';', mode='w')
 
-      num_posts_before_notifications = len([n for n in df['post_notification_diff_ms'] if n < 0])
-      num_notifications_before_posts = len([n for n in df['post_notification_diff_ms'] if n >= 0])
+      num_posts_before_notifications = len([n for n in df['post_consistency_diff_ms'] if n <= 0])
+      num_notifications_before_posts = len([n for n in df['post_consistency_diff_ms'] if n > 0])
 
       # print to file and to output
       with open('vl.out', 'w') as f:
+        if tag:
+          print(f"GATHER TAG: {tag}", file=f)
+          print("", file=f)
         print(f"{missing_info} messages missing information", file=f)
         print("", file=f)
         print(df.describe(percentiles=PERCENTILES_TO_PRINT), file=f)
@@ -1534,6 +1664,12 @@ if __name__ == "__main__":
 
   # delay application
   delay_parser = subparsers.add_parser('delay', help='Delay application')
+  # deploy file group
+  deploy_file_group = delay_parser.add_mutually_exclusive_group(required=False)
+  deploy_file_group.add_argument('-l', '--latest', action='store_true', help="Use last used deploy file")
+  deploy_file_group.add_argument('-f', '--file', type=argparse.FileType('r', encoding='UTF-8'), help="Use specific file")
+  # other options
+  delay_parser.add_argument('-d', '--duration', type=int, default='100', help="Duration in ms")
 
   # run application
   run_parser = subparsers.add_parser('run', help='Run application')

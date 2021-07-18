@@ -17,6 +17,7 @@ apps:
       to_build:
         - rabbitmq-setup
         - mongodb-setup
+        - mongodb-delayed
         - yg397/openresty-thrift:latest
         - yg397/social-network-microservices:antipode
         - wrk2:antipode
