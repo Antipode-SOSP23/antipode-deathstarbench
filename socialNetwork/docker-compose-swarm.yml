@@ -25,8 +25,7 @@ services:
     - deathstarbench_network
     restart: 'no'
   compose-post-service:
-    command: dockerize -wait tcp://write-home-timeline-rabbitmq-setup:8000 -wait tcp://write-home-timeline-rabbitmq-eu:5672
-      -wait tcp://write-home-timeline-rabbitmq-us:5672 -wait tcp://write-home-timeline-service-eu:9090
+    command: dockerize -wait tcp://write-home-timeline-rabbitmq-setup:8000 -wait tcp://write-home-timeline-service-eu:9090
       -wait tcp://write-home-timeline-service-us:9090 -wait tcp://post-storage-service-eu:9090
       -wait-retry-interval 10s -timeout 300s ComposePostService
     deploy:
@@ -71,7 +70,7 @@ services:
         constraints:
         - node.hostname == home-timeline-us
     entrypoint: dockerize -wait tcp://home-timeline-redis-us:6379 -wait tcp://post-storage-service-us:9090
-      HomeTimelineService
+      -timeout 300s HomeTimelineService
     hostname: home-timeline-service
     image: yg397/social-network-microservices:antipode
     networks:
@@ -134,7 +133,8 @@ services:
         size: 3000000000
       type: tmpfs
   media-service:
-    command: dockerize -wait tcp://compose-post-service:9090 -wait-retry-interval 10s -timeout 300s MediaService
+    command: dockerize -wait tcp://compose-post-service:9090 -wait-retry-interval
+      10s -timeout 300s MediaService
     deploy:
       placement:
         constraints:
@@ -391,7 +391,6 @@ services:
       placement:
         constraints:
         - node.hostname == compose-others
-    entrypoint: UrlShortenService
     hostname: url-shorten-service
     image: yg397/social-network-microservices:antipode
     networks:
@@ -474,12 +473,13 @@ services:
     restart: 'no'
   user-timeline-service:
     command: dockerize -wait tcp://post-storage-service-eu:9090 -wait tcp://user-timeline-redis:6379
-      UserTimelineService
+      -wait tcp://write-home-timeline-rabbitmq-us:5672 -wait tcp://write-home-timeline-service-eu:9090
+      -wait tcp://write-home-timeline-service-us:9090 -wait tcp://post-storage-service-eu:9090
+      -wait-retry-interval 10s -timeout 300s UserTimelineService
     deploy:
       placement:
         constraints:
         - node.hostname == user-timeline
-    entrypoint: null
     hostname: user-timeline-service
     image: yg397/social-network-microservices:antipode
     networks:

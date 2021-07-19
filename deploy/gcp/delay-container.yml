@@ -47,7 +47,7 @@
 
     - name: Delay container
       shell: >
-          docker exec $( docker ps -a --filter name='post-storage-mongodb-eu' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) /home/delay.sh {{ delay_ip }} 200ms
+          docker exec $( docker ps -a --filter name='post-storage-mongodb-eu' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) /home/delay.sh {{ delay_ip }} 85ms
       ignore_errors: True
 
     - name: Spam ping to kickstart delay

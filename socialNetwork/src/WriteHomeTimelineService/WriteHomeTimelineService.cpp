@@ -89,7 +89,7 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
     opentracing::Tracer::Global()->Inject(span->context(), writer);
 
     // eval
-    span->SetTag("wth_start_worker_ts", std::to_string(ts));
+    span->SetTag("wht_start_worker_ts", std::to_string(ts));
 
     // Extract information from rabbitmq messages
     int64_t user_id = msg_json["user_id"];
@@ -136,16 +136,16 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
     //----------
     // DISTRIBUTED
     //----------
-    mongoc_client_t *mongodb_client = mongoc_client_pool_pop(_mongodb_client_pool);
-    AntipodeMongodb antipode_client = AntipodeMongodb(mongodb_client, "post");
+    // mongoc_client_t *mongodb_client = mongoc_client_pool_pop(_mongodb_client_pool);
+    // AntipodeMongodb antipode_client = AntipodeMongodb(mongodb_client, "post");
 
-    // gets cscopes with writes by caller
-    std::list<std::string> wanted_callers {"post-storage-service"};
+    // // gets cscopes with writes by caller
+    // std::list<std::string> wanted_callers {"post-storage-service"};
 
-    cscope = antipode_client.barrier(cscope);
+    // cscope = antipode_client.barrier(cscope);
 
-    antipode_client.close();
-    mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
+    // antipode_client.close();
+    // mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
     //----------
     // DISTRIBUTED
     //----------
@@ -271,10 +271,6 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
     // XTRACE("RedisUpdate complete");
     _redis_client_pool->Push(redis_client_wrapper);
 
-    // add metrics to span to read later
-    high_resolution_clock::time_point end_worker_ts = high_resolution_clock::now();
-    ts = duration_cast<milliseconds>(end_worker_ts.time_since_epoch()).count();
-    span->SetTag("wth_end_worker_ts", std::to_string(ts));
     DELETE_CURRENT_BAGGAGE();
     return true;
   } catch (...) {

@@ -32,6 +32,13 @@
         use_ssh_args: yes
         mode: push
 
+    - name: Copy wkld-run script
+      synchronize:
+        src: "./wkld-run.sh"
+        dest: "/code/deploy/gcp/"
+        use_ssh_args: yes
+        mode: push
+
     - name: Pull images from GCP registry
       shell: >
         docker pull gcr.io/pluribus/{{item}} &&

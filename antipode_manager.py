@@ -786,7 +786,14 @@ def run__socialNetwork__local(args):
   from plumbum.cmd import docker_compose, docker
 
   if args['info']:
-    print("NOT IMPLEMENTED!")
+    from plumbum import FG, BG
+    from plumbum.cmd import sudo, hostname
+
+    public_ip = hostname['-I']().split()[1]
+    print(f"Jaeger:\thttp://{public_ip}:16686")
+    print(f"RabbitMQ-EU:\thttp://{public_ip}:15672")
+    print(f"RabbitMQ-US:\thttp://{public_ip}:15673")
+    print("\tuser: admin / pwd: admin")
     return
 
   run_args = ['up']
@@ -1395,7 +1402,7 @@ def gather(args):
     jaeger_host = getattr(sys.modules[__name__], f"gather__{args['app']}__{_deploy_type(args)}")(args)
 
     limit = int(input(f"Visit {jaeger_host}/dependencies to check number of flowing requests: "))
-    tag = int(input(f"Input any tag for this gather: "))
+    tag = input(f"Input any tag for this gather: ")
     traces = []
 
     # curl -X GET "jaeger:16686/api/traces?service=write-home-timeline-service&prettyPrint=true
@@ -1417,177 +1424,93 @@ def gather(args):
     if len(traces) == limit:
       print(f"[WARN] Fetched the same amount of traces as the limit ({limit}). Increase the limit to fetch all traces.")
 
-    # read returned traces
+    # pick only the traces with the desired info
     content = response.json()
     missing_info = 0
-    if args['antipode_ts']:
-      # pick only the traces with the desired info
-      for trace in content['data']:
-        trace_info = {
-          'ts': None,
-          # 'trace_id': trace['spans'][0]['traceID'],
-          'post_id': None,
-          # 'antipode_isvisible_duration': -1,
-          # 'antipode_isvisible_attempts': -1,
-          'wht_start_queue_ts': None,
-          'wth_start_worker_ts': None,
-          'wth_end_worker_ts': None,
-          'wht_antipode_duration': None,
-        }
+    for trace in content['data']:
+      trace_info = {
+        'ts': None,
+        'post_id': None,
+        # 'trace_id': trace['spans'][0]['traceID'],
+        #
+        'poststorage_post_written_ts': None,
+        'poststorage_read_notification_ts': None,
+        'consistency_ts': None,
+        #
+        'wht_start_queue_ts': None,
+        'wht_start_worker_ts': None,
+        'wht_antipode_duration': None,
+      }
+      # search trace info in different spans
+      for s in trace['spans']:
+        if s['operationName'] == '_ComposeAndUpload':
+          trace_info['post_id'] = int(_fetch_span_tag(s['tags'], 'composepost_id'))
+          trace_info['ts'] = datetime.fromtimestamp(s['startTime']/1000000.0)
+        elif s['operationName'] == 'StorePost':
+          trace_info['poststorage_post_written_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_post_written_ts'))
+        elif s['operationName'] == 'FanoutHomeTimelines':
+          trace_info['poststorage_read_notification_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_read_notification_ts'))
+          trace_info['consistency_ts'] = int(_fetch_span_tag(s['tags'], 'consistency_ts'))
+          # compute the time spent in the queue
+          trace_info['wht_start_worker_ts'] = float(_fetch_span_tag(s['tags'], 'wht_start_worker_ts'))
+          # duration spent in antipode
+          trace_info['wht_antipode_duration'] = float(_fetch_span_tag(s['tags'], 'wht_antipode_duration'))
+        elif s['operationName'] == '_UploadHomeTimelineHelper':
+          # compute the time spent in the queue
+          trace_info['wht_start_queue_ts'] = float(_fetch_span_tag(s['tags'], 'wht_start_queue_ts'))
 
-        # search trace info in different spans
-        for s in trace['spans']:
-          if s['operationName'] == '_ComposeAndUpload':
-            trace_info['post_id'] = float(_fetch_span_tag(s['tags'], 'composepost_id'))
-            trace_info['ts'] = datetime.fromtimestamp(s['startTime']/1000000.0)
+      # skip if we still have -1 values
+      if any(v is None for v in trace_info.values()):
+        # print(f"[INFO] trace missing information: {trace_info}")
+        missing_info += 1
+        continue
 
+      # computes the difference in ms from post to notification
+      diff = datetime.fromtimestamp(trace_info['poststorage_read_notification_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_post_written_ts']/1000.0)
+      trace_info['post_notification_diff_ms'] = float(diff.total_seconds() * 1000)
 
-          if s['operationName'] == '_UploadHomeTimelineHelper':
-            # compute the time spent in the queue
-            trace_info['wht_start_queue_ts'] = float(_fetch_span_tag(s['tags'], 'wht_start_queue_ts'))
+      # computes the difference in ms from post to post-ready
+      diff = datetime.fromtimestamp(trace_info['consistency_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_read_notification_ts']/1000.0)
+      trace_info['post_consistency_diff_ms'] = float(diff.total_seconds() * 1000)
 
-          # these values are captured by wht_antipode_duration
-          # if s['operationName'] == 'IsVisible':
-            # trace_info['antipode_isvisible_duration'] = float(_fetch_span_tag(s['tags'], 'antipode_isvisible_duration'))
-            # trace_info['antipode_isvisible_attempts'] = int(_fetch_span_tag(s['tags'], 'antipode_isvisible_attempts'))
+      # computes time spent queued in rabbitmq
+      diff = datetime.fromtimestamp(trace_info['wht_start_worker_ts']/1000.0) - datetime.fromtimestamp(trace_info['wht_start_queue_ts']/1000.0)
+      trace_info['wht_queue_duration'] = float(diff.total_seconds() * 1000)
 
-          if s['operationName'] == 'FanoutHomeTimelines':
-            # duration spent in antipode
-            trace_info['wht_antipode_duration'] = float(_fetch_span_tag(s['tags'], 'wht_antipode_duration'))
-            # compute the time spent in the queue
-            trace_info['wth_start_worker_ts'] = float(_fetch_span_tag(s['tags'], 'wth_start_worker_ts'))
-            # total time spent in antipode operations while in WHT
-            trace_info['wth_end_worker_ts'] = float(_fetch_span_tag(s['tags'], 'wth_end_worker_ts'))
+      traces.append(trace_info)
 
-        # skip if we still have -1 values
-        if any(v is None for v in trace_info.values()):
-          missing_info += 1
-          # print(f"[INFO] trace missing information: {trace_info}")
-          continue
+    # Build dataframe with all the traces
+    df = pd.DataFrame(traces)
+    df = df.set_index('ts')
+    # remove unecessary columns
+    del df['post_id']
+    del df['poststorage_post_written_ts']
+    del df['poststorage_read_notification_ts']
+    del df['consistency_ts']
+    del df['wht_start_queue_ts']
+    del df['wht_start_worker_ts']
 
-        # total time of worker
-        diff = datetime.fromtimestamp(trace_info['wth_end_worker_ts']/1000.0) - datetime.fromtimestamp(trace_info['wth_start_worker_ts']/1000.0)
-        trace_info['wht_worker_duration'] = float(diff.total_seconds() * 1000)
+    # save to csv so we can plot a timeline later
+    df.to_csv('traces.csv', sep=';', mode='w')
 
-        try:
-          trace_info['wht_worker_per_antipode'] = trace_info['wht_antipode_duration'] / trace_info['wht_worker_duration']
-        except ZeroDivisionError:
-          trace_info['wht_worker_per_antipode'] = 1
+    # compute extra info to output in info file
+    num_posts_before_notifications = len([n for n in df['post_consistency_diff_ms'] if n <= 0])
+    num_notifications_before_posts = len([n for n in df['post_consistency_diff_ms'] if n > 0])
 
-        # computes time spent queued in rabbitmq
-        diff = datetime.fromtimestamp(trace_info['wth_start_worker_ts']/1000.0) - datetime.fromtimestamp(trace_info['wht_start_queue_ts']/1000.0)
-        trace_info['wht_queue_duration'] = float(diff.total_seconds() * 1000)
+    # save to file
+    with open('traces.info', 'w') as f:
+      print(f"{missing_info} messages skipped due to missing information", file=f)
+      if tag:
+        print(f"GATHER TAG: {tag}", file=f)
+      print("", file=f)
+      print(f"% posts ready before notifications: {num_posts_before_notifications/float(len(df))}", file=f)
+      print(f"% notifications ready before posts: {num_notifications_before_posts/float(len(df))}", file=f)
+      print("", file=f)
+      print(df.describe(percentiles=PERCENTILES_TO_PRINT), file=f)
 
-        # queue + worker time
-        diff = datetime.fromtimestamp(trace_info['wth_end_worker_ts']/1000.0) - datetime.fromtimestamp(trace_info['wht_start_queue_ts']/1000.0)
-        trace_info['wht_total_duration'] = float(diff.total_seconds() * 1000)
-
-        traces.append(trace_info)
-
-      df = pd.DataFrame(traces)
-      df = df.set_index('ts')
-      del df['post_id']
-      del df['wht_start_queue_ts']
-      del df['wth_start_worker_ts']
-      del df['wth_end_worker_ts']
-
-      df.to_csv('ats_single.csv', sep=';', mode='w')
-
-      # print to file and to output
-      with open('antipode_ts.out', 'w') as f:
-        if tag:
-          print(f"GATHER TAG: {tag}", file=f)
-          print("", file=f)
-
-        print(f"{missing_info} messages missing information", file=f)
-        print("", file=f)
-        print(df.describe(percentiles=PERCENTILES_TO_PRINT), file=f)
-      # --
-      print(f"{missing_info} messages missing information")
-      print("")
-      print(df.describe(percentiles=PERCENTILES_TO_PRINT))
-
-    elif args['visibility_latency']:
-      # pick only the traces with the desired info
-      for trace in content['data']:
-        trace_info = {
-          # 'trace_id': trace['spans'][0]['traceID'],
-          'post_id': None,
-          'ts': None,
-          'poststorage_post_written_ts': None,
-          'poststorage_read_notification_ts': None,
-          'consistency_ts': None,
-          'wth_end_worker_ts': None,
-        }
-
-        # search trace info in different spans
-        for s in trace['spans']:
-          if s['operationName'] == '_ComposeAndUpload':
-            trace_info['post_id'] = int(_fetch_span_tag(s['tags'], 'composepost_id'))
-            trace_info['ts'] = datetime.fromtimestamp(s['startTime']/1000000.0)
-
-          if s['operationName'] == 'FanoutHomeTimelines':
-            trace_info['poststorage_read_notification_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_read_notification_ts'))
-            trace_info['consistency_ts'] = int(_fetch_span_tag(s['tags'], 'consistency_ts'))
-            trace_info['wth_end_worker_ts'] = int(_fetch_span_tag(s['tags'], 'wth_end_worker_ts'))
-
-          if s['operationName'] == 'StorePost':
-            trace_info['poststorage_post_written_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_post_written_ts'))
-
-        # skip if we still have -1 values
-        if any(v is None for v in trace_info.values()):
-          # print(f"[INFO] trace missing information: {trace_info}")
-          missing_info += 1
-          continue
-
-        # computes the difference in ms from post to notification
-        diff = datetime.fromtimestamp(trace_info['poststorage_read_notification_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_post_written_ts']/1000.0)
-        trace_info['post_notification_diff_ms'] = float(diff.total_seconds() * 1000)
-
-        # computes the difference in ms from post to post-ready
-        diff = datetime.fromtimestamp(trace_info['consistency_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_read_notification_ts']/1000.0)
-        trace_info['post_consistency_diff_ms'] = float(diff.total_seconds() * 1000)
-
-        traces.append(trace_info)
-
-        consistency_ts = 100
-        poststorage_read_notification_ts = 100
-
-
-
-
-      df = pd.DataFrame(traces)
-      df = df.set_index('ts')
-      # delete unnecessary columns
-      del df['post_id']
-      del df['poststorage_post_written_ts']
-      del df['poststorage_read_notification_ts']
-      del df['consistency_ts']
-      del df['wth_end_worker_ts']
-
-      df.to_csv('vl_single.csv', sep=';', mode='w')
-
-      num_posts_before_notifications = len([n for n in df['post_consistency_diff_ms'] if n <= 0])
-      num_notifications_before_posts = len([n for n in df['post_consistency_diff_ms'] if n > 0])
-
-      # print to file and to output
-      with open('vl.out', 'w') as f:
-        if tag:
-          print(f"GATHER TAG: {tag}", file=f)
-          print("", file=f)
-        print(f"{missing_info} messages missing information", file=f)
-        print("", file=f)
-        print(df.describe(percentiles=PERCENTILES_TO_PRINT), file=f)
-        print("", file=f)
-        print(f"% posts ready before notifications: {num_posts_before_notifications/float(len(df))}", file=f)
-        print(f"% notifications ready before posts: {num_notifications_before_posts/float(len(df))}", file=f)
-      # --
-      print(f"{missing_info} messages missing information")
-      print("")
-      print(df.describe(percentiles=PERCENTILES_TO_PRINT))
-      print("")
-      print(f"% posts ready before notifications: {num_posts_before_notifications/float(len(df))}")
-      print(f"% notifications ready before posts: {num_notifications_before_posts/float(len(df))}")
+    # print file to stdout
+    with open('traces.info', 'r') as f:
+      print(f.read())
 
   except KeyboardInterrupt:
     # if the compose gets interrupted we just continue with the script
@@ -1696,9 +1619,6 @@ if __name__ == "__main__":
   deploy_file_group = gather_parser.add_mutually_exclusive_group(required=False)
   deploy_file_group.add_argument('-l', '--latest', action='store_true', help="Use last used deploy file")
   deploy_file_group.add_argument('-f', '--file', type=argparse.FileType('r', encoding='UTF-8'), help="Use specific file")
-  # different metics to gather
-  gather_parser.add_argument('-vl', '--visibility-latency', action='store_true', help="gather visibility latency information")
-  gather_parser.add_argument('-ats', '--antipode-ts', action='store_true', help="gathers antipode timestamps and duration information")
 
 
   args = vars(main_parser.parse_args())
