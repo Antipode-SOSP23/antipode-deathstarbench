@@ -733,9 +733,6 @@ def deploy__socialNetwork__gcp(args):
           inventory[node_key]['external_ip'] = None
           inventory[node_key]['internal_ip'] = None
 
-    # observed some errors while running hence we sleep to avoid those
-    time.sleep(20)
-
     # now build the inventory
     # if you want to get a new google_compute_engine key:
     #   1) go to https://console.cloud.google.com/compute/instances
@@ -820,16 +817,9 @@ def run__socialNetwork__gsd(args):
   portainer_ip = GSD_AVAILABLE_NODES[next(iter(GSD_SWARM_MANAGER_NODE))]
   print(f"[INFO] Portainer link (u/pwd: admin/antipode): http://{portainer_ip}:9000 ")
 
-  # weird bug when starting DSB right after deploying it
-  print("[INFO] Sleeping before deploying to avoid weird bugs ...!")
-  time.sleep(20)
-
   ansible_playbook['start-dsb.yml', '-e', 'app=socialNetwork'] & FG
 
-  # init social graph
-  print("[INFO] Sleeping before init with the social graph dataset ...")
-  time.sleep(30)
-  ansible_playbook['init-social-graph.yml', '-e', 'app=socialNetwork', '-e', f"configuration={filepath}"] & FG
+  # ansible_playbook['init-social-graph.yml', '-e', 'app=socialNetwork', '-e', f"configuration={filepath}"] & FG
 
   print("[INFO] Run Complete!")
 
@@ -877,16 +867,10 @@ def run__socialNetwork__gcp(args):
   _wait_url_up(prometheus_url)
   print(f"[INFO] Prometheus link: {prometheus_url}")
 
-  # weird bug when starting DSB right after deploying it
-  print("[INFO] Sleeping before deploying to avoid weird bugs ...!")
-  time.sleep(30)
-
   # start dsb services
   ansible_playbook['start-dsb.yml', '-e', 'app=socialNetwork'] & FG
 
   # init social graph
-  # print("[INFO] Sleeping before init with the social graph dataset ...")
-  # time.sleep(10)
   # ansible_playbook['init-social-graph.yml', '-e', 'app=socialNetwork', '-e', f"configuration={filepath}"] & FG
 
   print("[INFO] Run Complete!")
@@ -1287,8 +1271,6 @@ def wkld__socialNetwork__gcp__run(args, hosts, exe_path, exe_args):
         hostname=client_info['hostname'],
         firewall_tags=[]
       )
-
-    time.sleep(20)
 
     # wait for instances public ips
     print("[INFO] Waiting for GCP nodes to have public IP addresses ...")
