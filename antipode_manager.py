@@ -902,8 +902,6 @@ def clean__socialNetwork__local(args):
 
   if args['strong']:
     docker_compose['down', '--rmi', 'all', '--remove-orphans'] & FG
-  elif args['jaeger']:
-    docker_compose['rm', '-f', 'jaeger'] & FG
   else:
     docker_compose['down'] & FG
 
@@ -932,8 +930,8 @@ def clean__socialNetwork__gcp(args):
       _gcp_delete_instance(host['zone'], name)
     for name,host in client_inventory.items():
       _gcp_delete_instance(host['zone'], name)
-  elif args['jaeger']:
-    ansible_playbook['restart-jaeger.yml', '-e', 'app=socialNetwork'] & FG
+  elif args['restart']:
+    ansible_playbook['rescale-dsb.yml', '-e', 'app=socialNetwork'] & FG
   else:
     ansible_playbook['undeploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
 
@@ -1567,7 +1565,7 @@ if __name__ == "__main__":
   # clean application
   clean_parser = subparsers.add_parser('clean', help='Clean application')
   clean_parser.add_argument('-s', '--strong', action='store_true', help="delete images")
-  clean_parser.add_argument('-j', '--jaeger', action='store_true', help="delete jaeger container")
+  clean_parser.add_argument('-r', '--restart', action='store_true', help="clean deployment by restarting containers")
 
   # delay application
   delay_parser = subparsers.add_parser('delay', help='Delay application')

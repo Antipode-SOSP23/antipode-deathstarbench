@@ -1,0 +1,14 @@
+---
+- hosts: swarm_manager
+  any_errors_fatal: true
+  gather_facts: no
+  become: yes
+  vars:
+    - stack: deathstarbench
+
+  tasks:
+    - name: Scale DSB to 0
+      shell: docker service scale $(CMD="" ; for SERVICE in $(docker stack services {{ stack }} --format {% raw %}'{{.Name}}'{% endraw %}) ; do CMD="$CMD $SERVICE=0"; done; echo $CMD)
+
+    - name: Scale DSB to 1
+      shell: docker service scale $(CMD="" ; for SERVICE in $(docker stack services {{ stack }} --format {% raw %}'{{.Name}}'{% endraw %}) ; do CMD="$CMD $SERVICE=1"; done; echo $CMD)
