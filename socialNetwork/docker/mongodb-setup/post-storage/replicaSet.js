@@ -1,5 +1,6 @@
 rsconf = {
   _id: "rs0",
+  writeConcernMajorityJournalDefault: false,
   members: [
     {
       _id: 0,
@@ -9,7 +10,7 @@ rsconf = {
     {
       _id: 1,
       host: "post-storage-mongodb-us:27017",
-      priority: 0
+      priority: 1
     },
   ]
 }

@@ -182,6 +182,7 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
         LOG(warning) << "[ANTIPODE] Could not open mongo connection: client";
         continue;
       }
+
       auto collection = mongoc_client_get_collection(mongodb_client, "post", "post");
       if (!collection) {
         mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
@@ -191,8 +192,9 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
 
       bson_t *query = bson_new();
       BSON_APPEND_INT64(query, "post_id", post_id);
-      mongoc_cursor_t *cursor = mongoc_collection_find_with_opts(
-          collection, query, nullptr, nullptr);
+      mongoc_read_prefs_t *read_prefs;
+      read_prefs = mongoc_read_prefs_new(MONGOC_READ_SECONDARY);
+      mongoc_cursor_t *cursor = mongoc_collection_find_with_opts(collection, query, nullptr, read_prefs);
       const bson_t *doc;
       read_post = mongoc_cursor_next(cursor, &doc);
 
@@ -415,6 +417,22 @@ int main(int argc, char *argv[]) {
   if (_mongodb_client_pool == nullptr) {
     return EXIT_FAILURE;
   }
+
+  // get latest server description
+  // mongoc_client_t *mongodb_client = mongoc_client_pool_pop(_mongodb_client_pool);
+  // if (!mongodb_client) {
+  //   LOG(fatal) << "Failed to pop mongoc client";
+  //   return EXIT_FAILURE;
+  // }
+  // mongoc_server_description_t *sd;
+  // sd = mongoc_client_get_server_description(mongodb_client, 1);
+  // if (sd == NULL) {
+  //   LOG(fatal) << "Failed to fetch server description";
+  //   return EXIT_FAILURE;
+  // }
+  // LOG(debug) << "HOST AND PORT = " << mongoc_server_description_host(sd)->host_and_port;
+  // mongoc_server_description_destroy(sd);
+  // mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
 
   //----------
   // +ANTIPODE
