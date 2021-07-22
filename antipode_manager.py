@@ -943,17 +943,18 @@ def clean__socialNetwork__gcp(args):
 #
 def delay(args):
   try:
-    delay_ms = args['duration']
+    delay_ms = f"{args['delay']}ms"
+    jitter_ms = f"{args['jitter']}ms"
     # params - TODO move to args later on
     src_container = 'post-storage-mongodb-eu'
     dst_container = 'post-storage-mongodb-us'
 
-    getattr(sys.modules[__name__], f"delay__{args['app']}__{_deploy_type(args)}")(args, src_container, dst_container, delay_ms)
+    getattr(sys.modules[__name__], f"delay__{args['app']}__{_deploy_type(args)}")(args, src_container, dst_container, delay_ms, jitter_ms)
   except KeyboardInterrupt:
     # if the compose gets interrupted we just continue with the script
     pass
 
-def delay__socialNetwork__local(args, src_container, dst_container, delay_ms):
+def delay__socialNetwork__local(args, src_container, dst_container, delay_ms, jitter_ms):
   from plumbum.cmd import docker_compose, docker
 
   os.chdir(ROOT_PATH / args['app'])
@@ -962,9 +963,9 @@ def delay__socialNetwork__local(args, src_container, dst_container, delay_ms):
   dst_container_id = docker_compose['ps', '-q', dst_container].run()[1].rstrip()
   dst_ip = docker['inspect', '-f' '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}', dst_container_id].run()[1].rstrip()
 
-  docker_compose['exec', src_container, '/home/delay.sh', dst_ip, f'{delay_ms}ms'] & FG
+  docker_compose['exec', src_container, '/home/delay.sh', dst_ip, delay_ms, jitter_ms] & FG
 
-def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms):
+def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms, jitter_ms):
   _force_docker()
   from plumbum.cmd import ansible_playbook
   from jinja2 import Environment
@@ -1031,7 +1032,7 @@ def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms):
 
         - name: Delay container
           shell: >
-              docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) /home/delay.sh {% raw %}{{ delay_ip }}{% endraw %} {{ delay_ms }}ms
+              docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) /home/delay.sh {% raw %}{{ delay_ip }}{% endraw %} {{ delay_ms }} {{ jitter_ms }}
           ignore_errors: True
 
         - name: Spam ping to kickstart delay
@@ -1050,6 +1051,7 @@ def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms):
     'src_container': src_container,
     'dst_container': dst_container,
     'delay_ms': delay_ms,
+    'jitter_ms': jitter_ms,
   })
 
   playbook_filepath = ROOT_PATH / 'deploy' / 'gcp' / 'delay-container.yml'
@@ -1063,6 +1065,7 @@ def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms):
     '-e', f'src_container={src_container}',
     '-e', f'dst_container={dst_container}',
     '-e', f'delay_ms={delay_ms}',
+    '-e', f'jitter_ms={jitter_ms}',
   ] & FG
   print("[INFO] Delay Complete!")
 
@@ -1574,7 +1577,8 @@ if __name__ == "__main__":
   deploy_file_group.add_argument('-l', '--latest', action='store_true', help="Use last used deploy file")
   deploy_file_group.add_argument('-f', '--file', type=argparse.FileType('r', encoding='UTF-8'), help="Use specific file")
   # other options
-  delay_parser.add_argument('-d', '--duration', type=int, default='100', help="Duration in ms")
+  delay_parser.add_argument('-d', '--delay', type=int, default='100', help="Delay in ms")
+  delay_parser.add_argument('-j', '--jitter', type=int, default='0', help="Jitter in ms")
 
   # run application
   run_parser = subparsers.add_parser('run', help='Run application')
