@@ -979,15 +979,28 @@ void ComposePostHandler::_UploadHomeTimelineHelper(
     rabbitmq_channel->DeclareExchange("write-home-timeline", AmqpClient::Channel::EXCHANGE_TYPE_TOPIC);
     // publishes to the queue of each zone
     for (auto &izone : _interest_zones){
-      rabbitmq_channel->BasicPublish("write-home-timeline", "write-home-timeline-" + izone, msg, true);
+      std::string routing_key = "write-home-timeline-" + izone;
+      rabbitmq_channel->BasicPublish("write-home-timeline", routing_key, msg, true);
     }
-    _rabbitmq_client_pool->Push(rabbitmq_client_wrapper);
 
     // save ts when notification as placed on rabbitmq
     ts = high_resolution_clock::now();
     ts_int = duration_cast<milliseconds>(ts.time_since_epoch()).count();
     span->SetTag("wht_start_queue_ts", std::to_string(ts_int));
 
+    for (auto &izone : _interest_zones){
+      std::string queue_name = "write-home-timeline-" + izone;
+
+      // save the current message count on the tags
+      // the only way to get the message count is by doing a passive queue declaration
+      // ref: https://github.com/alanxz/SimpleAmqpClient/blob/master/src/Channel.cpp#L637
+      boost::uint32_t message_count;
+      boost::uint32_t consumer_count;
+      rabbitmq_channel->DeclareQueueWithCounts(queue_name, message_count, consumer_count, false, true, false, false);
+
+      span->SetTag(queue_name+"-message_count", std::to_string(message_count));
+    }
+    _rabbitmq_client_pool->Push(rabbitmq_client_wrapper);
   } catch (...) {
     LOG(error) << "Failed to connected to home-timeline-rabbitmq";
     // XTRACE("Failed to connect to home-timeline-rabbitmq");

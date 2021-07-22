@@ -783,11 +783,11 @@ def run(args):
     pass
 
 def run__socialNetwork__local(args):
+  from plumbum import FG, BG
   from plumbum.cmd import docker_compose, docker
 
   if args['info']:
-    from plumbum import FG, BG
-    from plumbum.cmd import sudo, hostname
+    from plumbum.cmd import hostname
 
     public_ip = hostname['-I']().split()[1]
     print(f"Jaeger:\thttp://{public_ip}:16686")
@@ -1440,6 +1440,7 @@ def gather(args):
         'wht_start_queue_ts': None,
         'wht_start_worker_ts': None,
         'wht_antipode_duration': None,
+        'write-home-timeline-us-message_count': None,
       }
       # search trace info in different spans
       for s in trace['spans']:
@@ -1458,6 +1459,7 @@ def gather(args):
         elif s['operationName'] == '_UploadHomeTimelineHelper':
           # compute the time spent in the queue
           trace_info['wht_start_queue_ts'] = float(_fetch_span_tag(s['tags'], 'wht_start_queue_ts'))
+          trace_info['write-home-timeline-us-message_count'] = float(_fetch_span_tag(s['tags'], 'write-home-timeline-us-message_count'))
 
       # skip if we still have -1 values
       if any(v is None for v in trace_info.values()):

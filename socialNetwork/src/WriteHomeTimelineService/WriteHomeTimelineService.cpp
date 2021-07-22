@@ -73,9 +73,9 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
       SET_CURRENT_BAGGAGE(Baggage::deserialize(baggage_it->second));
     }
 
-    if (!XTrace::IsTracing()) {
-      XTrace::StartTrace("WriteHomeTimelineService");
-    }
+    // if (!XTrace::IsTracing()) {
+    //   XTrace::StartTrace("WriteHomeTimelineService");
+    // }
 
     // XTRACE("WriteHomeTimelineService::OnReceivedWorker");
     // Jaeger tracing
@@ -102,9 +102,7 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
     // -ANTIPODE
     //----------
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
-    bool check = false;
-
-    Cscope cscope = Cscope::from_json(msg_json["cscope_str"].dump());
+    // Cscope cscope = Cscope::from_json(msg_json["cscope_str"].dump());
 
     //----------
     // CENTRALIZED
@@ -150,6 +148,10 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
     // DISTRIBUTED
     //----------
 
+    //----------
+    // EVAL CONSISTENCY ERRORS
+    //----------
+
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     ts = duration_cast<milliseconds>(t2.time_since_epoch()).count();
     span->SetTag("poststorage_read_notification_ts", std::to_string(ts));
@@ -158,7 +160,11 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
     span->SetTag("wht_antipode_duration", std::to_string(time_span.count()));
 
     //----------
-    // -EVAL CONSISTENCY ERRORS
+    // EVAL CONSISTENCY ERRORS
+    //----------
+
+    //----------
+    // -ANTIPODE
     //----------
 
     // force WritHomeTimeline to an error by sleeping
