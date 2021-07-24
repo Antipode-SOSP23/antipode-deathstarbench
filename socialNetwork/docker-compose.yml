@@ -480,8 +480,8 @@ services:
     hostname: antipode-oracle
     # ports:
       # - 10001:9090
-    restart: 'no'
-    entrypoint: /usr/local/bin/AntipodeOracle
+    restart: 'always'
+    command: dockerize -wait tcp://jaeger:16686 -wait-retry-interval 10s -timeout 300s /usr/local/bin/AntipodeOracle
     deploy:
       placement:
         constraints: [node.hostname == node22]
@@ -494,6 +494,7 @@ services:
     hostname: nginx-thrift
     ports:
       - 8080:8080
+    command: dockerize -wait tcp://jaeger:16686 -wait-retry-interval 10s -timeout 300s bash -c "/usr/local/openresty/bin/openresty -g 'daemon off;'"
     restart: 'always'
     volumes:
       - ./nginx-web-server/lua-scripts:/usr/local/openresty/nginx/lua-scripts
@@ -513,6 +514,7 @@ services:
     hostname: nginx-thrift
     ports:
       - 8082:8080
+    command: dockerize -wait tcp://jaeger:16686 -wait-retry-interval 10s -timeout 300s bash -c "/usr/local/openresty/bin/openresty -g 'daemon off;'"
     restart: 'always'
     volumes:
       - ./nginx-web-server/lua-scripts:/usr/local/openresty/nginx/lua-scripts

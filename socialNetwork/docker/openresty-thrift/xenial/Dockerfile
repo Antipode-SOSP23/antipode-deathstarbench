@@ -66,7 +66,6 @@ LABEL resty_eval_post_make="${RESTY_EVAL_POST_MAKE}"
 # These are not intended to be user-specified
 ARG _RESTY_CONFIG_DEPS="--with-openssl=/tmp/openssl-${RESTY_OPENSSL_VERSION} --with-pcre=/tmp/pcre-${RESTY_PCRE_VERSION}"
 
-
 # 1) Install apt dependencies
 # 2) Download and untar OpenSSL, PCRE, and OpenResty
 # 3) Build OpenResty
@@ -77,6 +76,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
         build-essential \
         ca-certificates \
         curl \
+        wget \
         git \
         gettext-base \
         libgd-dev \
@@ -90,6 +90,9 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
         unzip \
         zlib1g-dev \
         cmake \
+        libboost-all-dev \
+        lua5.1 \
+        lua5.1-dev \
         ${RESTY_ADD_PACKAGE_BUILDDEPS} \
         ${RESTY_ADD_PACKAGE_RUNDEPS} \
     && cd /tmp \
@@ -115,7 +118,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && cd /tmp \
     && rm -rf opentracing-cpp-${OPENTRACING_CPP_VERSION}.tar.gz \
               opentracing-cpp-${OPENTRACING_CPP_VERSION} \
-  ### Build lua-resty-hmac
+    ### Build lua-resty-hmac
     && cd /tmp \
     && git clone https://github.com/jkeys089/lua-resty-hmac.git \
     && cd lua-resty-hmac \
@@ -123,12 +126,13 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && make install \
     && cd /tmp \
     && rm -rf lua-resty-hmac \
-
-  ### Add Jaeger plugin
+    ### Add Jaeger plugin
     && cd /usr/local/lib \
     && curl -fSL https://github.com/jaegertracing/jaeger-client-cpp/releases/download/v${JAEGER_TRACING_VERSION}/libjaegertracing_plugin.linux_amd64.so -o libjaegertracing_plugin.so
 
-
+#---------
+# OpenTracing
+#---------
 RUN cd /usr/local \
     && curl -fSL https://github.com/opentracing-contrib/nginx-opentracing/archive/v${NGINX_OPENTRACING_VERSION}.tar.gz -o nginx-opentracing-${NGINX_OPENTRACING_VERSION}.tar.gz \
     && tar -zxf nginx-opentracing-${NGINX_OPENTRACING_VERSION}.tar.gz \
@@ -147,6 +151,9 @@ RUN cd /usr/local \
         openresty-${RESTY_VERSION}.tar.gz openresty-${RESTY_VERSION} \
         pcre-${RESTY_PCRE_VERSION}.tar.gz pcre-${RESTY_PCRE_VERSION}
 
+#---------
+# Lua
+#---------
 RUN cd /tmp \
     && curl -fSL https://github.com/luarocks/luarocks/archive/${RESTY_LUAROCKS_VERSION}.tar.gz -o luarocks-${RESTY_LUAROCKS_VERSION}.tar.gz \
     && tar xzf luarocks-${RESTY_LUAROCKS_VERSION}.tar.gz \
@@ -168,14 +175,12 @@ RUN cd /tmp \
 
 # Add additional binaries into PATH for convenience
 ENV PATH=$PATH:/usr/local/openresty/luajit/bin:/usr/local/openresty/nginx/sbin:/usr/local/openresty/bin
-
 # Add LuaRocks paths
 # If OpenResty changes, these may need updating:
 #    /usr/local/openresty/bin/resty -e 'print(package.path)'
 #    /usr/local/openresty/bin/resty -e 'print(package.cpath)'
-ENV LUA_PATH="/usr/local/openresty/site/lualib/?.ljbc;/usr/local/openresty/site/lualib/?/init.ljbc;/usr/local/openresty/lualib/?.ljbc;/usr/local/openresty/lualib/?/init.ljbc;/usr/local/openresty/site/lualib/?.lua;/usr/local/openresty/site/lualib/?/init.lua;/usr/local/openresty/lualib/?.lua;/usr/local/openresty/lualib/?/init.lua;./?.lua;/usr/local/openresty/luajit/share/luajit-2.1.0-beta3/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/share/lua/5.1/?/init.lua;/usr/local/openresty/luajit/share/lua/5.1/?.lua;/usr/local/openresty/luajit/share/lua/5.1/?/init.lua;/usr/local/openresty/lualib/?/?.lua;/usr/local/openresty/lualib/thrift/?.lua"
+ENV LUA_PATH="/usr/local/openresty/site/lualib/?.ljbc;/usr/local/openresty/site/lualib/?/init.ljbc;/usr/local/openresty/lualib/?.ljbc;/usr/local/openresty/lualib/?/init.ljbc;/usr/local/openresty/site/lualib/?.lua;/usr/local/openresty/site/lualib/?/init.lua;/usr/local/openresty/lualib/?.lua;/usr/local/openresty/lualib/?/init.lua;./?.lua;/usr/local/openresty/luajit/share/luajit-2.1.0-beta3/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/share/lua/5.1/?/init.lua;/usr/local/openresty/luajit/share/lua/5.1/?.lua;/usr/local/openresty/luajit/share/lua/5.1/?/init.lua;/usr/local/openresty/lualib/?/?.lua;/usr/local/openresty/lualib/thrift/?.lua;/gen-lua/?.lua"
 ENV LUA_CPATH="/usr/local/openresty/site/lualib/?.so;/usr/local/openresty/lualib/?.so;./?.so;/usr/local/lib/lua/5.1/?.so;/usr/local/openresty/luajit/lib/lua/5.1/?.so;/usr/local/lib/lua/5.1/loadall.so;/usr/local/openresty/luajit/lib/lua/5.1/?.so;/usr/local/openresty/lualib/?/?.so"
-
 
 COPY lua-thrift /usr/local/openresty/lualib/thrift
 COPY lua-bridge-tracer /tmp/lua-bridge-tracer
@@ -184,32 +189,24 @@ COPY lua-json/json.lua /usr/local/openresty/lualib/json/json.lua
 RUN cd /usr/local/openresty/lualib/thrift/src \
     && make \
     && make install \
-  ### Build bridge tracer
+    ### Build bridge tracer
     && cd /tmp/lua-bridge-tracer \
     && mkdir -p cmake-build \
     && cd cmake-build \
     && cmake -DCMAKE_BUILD_TYPE=Release \
        .. \
     && make -j${NUM_CPUS} \
-    && make -j${NUM_CPUS} install
-#    && cd /tmp
-#    && rm -rf lua-bridge-tracer
-
-ENV LUA_PATH=$LUA_PATH;/gen-lua/?.lua
-
-RUN luarocks install long \
+    && make -j${NUM_CPUS} install \
+    # && cd /tmp
+    # && rm -rf lua-bridge-tracer
+    && luarocks install long \
     && luarocks install lua-resty-jwt 0.2.0-0 \
     && luarocks install penlight \
     && ldconfig
 
-RUN apt-get update \
-  && apt-get install -y wget
-
-RUN apt-get update \
-  && apt-get install -y libboost-all-dev
-
-RUN apt-get install -y lua5.1 lua5.1-dev
-
+#---------
+# Protobuf
+#---------
 RUN cd /tmp \
   && wget https://github.com/google/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.gz \
   && gunzip protobuf-2.5.0.tar.gz \
@@ -218,9 +215,13 @@ RUN cd /tmp \
   && ./configure --prefix=/usr \
   && make \
   && make install \
-  && ldconfig \
-  # Install xtrace
-  && cd /tmp \
+  && ldconfig
+
+#---------
+# XTrace
+#---------
+ENV LD_LIBRARY_PATH /usr/local/lib:/usr/lib:/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}
+RUN cd /tmp \
   && git clone https://github.com/JonathanMace/xtrace-cpp.git \
   && cd xtrace-cpp \
   && mkdir build \
@@ -229,16 +230,22 @@ RUN cd /tmp \
   && make \
   && make install \
   && cd /tmp \
-  && rm -rf \
-      protobuf-2.5.0.tar \
-      protobuf-2.5.0 \
-      xtrace-cpp
+  && rm -rf protobuf-2.5.0.tar protobuf-2.5.0 xtrace-cpp \
+  && cp /usr/local/lib/luaxtrace.so /usr/local/openresty/lualib/luaxtrace.so \
+  && ldconfig
 
-RUN cp /usr/local/lib/luaxtrace.so /usr/local/openresty/lualib/luaxtrace.so
+#---------
+# Dockerize
+#---------
+ENV DOCKERIZE_VERSION v0.6.1
+RUN wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
+    && tar -C /usr/local/bin -xzvf dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
+    && rm dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz
 
-ENV LD_LIBRARY_PATH /usr/local/lib:/usr/lib:/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}
-RUN ldconfig
 
+#---------
+# Finalnginx configuration
+#---------
 # Copy nginx configuration files
 COPY nginx.conf /usr/local/openresty/nginx/conf/nginx.conf
 COPY nginx.vh.default.conf /etc/nginx/conf.d/default.conf

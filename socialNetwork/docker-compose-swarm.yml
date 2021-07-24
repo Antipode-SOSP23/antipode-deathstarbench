@@ -4,16 +4,17 @@ networks:
       name: deathstarbench_network
 services:
   antipode-oracle:
+    command: dockerize -wait tcp://jaeger:16686 -wait-retry-interval 10s -timeout
+      300s /usr/local/bin/AntipodeOracle
     deploy:
       placement:
         constraints:
         - node.hostname == antipode-oracle
-    entrypoint: /usr/local/bin/AntipodeOracle
     hostname: antipode-oracle
     image: yg397/social-network-microservices:antipode
     networks:
     - deathstarbench_network
-    restart: 'no'
+    restart: always
   compose-post-redis:
     deploy:
       placement:
@@ -158,6 +159,8 @@ services:
     - 1234:1234
     restart: 'no'
   nginx-thrift:
+    command: dockerize -wait tcp://jaeger:16686 -wait-retry-interval 10s -timeout
+      300s bash -c "/usr/local/openresty/bin/openresty -g 'daemon off;'"
     deploy:
       placement:
         constraints:
@@ -176,6 +179,8 @@ services:
     - ./nginx-web-server/jaeger-config.json:/usr/local/openresty/nginx/jaeger-config.json
     - ./gen-lua:/gen-lua
   nginx-thrift-us:
+    command: dockerize -wait tcp://jaeger:16686 -wait-retry-interval 10s -timeout
+      300s bash -c "/usr/local/openresty/bin/openresty -g 'daemon off;'"
     deploy:
       placement:
         constraints:
