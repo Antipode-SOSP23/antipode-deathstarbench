@@ -1,3 +1,8 @@
 antipode-296620.json
 pluribus.json
 *google_compute_engine*
+# generated files
+clients_inventory.cfg
+inventory.cfg
+delay-container.yml
+wkld-run.sh
