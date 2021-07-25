@@ -945,16 +945,20 @@ def delay(args):
   try:
     delay_ms = f"{args['delay']}ms"
     jitter_ms = f"{args['jitter']}ms"
+    distribution = args['distribution']
     # params - TODO move to args later on
     src_container = 'post-storage-mongodb-eu'
     dst_container = 'post-storage-mongodb-us'
 
-    getattr(sys.modules[__name__], f"delay__{args['app']}__{_deploy_type(args)}")(args, src_container, dst_container, delay_ms, jitter_ms)
+    if args['jitter'] == 0 and distribution in [ 'normal', 'pareto', 'paretonormal']:
+      raise argparse.ArgumentTypeError(f"{distribution} does not allow for 0ms jitter")
+
+    getattr(sys.modules[__name__], f"delay__{args['app']}__{_deploy_type(args)}")(args, src_container, dst_container, delay_ms, jitter_ms, distribution)
   except KeyboardInterrupt:
     # if the compose gets interrupted we just continue with the script
     pass
 
-def delay__socialNetwork__local(args, src_container, dst_container, delay_ms, jitter_ms):
+def delay__socialNetwork__local(args, src_container, dst_container, delay_ms, jitter_ms, distribution):
   from plumbum.cmd import docker_compose, docker
 
   os.chdir(ROOT_PATH / args['app'])
@@ -963,9 +967,9 @@ def delay__socialNetwork__local(args, src_container, dst_container, delay_ms, ji
   dst_container_id = docker_compose['ps', '-q', dst_container].run()[1].rstrip()
   dst_ip = docker['inspect', '-f' '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}', dst_container_id].run()[1].rstrip()
 
-  docker_compose['exec', src_container, '/home/delay.sh', dst_ip, delay_ms, jitter_ms] & FG
+  docker_compose['exec', src_container, '/home/delay.sh', dst_ip, delay_ms, jitter_ms, distribution] & FG
 
-def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms, jitter_ms):
+def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms, jitter_ms, distribution):
   _force_docker()
   from plumbum.cmd import ansible_playbook
   from jinja2 import Environment
@@ -1032,7 +1036,7 @@ def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms, jitt
 
         - name: Delay container
           shell: >
-              docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) /home/delay.sh {% raw %}{{ delay_ip }}{% endraw %} {{ delay_ms }} {{ jitter_ms }}
+              docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) /home/delay.sh {% raw %}{{ delay_ip }}{% endraw %} {{ delay_ms }} {{ jitter_ms }} {{ distribution }}
           ignore_errors: True
 
         - name: Spam ping to kickstart delay
@@ -1052,6 +1056,7 @@ def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms, jitt
     'dst_container': dst_container,
     'delay_ms': delay_ms,
     'jitter_ms': jitter_ms,
+    'distribution': distribution,
   })
 
   playbook_filepath = ROOT_PATH / 'deploy' / 'gcp' / 'delay-container.yml'
@@ -1060,12 +1065,14 @@ def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms, jitt
     f.write(textwrap.dedent(playbook))
     print(f"[SAVED] '{playbook_filepath}'")
 
+  exit()
   ansible_playbook['delay-container.yml',
     '-e', 'app=socialNetwork',
     '-e', f'src_container={src_container}',
     '-e', f'dst_container={dst_container}',
     '-e', f'delay_ms={delay_ms}',
     '-e', f'jitter_ms={jitter_ms}',
+    '-e', f'distribution={distribution}',
   ] & FG
   print("[INFO] Delay Complete!")
 
@@ -1436,12 +1443,11 @@ def gather(args):
         #
         'poststorage_post_written_ts': None,
         'poststorage_read_notification_ts': None,
-        'consistency_ts': None,
+        'consistency_bool': None,
         #
         'wht_start_queue_ts': None,
         'wht_start_worker_ts': None,
         'wht_antipode_duration': None,
-        'write-home-timeline-us-message_count': None,
       }
       # search trace info in different spans
       for s in trace['spans']:
@@ -1452,7 +1458,7 @@ def gather(args):
           trace_info['poststorage_post_written_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_post_written_ts'))
         elif s['operationName'] == 'FanoutHomeTimelines':
           trace_info['poststorage_read_notification_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_read_notification_ts'))
-          trace_info['consistency_ts'] = int(_fetch_span_tag(s['tags'], 'consistency_ts'))
+          trace_info['consistency_bool'] = _fetch_span_tag(s['tags'], 'consistency_bool')
           # compute the time spent in the queue
           trace_info['wht_start_worker_ts'] = float(_fetch_span_tag(s['tags'], 'wht_start_worker_ts'))
           # duration spent in antipode
@@ -1460,7 +1466,6 @@ def gather(args):
         elif s['operationName'] == '_UploadHomeTimelineHelper':
           # compute the time spent in the queue
           trace_info['wht_start_queue_ts'] = float(_fetch_span_tag(s['tags'], 'wht_start_queue_ts'))
-          trace_info['write-home-timeline-us-message_count'] = float(_fetch_span_tag(s['tags'], 'write-home-timeline-us-message_count'))
 
       # skip if we still have -1 values
       if any(v is None for v in trace_info.values()):
@@ -1471,10 +1476,6 @@ def gather(args):
       # computes the difference in ms from post to notification
       diff = datetime.fromtimestamp(trace_info['poststorage_read_notification_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_post_written_ts']/1000.0)
       trace_info['post_notification_diff_ms'] = float(diff.total_seconds() * 1000)
-
-      # computes the difference in ms from post to post-ready
-      diff = datetime.fromtimestamp(trace_info['consistency_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_read_notification_ts']/1000.0)
-      trace_info['post_consistency_diff_ms'] = float(diff.total_seconds() * 1000)
 
       # computes time spent queued in rabbitmq
       diff = datetime.fromtimestamp(trace_info['wht_start_worker_ts']/1000.0) - datetime.fromtimestamp(trace_info['wht_start_queue_ts']/1000.0)
@@ -1489,7 +1490,6 @@ def gather(args):
     del df['post_id']
     del df['poststorage_post_written_ts']
     del df['poststorage_read_notification_ts']
-    del df['consistency_ts']
     del df['wht_start_queue_ts']
     del df['wht_start_worker_ts']
 
@@ -1497,8 +1497,7 @@ def gather(args):
     df.to_csv('traces.csv', sep=';', mode='w')
 
     # compute extra info to output in info file
-    num_posts_before_notifications = len([n for n in df['post_consistency_diff_ms'] if n <= 0])
-    num_notifications_before_posts = len([n for n in df['post_consistency_diff_ms'] if n > 0])
+    inconsistent_count, consistent_count = df.consistency_bool.value_counts().sort_index().tolist()
 
     # save to file
     with open('traces.info', 'w') as f:
@@ -1506,8 +1505,7 @@ def gather(args):
       if tag:
         print(f"GATHER TAG: {tag}", file=f)
       print("", file=f)
-      print(f"% posts ready before notifications: {num_posts_before_notifications/float(len(df))}", file=f)
-      print(f"% notifications ready before posts: {num_notifications_before_posts/float(len(df))}", file=f)
+      print(f"% inconsistencies: {inconsistent_count/float(len(df))}", file=f)
       print("", file=f)
       print(df.describe(percentiles=PERCENTILES_TO_PRINT), file=f)
 
@@ -1579,6 +1577,7 @@ if __name__ == "__main__":
   # other options
   delay_parser.add_argument('-d', '--delay', type=int, default='100', help="Delay in ms")
   delay_parser.add_argument('-j', '--jitter', type=int, default='0', help="Jitter in ms")
+  delay_parser.add_argument('-dist', '--distribution', choices=[ 'uniform', 'normal', 'pareto', 'paretonormal' ], default='uniform', help="Delay distribution")
 
   # run application
   run_parser = subparsers.add_parser('run', help='Run application')
