@@ -172,10 +172,9 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
     // std::this_thread ::sleep_for(std::chrono::milliseconds(10000));
     // LOG(debug) << "[ANTIPODE] Done Sleeping!";
 
-    // sleep while post is not ready at US replica
+    // read replica only ONCE while post is not ready at US replica
+    // that way we dont stall workers
     bool read_post = false;
-    int attempts = 0;
-    // bool read_post = true;
     while(!read_post) {
       mongoc_client_t *mongodb_client = mongoc_client_pool_pop(_mongodb_client_pool);
       if (!mongodb_client) {
@@ -204,14 +203,10 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
       mongoc_cursor_destroy(cursor);
       mongoc_collection_destroy(collection);
       mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
-      attempts++;
+      break; // if it got here it read the post
     }
 
-    // use the same timestamp as the notification if the attempts are the same
-    // so when we gather eval we dont deal with small lags between these 2 timestamps
-    high_resolution_clock::time_point consistency_ts = (attempts > 1) ? high_resolution_clock::now() : t2;
-    ts = duration_cast<milliseconds>(consistency_ts.time_since_epoch()).count();
-    span->SetTag("consistency_ts", std::to_string(ts));
+    span->SetTag("consistency_bool", read_post);
 
     //----------
     // -EVAL CONSISTENCY ERRORS
