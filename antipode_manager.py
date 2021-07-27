@@ -1460,7 +1460,10 @@ def gather(args):
     print(f"[INFO] Save '{wkld_data_path}/traces.csv'")
 
     # compute extra info to output in info file
-    inconsistent_count, consistent_count = df.consistency_bool.value_counts().sort_index().tolist()
+    consistent_df = df[df['consistency_bool'] == True]
+    inconsistent_df = df[df['consistency_bool'] == False]
+    inconsistent_count = len(consistent_df)
+    consistent_count = len(inconsistent_df)
 
     # save to file
     with open('traces.info', 'w') as f:
@@ -1470,7 +1473,14 @@ def gather(args):
       print("", file=f)
       print(f"% inconsistencies: {inconsistent_count/float(len(df))}", file=f)
       print("", file=f)
+      print("TOTALS", file=f)
       print(df.describe(percentiles=PERCENTILES_TO_PRINT), file=f)
+      print("", file=f)
+      print("--- INCONSISTENCIES", file=f)
+      print(inconsistent_df.describe(percentiles=PERCENTILES_TO_PRINT), file=f)
+      print("", file=f)
+      print("--- CONSISTENCIES", file=f)
+      print(consistent_df.describe(percentiles=PERCENTILES_TO_PRINT), file=f)
 
     # print file to stdout
     print(f"[INFO] Save '{wkld_data_path}/traces.info'\n")
