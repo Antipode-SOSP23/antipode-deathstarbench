@@ -390,6 +390,102 @@ void WorkerThread(std::string &addr, int port) {
   connection.close();
 }
 
+//--------------
+// -ANTIPODE
+//--------------
+void mongoStreamListener(std::string uri, std::string dbname, std::string collection_name) {
+  // init db and collection
+  bson_error_t error;
+
+  mongoc_init();
+  mongoc_client_t* client = mongoc_client_new(uri.c_str());
+  mongoc_database_t* db = mongoc_client_get_database(client, dbname.c_str());
+  mongoc_collection_t* collection = mongoc_database_get_collection(db, collection_name.c_str());
+
+  // refs:
+  // http://mongoc.org/libmongoc/1.17.0/mongoc_change_stream_t.html
+  // https://docs.mongodb.com/manual/changeStreams/
+  bson_t *pipeline = BCON_NEW("pipeline",
+    "[",
+      "{",
+        "$match", "{",
+          "$and", "[",
+            "{",
+              "operationType", "insert",
+            "}",
+          "]",
+        "}",
+      "}",
+    "]");
+
+  // if the stream finds the same cscope
+  mongoc_change_stream_t *stream;
+  stream = mongoc_collection_watch (collection, pipeline, NULL /* opts */);
+  LOG(debug) << "Listening to " << uri << ":" << dbname << ":" << collection_name << " changes...";
+  while (true) {
+    const bson_t *change;
+    if (mongoc_change_stream_next (stream, &change)) {
+      // for debug:
+      // char *as_json = bson_as_relaxed_extended_json (change, NULL);
+      // LOG(debug) << "CHANGE JSON: " << as_json;
+      // bson_free (as_json);
+
+      // PARTIAL EXAMPLE:
+      //
+      //      "clusterTime": {
+      //        "$timestamp": {
+      //          "t": 1627398240,
+      //          "i": 16
+      //        }
+      //      },
+      //      "fullDocument": {
+      //        "_id": {
+      //          "$oid": "61002060e789c6325e0b38d2"
+      //        },
+      //        "post_id": 784087681735860200,
+      //        "timestamp": 1627398240777,
+      //        //...
+      //      }
+
+      // parsing ref: http://mongoc.org/libbson/current/parsing.html
+      bson_iter_t change_iter;
+      bson_iter_t post_id_iter;
+      bson_iter_t timestamp_iter;
+      bson_iter_t cluster_timestamp_iter;
+
+      if (bson_iter_init (&change_iter, change) && bson_iter_find_descendant (&change_iter, "fullDocument.post_id", &post_id_iter) && BSON_ITER_HOLDS_INT64(&post_id_iter)) {
+        int64_t post_id(bson_iter_int64(&post_id_iter));
+        LOG(debug) << "POST INSERT: " << post_id;
+      }
+      if (bson_iter_init (&change_iter, change) && bson_iter_find_descendant (&change_iter, "fullDocument.timestamp", &timestamp_iter) && BSON_ITER_HOLDS_INT64(&timestamp_iter)) {
+        int64_t post_timestamp(bson_iter_int64(&timestamp_iter));
+        LOG(debug) << "POST TIMESTAMP: " << post_timestamp;
+      }
+      if (bson_iter_init (&change_iter, change) && bson_iter_find_descendant (&change_iter, "clusterTime", &cluster_timestamp_iter) && BSON_ITER_HOLDS_TIMESTAMP(&cluster_timestamp_iter)) {
+        uint32_t cluster_timestamp;
+        uint32_t cluster_timestamp_increment;
+        bson_iter_timestamp(&cluster_timestamp_iter, &cluster_timestamp, &cluster_timestamp_increment);
+        LOG(debug) << "CLUSTER TIMESTAMP: " << cluster_timestamp << " --- " << cluster_timestamp_increment;
+      }
+    }
+  }
+
+  // const bson_t *resume_token;
+  // bson_error_t error;
+  // if (mongoc_change_stream_error_document (stream, &error, NULL)) {
+  //   MONGOC_ERROR ("%s\n", error.message);
+  // }
+
+  mongoc_change_stream_destroy (stream);
+  bson_destroy(pipeline);
+  mongoc_collection_destroy(collection);
+  mongoc_database_destroy(db);
+  mongoc_client_destroy (client);
+}
+//--------------
+// -ANTIPODE
+//--------------
+
 // The function we want to execute on the new thread.
 void serveThriftServer(int port, std::string name) {
   // for thrift
@@ -464,9 +560,12 @@ int main(int argc, char *argv[]) {
   //----------
   // +ANTIPODE
   //----------
+  std::string mongodb_uri = mongodb_dsb_uri(config_json, "post-storage", zone);
+
   // init antipode tables
-  // std::string mongodb_uri = mongodb_dsb_uri(config_json, "post-storage", zone);
   // AntipodeMongodb::init_cscope_listener(mongodb_uri, "post");
+
+  std::thread tmongo_stream_listener(mongoStreamListener, mongodb_uri, "post", "post");
   //----------
   // +ANTIPODE
   //----------
