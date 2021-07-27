@@ -292,7 +292,14 @@ void PostStorageHandler::StorePost(
   //----------
 
   // original:
-  bool inserted = mongoc_collection_insert_one (collection, new_doc, nullptr, nullptr, &error);
+  // include write concern in command options
+  // example: http://mongoc.org/libmongoc/current/mongoc_client_write_command_with_opts.html
+  bson_t* opts = bson_new();
+  mongoc_write_concern_t *write_concern = mongoc_write_concern_new ();
+  mongoc_write_concern_set_w (write_concern, MONGOC_WRITE_CONCERN_W_DEFAULT);
+  mongoc_write_concern_append (write_concern, opts);
+
+  bool inserted = mongoc_collection_insert_one (collection, new_doc, opts, nullptr, &error);
 
   // XTRACE("MongoInsertPost complete");
   insert_span->Finish();
@@ -315,6 +322,8 @@ void PostStorageHandler::StorePost(
   span->SetTag("poststorage_post_written_ts", std::to_string(ts_int));
 
   bson_destroy (new_doc);
+  bson_destroy (opts);
+  mongoc_write_concern_destroy (write_concern);
   mongoc_collection_destroy (collection);
   mongoc_client_pool_push (_mongodb_client_pool, mongodb_client);
 

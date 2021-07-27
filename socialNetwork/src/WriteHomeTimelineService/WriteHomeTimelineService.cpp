@@ -192,9 +192,17 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
 
       bson_t *query = bson_new();
       BSON_APPEND_INT64(query, "post_id", post_id);
+
+      // add a read concern to opts
+      // example: http://mongoc.org/libmongoc/current/mongoc_client_write_command_with_opts.html
+      bson_t *opts = bson_new();
+      mongoc_read_concern_t *read_concern = mongoc_read_concern_new();
+      mongoc_read_concern_set_level (read_concern, MONGOC_READ_CONCERN_LEVEL_LOCAL);
+      mongoc_read_concern_append (read_concern, opts);
+
       mongoc_read_prefs_t *read_prefs;
       read_prefs = mongoc_read_prefs_new(MONGOC_READ_SECONDARY);
-      mongoc_cursor_t *cursor = mongoc_collection_find_with_opts(collection, query, nullptr, read_prefs);
+      mongoc_cursor_t *cursor = mongoc_collection_find_with_opts(collection, query, opts, read_prefs);
 
       const bson_t *doc;
       read_post = mongoc_cursor_next(cursor, &doc);
@@ -219,6 +227,9 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
 
       mongoread_ts = high_resolution_clock::now();
       bson_destroy(query);
+      bson_destroy (opts);
+      mongoc_read_prefs_destroy (read_prefs);
+      mongoc_read_concern_destroy (read_concern);
       mongoc_cursor_destroy(cursor);
       mongoc_collection_destroy(collection);
       mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);

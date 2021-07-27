@@ -729,10 +729,6 @@ void ComposePostHandler::_ComposeAndUpload(
   // -ANTIPODE
   //----------
 
-  ts = high_resolution_clock::now();
-  time_diff = ts - start_ts;
-  LOG(debug) << "AFTER CSCOPE: " << std::to_string(time_diff.count());
-
   // Upload the post
   // XTRACE("Upload Post start");
   Baggage upload_post_helper_baggage = BRANCH_CURRENT_BAGGAGE();
@@ -741,29 +737,17 @@ void ComposePostHandler::_ComposeAndUpload(
   // std::thread upload_post_worker(&ComposePostHandler::_UploadPostHelper, this, req_id, std::ref(post), std::ref(cscope), std::ref(carrier), std::ref(upload_post_helper_baggage), std::ref(upload_post_promise));
   _UploadPostHelper(req_id, post, cscope, carrier, upload_post_helper_baggage, std::move(upload_post_promise));
 
-  ts = high_resolution_clock::now();
-  time_diff = ts - start_ts;
-  LOG(debug) << "AFTER upload_post_helper_baggage: " << std::to_string(time_diff.count());
-
   Baggage upload_user_timeline_helper_baggage = BRANCH_CURRENT_BAGGAGE();
   std::promise<Baggage> upload_user_promise;
   std::future<Baggage> upload_user_future = upload_user_promise.get_future();
   // std::thread upload_user_timeline_worker(&ComposePostHandler::_UploadUserTimelineHelper, this, req_id, post.post_id, post.creator.user_id, post.timestamp, std::ref(carrier), std::ref(upload_user_timeline_helper_baggage), std::move(upload_user_promise));
   _UploadUserTimelineHelper(req_id, post.post_id, post.creator.user_id, post.timestamp, carrier, upload_user_timeline_helper_baggage, std::move(upload_user_promise));
 
-  ts = high_resolution_clock::now();
-  time_diff = ts - start_ts;
-  LOG(debug) << "AFTER upload_user_timeline_helper_baggage: " << std::to_string(time_diff.count());
-
   Baggage upload_home_timeline_helper_baggage = BRANCH_CURRENT_BAGGAGE();
   std::promise<Baggage> upload_home_promise;
   std::future<Baggage> upload_home_future = upload_home_promise.get_future();
   // std::thread upload_home_timeline_worker(&ComposePostHandler::_UploadHomeTimelineHelper, this, req_id, post.post_id, post.creator.user_id, post.timestamp, std::ref(user_mentions_id), std::ref(cscope), std::ref(carrier), std::ref(upload_home_timeline_helper_baggage), std::move(upload_home_promise));
   _UploadHomeTimelineHelper(req_id, post.post_id, post.creator.user_id, post.timestamp, user_mentions_id, cscope, carrier, upload_home_timeline_helper_baggage, std::move(upload_home_promise));
-
-  ts = high_resolution_clock::now();
-  time_diff = ts - start_ts;
-  LOG(debug) << "AFTER upload_home_timeline_helper_baggage: " << std::to_string(time_diff.count());
 
   // upload_post_worker.join();
   // upload_user_timeline_worker.join();
