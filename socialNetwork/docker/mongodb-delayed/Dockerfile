@@ -9,6 +9,7 @@ RUN set -ex ;\
         net-tools \
         iproute2 \
         iputils-ping \
+        dnsutils \
         ;\
     rm -rf /var/lib/apt/lists/* ;\
     chmod 777 /home/delay.sh

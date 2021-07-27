@@ -945,6 +945,7 @@ def delay(args):
   try:
     delay_ms = f"{args['delay']}ms"
     jitter_ms = f"{args['jitter']}ms"
+    correlation_per = f"{args['correlation']}%"
     distribution = args['distribution']
     # params - TODO move to args later on
     src_container = 'post-storage-mongodb-eu'
@@ -953,23 +954,23 @@ def delay(args):
     if args['jitter'] == 0 and distribution in [ 'normal', 'pareto', 'paretonormal']:
       raise argparse.ArgumentTypeError(f"{distribution} does not allow for 0ms jitter")
 
-    getattr(sys.modules[__name__], f"delay__{args['app']}__{_deploy_type(args)}")(args, src_container, dst_container, delay_ms, jitter_ms, distribution)
+    getattr(sys.modules[__name__], f"delay__{args['app']}__{_deploy_type(args)}")(args, src_container, dst_container, delay_ms, jitter_ms, correlation_per, distribution)
   except KeyboardInterrupt:
     # if the compose gets interrupted we just continue with the script
     pass
 
-def delay__socialNetwork__local(args, src_container, dst_container, delay_ms, jitter_ms, distribution):
+def delay__socialNetwork__local(args, src_container, dst_container, delay_ms, jitter_ms, correlation_per, distribution):
   from plumbum.cmd import docker_compose, docker
 
   os.chdir(ROOT_PATH / args['app'])
 
   # get ip of the dst container since delay only accepts ips
-  dst_container_id = docker_compose['ps', '-q', dst_container].run()[1].rstrip()
-  dst_ip = docker['inspect', '-f' '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}', dst_container_id].run()[1].rstrip()
+  # dst_container_id = docker_compose['ps', '-q', dst_container].run()[1].rstrip()
+  # dst_ip = docker['inspect', '-f' '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}', dst_container_id].run()[1].rstrip()
 
-  docker_compose['exec', src_container, '/home/delay.sh', dst_ip, delay_ms, jitter_ms, distribution] & FG
+  docker_compose['exec', src_container, '/home/delay.sh', dst_container, delay_ms, jitter_ms, correlation_per, distribution] & FG
 
-def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms, jitter_ms, distribution):
+def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms, jitter_ms, correlation_per, distribution):
   _force_docker()
   from plumbum.cmd import ansible_playbook
   from jinja2 import Environment
@@ -989,34 +990,6 @@ def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms, jitt
 
   template = """
     ---
-    - hosts: {{ dst_gcp_container_hostname }}
-      gather_facts: no
-      become: yes
-      any_errors_fatal: true
-      vars:
-        - stack: deathstarbench
-        - app: socialNetwork
-
-      tasks:
-        # - name: Get IP address from delay destination container via exec
-        #   shell: >
-        #     docker exec $( docker ps -a --filter name='{{ dst_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) hostname -I | cut -d ' ' -f 1
-        #   register: dst_ip
-
-        - name: Get IP address from delay destination container via inspect
-          shell: >
-            docker inspect --format {{ "{% raw %}'{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}'{% endraw %}" }} $( docker ps -a --filter name='{{ dst_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} )
-          register: dst_ip
-
-        - name: Set fact with destination container IP
-          set_fact:
-            delay_ip: {% raw %}"{{ dst_ip.stdout }}"{% endraw %}
-
-        - name: IP from destination container
-          debug:
-            msg: {% raw %}"{{ delay_ip }}"{% endraw %}
-
-
     - hosts: {{ src_gcp_container_hostname }}
       gather_facts: no
       become: yes
@@ -1026,22 +999,14 @@ def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms, jitt
         - app: socialNetwork
 
       tasks:
-        - name: Bring fact with delay_ip from destination container
-          set_fact:
-            delay_ip: {% raw %}"{{ hostvars['{% endraw %}{{ dst_gcp_container_hostname }}{% raw %}']['delay_ip'] }}"{% endraw %}
-
-        - name: IP from destination container
-          debug:
-            msg: {% raw %}"{{ delay_ip }}"{% endraw %}
-
         - name: Delay container
           shell: >
-              docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) /home/delay.sh {% raw %}{{ delay_ip }}{% endraw %} {{ delay_ms }} {{ jitter_ms }} {{ distribution }}
+              docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) /home/delay.sh {{ dst_container }} {{ delay_ms }} {{ jitter_ms }} {{ correlation_per }} {{ distribution }}
           ignore_errors: True
 
         - name: Spam ping to kickstart delay
           shell: >
-              docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) ping -c 200 -f {% raw %}{{ delay_ip }}{% endraw %} 2>&1
+              docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) bash -c "for IP in \$(dig +short post-storage-mongodb-us); do ping -c 200 -f \$IP 2>&1; done"
           register: ping_out
 
         - name: Check delay
@@ -1056,6 +1021,7 @@ def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms, jitt
     'dst_container': dst_container,
     'delay_ms': delay_ms,
     'jitter_ms': jitter_ms,
+    'correlation_per': correlation_per,
     'distribution': distribution,
   })
 
@@ -1065,14 +1031,8 @@ def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms, jitt
     f.write(textwrap.dedent(playbook))
     print(f"[SAVED] '{playbook_filepath}'")
 
-  exit()
   ansible_playbook['delay-container.yml',
     '-e', 'app=socialNetwork',
-    '-e', f'src_container={src_container}',
-    '-e', f'dst_container={dst_container}',
-    '-e', f'delay_ms={delay_ms}',
-    '-e', f'jitter_ms={jitter_ms}',
-    '-e', f'distribution={distribution}',
   ] & FG
   print("[INFO] Delay Complete!")
 
@@ -1444,6 +1404,7 @@ def gather(args):
         'poststorage_post_written_ts': None,
         'poststorage_read_notification_ts': None,
         'consistency_bool': None,
+        'consistency_mongoread_duration': None,
         #
         'wht_start_queue_ts': None,
         'wht_start_worker_ts': None,
@@ -1459,6 +1420,7 @@ def gather(args):
         elif s['operationName'] == 'FanoutHomeTimelines':
           trace_info['poststorage_read_notification_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_read_notification_ts'))
           trace_info['consistency_bool'] = _fetch_span_tag(s['tags'], 'consistency_bool')
+          trace_info['consistency_mongoread_duration'] = float(_fetch_span_tag(s['tags'], 'consistency_mongoread_duration'))
           # compute the time spent in the queue
           trace_info['wht_start_worker_ts'] = float(_fetch_span_tag(s['tags'], 'wht_start_worker_ts'))
           # duration spent in antipode
@@ -1495,6 +1457,7 @@ def gather(args):
 
     # save to csv so we can plot a timeline later
     df.to_csv('traces.csv', sep=';', mode='w')
+    print(f"[INFO] Save '{wkld_data_path}/traces.csv'")
 
     # compute extra info to output in info file
     inconsistent_count, consistent_count = df.consistency_bool.value_counts().sort_index().tolist()
@@ -1510,6 +1473,7 @@ def gather(args):
       print(df.describe(percentiles=PERCENTILES_TO_PRINT), file=f)
 
     # print file to stdout
+    print(f"[INFO] Save '{wkld_data_path}/traces.info'\n")
     with open('traces.info', 'r') as f:
       print(f.read())
 
@@ -1577,6 +1541,7 @@ if __name__ == "__main__":
   # other options
   delay_parser.add_argument('-d', '--delay', type=int, default='100', help="Delay in ms")
   delay_parser.add_argument('-j', '--jitter', type=int, default='0', help="Jitter in ms")
+  delay_parser.add_argument('-c', '--correlation', type=int, default='0', help="Correlation in % (0-100)")
   delay_parser.add_argument('-dist', '--distribution', choices=[ 'uniform', 'normal', 'pareto', 'paretonormal' ], default='uniform', help="Delay distribution")
 
   # run application

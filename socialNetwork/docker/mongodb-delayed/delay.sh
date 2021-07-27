@@ -1,21 +1,21 @@
 #!/bin/bash
 
-IP=$1
 DELAY_MS=$2
 JITTER_MS=$3
-DISTRIBUTION=$([ "$4" = "uniform" ] && echo "" || echo "distribution $4")
-echo "delay $DELAY_MS $JITTER_MS $DISTRIBUTION"
+CORRELATION=$([ "$4" = "0%" ] && echo "" || echo "$4")
+DISTRIBUTION=$([ "$5" = "uniform" ] && echo "" || echo "distribution $5")
 
-# clean existing rules
-# apply to all eth* interfaces
 ifconfig -a | grep -e '^eth' | cut -d ':' -f 1 | while read -r INTERFACE ; do
+  # clean existing rules
   tc qdisc del dev $INTERFACE root
-  echo "APPLY $INTERFACE"
-done
 
-# apply rules
-ifconfig -a | grep -e '^eth' | cut -d ':' -f 1 | while read -r INTERFACE ; do
+  # apply to all eth* interfaces
   tc qdisc add dev $INTERFACE root handle 1: prio
-  tc filter add dev $INTERFACE parent 1:0 protocol ip prio 1 u32 match ip dst $IP flowid 2:1
-  tc qdisc add dev $INTERFACE parent 1:1 handle 2: netem delay $DELAY_MS $JITTER_MS $DISTRIBUTION
+
+  # apply rules for each docker IP - weird docker stack bs where containers have multiple ips
+  for IP in $(dig +short $1); do
+    tc filter add dev $INTERFACE parent 1:0 protocol ip prio 1 u32 match ip dst $IP flowid 2:1
+  done;
+
+  tc qdisc add dev $INTERFACE parent 1:1 handle 2: netem delay $DELAY_MS $JITTER_MS $CORRELATION $DISTRIBUTION
 done;
