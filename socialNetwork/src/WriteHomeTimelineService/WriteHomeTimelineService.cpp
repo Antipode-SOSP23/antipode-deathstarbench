@@ -175,6 +175,7 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
     // read replica only ONCE while post is not ready at US replica
     // that way we dont stall workers
     bool read_post = false;
+    high_resolution_clock::time_point mongoread_ts;
     while(!read_post) {
       mongoc_client_t *mongodb_client = mongoc_client_pool_pop(_mongodb_client_pool);
       if (!mongodb_client) {
@@ -197,7 +198,8 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
       const bson_t *doc;
       read_post = mongoc_cursor_next(cursor, &doc);
 
-      LOG(debug) << "[ANTIPODE] Was post #" << post_id << " found at " << std::getenv("ZONE") << " replica? " << read_post;
+      // LOG(debug) << "[ANTIPODE] Was post #" << post_id << " found at " << std::getenv("ZONE") << " replica? " << read_post;
+      mongoread_ts = high_resolution_clock::now();
 
       bson_destroy(query);
       mongoc_cursor_destroy(cursor);
@@ -207,6 +209,8 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
     }
 
     span->SetTag("consistency_bool", read_post);
+    time_span = mongoread_ts - t2;
+    span->SetTag("consistency_mongoread_duration", std::to_string(time_span.count()));
 
     //----------
     // -EVAL CONSISTENCY ERRORS
