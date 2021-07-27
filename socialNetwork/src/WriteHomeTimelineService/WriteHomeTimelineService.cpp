@@ -195,12 +195,29 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
       mongoc_read_prefs_t *read_prefs;
       read_prefs = mongoc_read_prefs_new(MONGOC_READ_SECONDARY);
       mongoc_cursor_t *cursor = mongoc_collection_find_with_opts(collection, query, nullptr, read_prefs);
+
       const bson_t *doc;
       read_post = mongoc_cursor_next(cursor, &doc);
 
-      // LOG(debug) << "[ANTIPODE] Was post #" << post_id << " found at " << std::getenv("ZONE") << " replica? " << read_post;
-      mongoread_ts = high_resolution_clock::now();
+      bson_error_t error;
+      if (mongoc_cursor_error (cursor, &error)) {
+        LOG(error) << "An error occurred: " << error.message;
+        continue;
+      }
 
+      //-------- debug
+      // mongoc_host_list_t host;
+      // mongoc_cursor_get_host (cursor, &host);
+      // LOG(warning) << "READ FORM SERVER: " << host.host_and_port;
+      // if (read_post) {
+      //   char *as_json = bson_as_relaxed_extended_json (doc, NULL);
+      //   LOG(error) << "READ DOCUMENT: " << as_json;
+      //   bson_free (as_json);
+      // }
+      // LOG(debug) << "[ANTIPODE] Was post #" << post_id << " found at " << std::getenv("ZONE") << " replica? " << read_post;
+      //-------- debug
+
+      mongoread_ts = high_resolution_clock::now();
       bson_destroy(query);
       mongoc_cursor_destroy(cursor);
       mongoc_collection_destroy(collection);
