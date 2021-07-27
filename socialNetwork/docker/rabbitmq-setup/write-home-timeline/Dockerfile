@@ -9,7 +9,7 @@ RUN set -ex; \
     go install
 
 
-FROM rabbitmq:3-management
+FROM rabbitmq:3.8-management
 
 # create app directory
 WORKDIR /usr/src/configs

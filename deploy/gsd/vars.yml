@@ -7,8 +7,8 @@ apps:
         - memcached:latest
         - mongo:latest
         - mrvautin/adminmongo:latest
-        - rabbitmq:latest
-        - rabbitmq:management
+        - rabbitmq:3.8
+        - rabbitmq:3.8-management
         - redis:latest
         - portainer/agent:latest
         - portainer/portainer-ce:latest

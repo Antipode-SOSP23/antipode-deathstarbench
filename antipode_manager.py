@@ -435,8 +435,8 @@ def build__socialNetwork__gcp(args):
   #     - docker pull memcached:latest
   #     - docker pull mongo:latest
   #     - docker pull mrvautin/adminmongo:latest
-  #     - docker pull rabbitmq:latest
-  #     - docker pull rabbitmq:management
+  #     - docker pull rabbitmq:3.8
+  #     - docker pull rabbitmq:3.8-management
   #     - docker pull redis:latest
   #     - docker pull portainer/agent:latest
   #     - docker pull portainer/portainer-ce:latest

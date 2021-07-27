@@ -500,7 +500,7 @@ services:
       RABBITMQ_ENABLED_PLUGINS_FILE: /etc/rabbitmq/enabled_plugins
       RABBITMQ_ERLANG_COOKIE: WRITE-HOME-TIMELINE-RABBITMQ
     hostname: write-home-timeline-rabbitmq-eu
-    image: rabbitmq:management
+    image: rabbitmq:3.8-management
     networks:
     - deathstarbench_network
     ports:
@@ -536,7 +536,7 @@ services:
       RABBITMQ_ENABLED_PLUGINS_FILE: /etc/rabbitmq/enabled_plugins
       RABBITMQ_ERLANG_COOKIE: WRITE-HOME-TIMELINE-RABBITMQ
     hostname: write-home-timeline-rabbitmq-us
-    image: rabbitmq:management
+    image: rabbitmq:3.8-management
     networks:
     - deathstarbench_network
     ports:
