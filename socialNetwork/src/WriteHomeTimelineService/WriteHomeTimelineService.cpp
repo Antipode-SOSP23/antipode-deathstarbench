@@ -453,20 +453,30 @@ void mongoStreamListener(std::string uri, std::string dbname, std::string collec
       bson_iter_t timestamp_iter;
       bson_iter_t cluster_timestamp_iter;
 
-      if (bson_iter_init (&change_iter, change) && bson_iter_find_descendant (&change_iter, "fullDocument.post_id", &post_id_iter) && BSON_ITER_HOLDS_INT64(&post_id_iter)) {
+      if (bson_iter_init (&change_iter, change) && bson_iter_find_descendant (&change_iter, "fullDocument.post_id", &post_id_iter) && BSON_ITER_HOLDS_INT64(&post_id_iter) &&
+          bson_iter_init (&change_iter, change) && bson_iter_find_descendant (&change_iter, "fullDocument.timestamp", &timestamp_iter) && BSON_ITER_HOLDS_INT64(&timestamp_iter))
+      {
         int64_t post_id(bson_iter_int64(&post_id_iter));
-        LOG(debug) << "POST INSERT: " << post_id;
-      }
-      if (bson_iter_init (&change_iter, change) && bson_iter_find_descendant (&change_iter, "fullDocument.timestamp", &timestamp_iter) && BSON_ITER_HOLDS_INT64(&timestamp_iter)) {
         int64_t post_timestamp(bson_iter_int64(&timestamp_iter));
-        LOG(debug) << "POST TIMESTAMP: " << post_timestamp;
+        uint64_t timestamp_now = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+
+        int64_t post_replication_diff = timestamp_now - post_timestamp;
+        LOG(debug) << "POST REPLICATION TIME: " << post_replication_diff;
+
+        auto span = opentracing::Tracer::Global()->StartSpan("WriteHomeTimeline-MongoChangeStream");
+        span->SetTag("consistency_diff", std::to_string(post_replication_diff));
+        span->Finish();
       }
-      if (bson_iter_init (&change_iter, change) && bson_iter_find_descendant (&change_iter, "clusterTime", &cluster_timestamp_iter) && BSON_ITER_HOLDS_TIMESTAMP(&cluster_timestamp_iter)) {
-        uint32_t cluster_timestamp;
-        uint32_t cluster_timestamp_increment;
-        bson_iter_timestamp(&cluster_timestamp_iter, &cluster_timestamp, &cluster_timestamp_increment);
-        LOG(debug) << "CLUSTER TIMESTAMP: " << cluster_timestamp << " --- " << cluster_timestamp_increment;
-      }
+
+      // clusterTimestamp is a second-based timestamp - as all mongodb internal timestamps are
+      // hence its useless to use them as a base to compare delays in the ms scale
+      //
+      // if (bson_iter_init (&change_iter, change) && bson_iter_find_descendant (&change_iter, "clusterTime", &cluster_timestamp_iter) && BSON_ITER_HOLDS_TIMESTAMP(&cluster_timestamp_iter)) {
+      //   uint32_t cluster_timestamp;
+      //   bson_iter_timestamp(&cluster_timestamp_iter, &cluster_timestamp, nullptr);
+      //   uint64_t timestamp_now = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+      //   LOG(debug) << "CLUSTER TIMESTAMP: " << cluster_timestamp << " VS " << timestamp_now;
+      // }
     }
   }
 
