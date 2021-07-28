@@ -5,6 +5,7 @@ RUN set -ex ;\
   apt-get install -y \
       iputils-ping \
       wget \
+      unzip \
       ;\
   rm -rf /var/lib/apt/lists/*
 
