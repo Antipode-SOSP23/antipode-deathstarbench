@@ -34,7 +34,7 @@ services:
   post-storage-memcached-eu: post-storage-eu
   #
   # 1 / 2 cores
-  post-storage-mongodb-eu: post-storage-mongo-eu
+  post-storage-mongodb-eu: post-storage-eu
 
   #----------------------------------------------------------
   # read post at US replica
@@ -44,7 +44,7 @@ services:
   post-storage-memcached-us: post-storage-us
   #
   # 1 / 2 cores
-  post-storage-mongodb-us: post-storage-mongo-us
+  post-storage-mongodb-us: post-storage-us
 
   #----------------------------------------------------------
   # compose posts EU
@@ -128,14 +128,14 @@ nodes:
     hostname: home-timeline-us.pluribus
     zone: us-central1-a
     machine_type: e2-standard-4
-  post-storage-mongo-eu:
-    hostname: post-storage-mongo-eu.pluribus
-    zone: us-central1-a
-    machine_type: e2-standard-4
-  post-storage-mongo-us:
-    hostname: post-storage-mongo-us.pluribus
-    zone: us-central1-a
-    machine_type: e2-standard-4
+  # post-storage-mongo-eu:
+  #   hostname: post-storage-mongo-eu.pluribus
+  #   zone: us-central1-a
+  #   machine_type: e2-standard-4
+  # post-storage-mongo-us:
+  #   hostname: post-storage-mongo-us.pluribus
+  #   zone: us-central1-a
+  #   machine_type: e2-standard-4
   post-storage-eu:
     hostname: post-storage-eu.pluribus
     zone: us-central1-a
