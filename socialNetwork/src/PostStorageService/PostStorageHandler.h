@@ -145,7 +145,9 @@ void PostStorageHandler::StorePost(
   BSON_APPEND_OID (new_doc, "_id", &oid);
 
   BSON_APPEND_INT64(new_doc, "post_id", post.post_id);
-  BSON_APPEND_INT64(new_doc, "timestamp", post.timestamp);
+  // DEBUG DELAY - refresh post timestamp to compare
+  // BSON_APPEND_INT64(new_doc, "timestamp", post.timestamp);
+  BSON_APPEND_INT64(new_doc, "timestamp", duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count());
   BSON_APPEND_UTF8(new_doc, "text", post.text.c_str());
   BSON_APPEND_INT64(new_doc, "req_id", post.req_id);
   BSON_APPEND_INT32(new_doc, "post_type", post.post_type);
