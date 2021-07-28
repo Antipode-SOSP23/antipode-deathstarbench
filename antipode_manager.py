@@ -1334,9 +1334,135 @@ def wkld__socialNetwork__gcp__run(args, hosts, exe_path, exe_args):
 def _fetch_span_tag(tags, tag_to_search):
   return next(item for item in tags if item['key'] == tag_to_search)['value']
 
+def _fetch_compose_post_service_traces(jaeger_host, limit):
+  import requests
+  import pandas as pd
+
+  # curl -X GET "jaeger:16686/api/traces?service=write-home-timeline-service&prettyPrint=true
+  params = (
+    # ('service', 'antipode-oracle'),
+    ('service', 'compose-post-service'),
+    ('limit', limit),
+    ('lookback', '1h'),
+    # ('prettyPrint', 'true'),
+  )
+  response = requests.get(f'{jaeger_host}/api/traces', params=params)
+
+  # error if we do not get a 200 OK code
+  if response.status_code != 200 :
+    print("[ERROR] Could not fetch traces from Jaeger")
+    exit(-1)
+
+  # pick only the traces with the desired info
+  content = response.json()
+  missing_info = 0
+  traces = []
+  for trace in content['data']:
+    trace_info = {
+      'ts': None,
+      'post_id': None,
+      # 'trace_id': trace['spans'][0]['traceID'],
+      #
+      'poststorage_post_written_ts': None,
+      'poststorage_read_notification_ts': None,
+      'consistency_bool': None,
+      'consistency_mongoread_duration': None,
+      #
+      'wht_start_queue_ts': None,
+      'wht_start_worker_ts': None,
+      'wht_antipode_duration': None,
+    }
+    # search trace info in different spans
+    for s in trace['spans']:
+      if s['operationName'] == '_ComposeAndUpload':
+        trace_info['post_id'] = int(_fetch_span_tag(s['tags'], 'composepost_id'))
+        trace_info['ts'] = datetime.fromtimestamp(s['startTime']/1000000.0)
+      elif s['operationName'] == 'StorePost':
+        trace_info['poststorage_post_written_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_post_written_ts'))
+      elif s['operationName'] == 'FanoutHomeTimelines':
+        trace_info['poststorage_read_notification_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_read_notification_ts'))
+        trace_info['consistency_bool'] = _fetch_span_tag(s['tags'], 'consistency_bool')
+        trace_info['consistency_mongoread_duration'] = float(_fetch_span_tag(s['tags'], 'consistency_mongoread_duration'))
+        # compute the time spent in the queue
+        trace_info['wht_start_worker_ts'] = float(_fetch_span_tag(s['tags'], 'wht_start_worker_ts'))
+        # duration spent in antipode
+        trace_info['wht_antipode_duration'] = float(_fetch_span_tag(s['tags'], 'wht_antipode_duration'))
+      elif s['operationName'] == '_UploadHomeTimelineHelper':
+        # compute the time spent in the queue
+        trace_info['wht_start_queue_ts'] = float(_fetch_span_tag(s['tags'], 'wht_start_queue_ts'))
+
+    # skip if we still have -1 values
+    if any(v is None for v in trace_info.values()):
+      # print(f"[INFO] trace missing information: {trace_info}")
+      missing_info += 1
+      continue
+
+    # computes the difference in ms from post to notification
+    diff = datetime.fromtimestamp(trace_info['poststorage_read_notification_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_post_written_ts']/1000.0)
+    trace_info['post_notification_diff_ms'] = float(diff.total_seconds() * 1000)
+
+    # computes time spent queued in rabbitmq
+    diff = datetime.fromtimestamp(trace_info['wht_start_worker_ts']/1000.0) - datetime.fromtimestamp(trace_info['wht_start_queue_ts']/1000.0)
+    trace_info['wht_queue_duration'] = float(diff.total_seconds() * 1000)
+
+    traces.append(trace_info)
+
+  # Build dataframe with all the traces
+  df = pd.DataFrame(traces)
+  df = df.set_index('ts')
+
+  return df, missing_info
+
+def _fetch_mongo_change_stream_traces(jaeger_host, limit):
+  import requests
+  import pandas as pd
+
+  # curl -X GET "jaeger:16686/api/traces?service=write-home-timeline-service&prettyPrint=true
+  params = (
+    ('service', 'write-home-timeline-service-us'),
+    ('limit', limit),
+    ('lookback', '1h'),
+    # ('prettyPrint', 'true'),
+  )
+  response = requests.get(f'{jaeger_host}/api/traces', params=params)
+
+  # error if we do not get a 200 OK code
+  if response.status_code != 200 :
+    print("[ERROR] Could not fetch traces from Jaeger")
+    exit(-1)
+
+  # pick only the traces with the desired info
+  content = response.json()
+  missing_info = 0
+  traces = []
+  for trace in content['data']:
+    trace_info = {
+      'post_id': None,
+      #
+      'consistency_diff': None,
+    }
+    # search trace info in different spans
+    for s in trace['spans']:
+      if s['operationName'] == 'WriteHomeTimeline-MongoChangeStream':
+        trace_info['post_id'] = int(_fetch_span_tag(s['tags'], 'composepost_id'))
+        trace_info['consistency_diff'] = int(_fetch_span_tag(s['tags'], 'consistency_diff'))
+
+    # skip if we still have -1 values
+    if any(v is None for v in trace_info.values()):
+      # print(f"[INFO] trace missing information: {trace_info}")
+      missing_info += 1
+      continue
+
+    traces.append(trace_info)
+
+  # Build dataframe with all the traces
+  df = pd.DataFrame(traces)
+
+  return df, missing_info
+
+
 def gather(args):
   import pandas as pd
-  import requests
   from plumbum.cmd import sudo, hostname
 
   # pd.set_option('display.float_format', lambda x: '%.3f' % x)
@@ -1368,86 +1494,15 @@ def gather(args):
   try:
     # get host for each zone
     jaeger_host = getattr(sys.modules[__name__], f"gather__{args['app']}__{_deploy_type(args)}")(args)
-
     limit = int(input(f"Visit {jaeger_host}/dependencies to check number of flowing requests: "))
     tag = input(f"Input any tag for this gather: ")
-    traces = []
 
-    # curl -X GET "jaeger:16686/api/traces?service=write-home-timeline-service&prettyPrint=true
-    params = (
-      # ('service', 'antipode-oracle'),
-      ('service', 'compose-post-service'),
-      ('limit', limit),
-      ('lookback', '1h'),
-      # ('prettyPrint', 'true'),
-    )
-    response = requests.get(f'{jaeger_host}/api/traces', params=params)
+    df,missing_info = _fetch_compose_post_service_traces(jaeger_host, limit)
 
-    # error if we do not get a 200 OK code
-    if response.status_code != 200 :
-      print("[ERROR] Could not fetch traces from Jaeger")
-      exit(-1)
+    # merge result with mongodb change stream consistency diff information
+    consistency_df,_ = _fetch_mongo_change_stream_traces(jaeger_host, limit)
+    df = df.join(consistency_df.set_index('post_id'), on='post_id')
 
-    # error if we do not retreive all traces
-    if len(traces) == limit:
-      print(f"[WARN] Fetched the same amount of traces as the limit ({limit}). Increase the limit to fetch all traces.")
-
-    # pick only the traces with the desired info
-    content = response.json()
-    missing_info = 0
-    for trace in content['data']:
-      trace_info = {
-        'ts': None,
-        'post_id': None,
-        # 'trace_id': trace['spans'][0]['traceID'],
-        #
-        'poststorage_post_written_ts': None,
-        'poststorage_read_notification_ts': None,
-        'consistency_bool': None,
-        'consistency_mongoread_duration': None,
-        #
-        'wht_start_queue_ts': None,
-        'wht_start_worker_ts': None,
-        'wht_antipode_duration': None,
-      }
-      # search trace info in different spans
-      for s in trace['spans']:
-        if s['operationName'] == '_ComposeAndUpload':
-          trace_info['post_id'] = int(_fetch_span_tag(s['tags'], 'composepost_id'))
-          trace_info['ts'] = datetime.fromtimestamp(s['startTime']/1000000.0)
-        elif s['operationName'] == 'StorePost':
-          trace_info['poststorage_post_written_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_post_written_ts'))
-        elif s['operationName'] == 'FanoutHomeTimelines':
-          trace_info['poststorage_read_notification_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_read_notification_ts'))
-          trace_info['consistency_bool'] = _fetch_span_tag(s['tags'], 'consistency_bool')
-          trace_info['consistency_mongoread_duration'] = float(_fetch_span_tag(s['tags'], 'consistency_mongoread_duration'))
-          # compute the time spent in the queue
-          trace_info['wht_start_worker_ts'] = float(_fetch_span_tag(s['tags'], 'wht_start_worker_ts'))
-          # duration spent in antipode
-          trace_info['wht_antipode_duration'] = float(_fetch_span_tag(s['tags'], 'wht_antipode_duration'))
-        elif s['operationName'] == '_UploadHomeTimelineHelper':
-          # compute the time spent in the queue
-          trace_info['wht_start_queue_ts'] = float(_fetch_span_tag(s['tags'], 'wht_start_queue_ts'))
-
-      # skip if we still have -1 values
-      if any(v is None for v in trace_info.values()):
-        # print(f"[INFO] trace missing information: {trace_info}")
-        missing_info += 1
-        continue
-
-      # computes the difference in ms from post to notification
-      diff = datetime.fromtimestamp(trace_info['poststorage_read_notification_ts']/1000.0) - datetime.fromtimestamp(trace_info['poststorage_post_written_ts']/1000.0)
-      trace_info['post_notification_diff_ms'] = float(diff.total_seconds() * 1000)
-
-      # computes time spent queued in rabbitmq
-      diff = datetime.fromtimestamp(trace_info['wht_start_worker_ts']/1000.0) - datetime.fromtimestamp(trace_info['wht_start_queue_ts']/1000.0)
-      trace_info['wht_queue_duration'] = float(diff.total_seconds() * 1000)
-
-      traces.append(trace_info)
-
-    # Build dataframe with all the traces
-    df = pd.DataFrame(traces)
-    df = df.set_index('ts')
     # remove unecessary columns
     del df['post_id']
     del df['poststorage_post_written_ts']
