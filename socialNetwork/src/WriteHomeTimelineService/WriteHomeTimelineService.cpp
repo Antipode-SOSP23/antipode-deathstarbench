@@ -405,6 +405,7 @@ void mongoStreamListener(std::string uri, std::string dbname, std::string collec
   // refs:
   // http://mongoc.org/libmongoc/1.17.0/mongoc_change_stream_t.html
   // https://docs.mongodb.com/manual/changeStreams/
+  // bson_t *pipeline = bson_new();
   bson_t *pipeline = BCON_NEW("pipeline",
     "[",
       "{",
@@ -451,19 +452,17 @@ void mongoStreamListener(std::string uri, std::string dbname, std::string collec
       bson_iter_t change_iter;
       bson_iter_t post_id_iter;
       bson_iter_t timestamp_iter;
-      bson_iter_t cluster_timestamp_iter;
 
       if (bson_iter_init (&change_iter, change) && bson_iter_find_descendant (&change_iter, "fullDocument.post_id", &post_id_iter) && BSON_ITER_HOLDS_INT64(&post_id_iter) &&
-          bson_iter_init (&change_iter, change) && bson_iter_find_descendant (&change_iter, "fullDocument.timestamp", &timestamp_iter) && BSON_ITER_HOLDS_INT64(&timestamp_iter))
-      {
+          bson_iter_init (&change_iter, change) && bson_iter_find_descendant (&change_iter, "fullDocument.timestamp", &timestamp_iter) && BSON_ITER_HOLDS_INT64(&timestamp_iter)
+      ){
         int64_t post_id(bson_iter_int64(&post_id_iter));
         int64_t post_timestamp(bson_iter_int64(&timestamp_iter));
         uint64_t timestamp_now = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-
         int64_t post_replication_diff = timestamp_now - post_timestamp;
-        LOG(debug) << "POST REPLICATION TIME: " << post_replication_diff;
 
         auto span = opentracing::Tracer::Global()->StartSpan("WriteHomeTimeline-MongoChangeStream");
+        span->SetTag("composepost_id", std::to_string(post_id));
         span->SetTag("consistency_diff", std::to_string(post_replication_diff));
         span->Finish();
       }
