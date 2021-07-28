@@ -6,10 +6,7 @@ RUN set -ex ;\
       iputils-ping \
       wget \
       ;\
-  rm -rf /var/lib/apt/lists/* ;\
-  # link useful bins
-  ln -s /usr/bin/python3 /usr/bin/python
-  # ln -s /usr/bin/pip3 /usr/bin/pip
+  rm -rf /var/lib/apt/lists/*
 
 #---------
 # Dockerize
@@ -19,6 +16,16 @@ RUN set -ex ;\
     wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz ;\
     tar -C /usr/local/bin -xzvf dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz ;\
     rm dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz
+
+#---------
+# ran HTTP server
+#---------
+ENV RAN_VERSION v0.1.5
+RUN set -ex ;\
+    wget https://github.com/m3ng9i/ran/releases/download/$RAN_VERSION/ran_linux_386.zip ;\
+    unzip ran_linux_386.zip ;\
+    mv ran_linux_386 /usr/local/bin/ran ;\
+    rm ran_linux_386.zip
 
 #---------
 # Python pika for debug
