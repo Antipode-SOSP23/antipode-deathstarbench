@@ -23,7 +23,9 @@ RUN set -ex ;\
   apt-get install -y --no-install-recommends ${BUILD_DEPS} ;\
   rm -rf /var/lib/apt/lists/*
 
-# Install CMake
+#---------
+# CMake
+#---------
 ARG CMAKE_VERSION=3.13.4
 RUN set -ex ;\
   apt purge --auto-remove -y cmake ;\
@@ -38,7 +40,9 @@ RUN set -ex ;\
   rm -rf cmake-${CMAKE_VERSION}.tar.gz \
          cmake-${CMAKE_VERSION}
 
-# Install Boost
+#---------
+# Boost
+#---------
 ARG LIB_BOOST_VERSION=1.68.0
 RUN set -ex ;\
   cd /tmp ;\
@@ -52,7 +56,9 @@ RUN set -ex ;\
   rm -rf boost_${LIB_BOOST_VERSION_UNDERSCORED}.tar.gz \
          boost_${LIB_BOOST_VERSION_UNDERSCORED}
 
-# Install mongo-c-driver
+#---------
+# mongo-c-driver
+#---------
 ARG LIB_MONGOC_VERSION=1.14.0
 RUN set -ex ;\
     cd /tmp ;\
@@ -68,7 +74,9 @@ RUN set -ex ;\
     rm -rf mongo-c-driver-${LIB_MONGOC_VERSION}.tar.gz \
            mongo-c-driver-${LIB_MONGOC_VERSION}
 
-# Install lib-thrift
+#---------
+# lib-thrift
+#---------
 ARG LIB_THRIFT_VERSION=0.12.0
 RUN set -ex ;\
     cd /tmp ;\
@@ -84,7 +92,9 @@ RUN set -ex ;\
     rm -rf thrift-${LIB_THRIFT_VERSION}.tar.gz \
            thrift-${LIB_THRIFT_VERSION}
 
-# Install /nlohmann/json
+#---------
+# nlohmann/json
+#---------
 ARG LIB_JSON_VERSION=3.6.1
 RUN set -ex ;\
     cd /tmp ;\
@@ -100,7 +110,9 @@ RUN set -ex ;\
     rm -rf json-${LIB_JSON_VERSION}.tar.gz \
            json-${LIB_JSON_VERSION}
 
-# Install yaml-cpp
+#---------
+# yaml-cpp
+#---------
 ARG LIB_YAML_VERSION=0.6.2
 RUN set -ex ;\
     cd /tmp ;\
@@ -116,7 +128,9 @@ RUN set -ex ;\
     rm -rf yaml-cpp-${LIB_YAML_VERSION}.tar.gz \
            yaml-cpp-yaml-cpp-${LIB_YAML_VERSION}
 
-# Install opentracing-cpp
+#---------
+# opentracing-cpp
+#---------
 ARG LIB_OPENTRACING_VERSION=1.5.1
 RUN set -ex ;\
     cd /tmp ;\
@@ -132,7 +146,9 @@ RUN set -ex ;\
     rm -rf opentracing-cpp-${LIB_OPENTRACING_VERSION}.tar.gz \
            opentracing-cpp-${LIB_OPENTRACING_VERSION}
 
-# Install jaeger-client-cpp
+#---------
+# jaeger-client-cpp
+#---------
 ARG LIB_JAEGER_VERSION=0.4.2
 RUN set -ex ;\
     cd /tmp ;\
@@ -148,7 +164,9 @@ RUN set -ex ;\
     rm -rf jaeger-client-cpp-${LIB_JAEGER_VERSION}.tar.gz \
            jaeger-client-cpp-${LIB_JAEGER_VERSION}
 
-# Install jwt
+#---------
+# cpp-jwt
+#---------
 ARG LIB_CPP_JWT_VERSION=1.1.1
 RUN set -ex ;\
     cd /tmp ;\
@@ -163,7 +181,9 @@ RUN set -ex ;\
     rm -rf cpp-jwt-${LIB_CPP_JWT_VERSION}.tar.gz \
            cpp-jwt-${LIB_CPP_JWT_VERSION}
 
-# Install cpp_redis
+#---------
+# cpp_redis
+#---------
 ARG LIB_CPP_REDIS_VERSION=4.3.1
 RUN set -ex ;\
     cd /tmp ;\
@@ -177,7 +197,9 @@ RUN set -ex ;\
     cd /tmp ;\
     rm -rf cpp_redis
 
-# Install AMQP-CPP
+#---------
+# AMQP-CPP
+#---------
 ARG LIB_AMQP_CPP_VERSION=4.1.4
 RUN set -ex ;\
     cd /tmp ;\
@@ -189,7 +211,9 @@ RUN set -ex ;\
     cd /tmp ;\
     rm -rf AMQP-CPP
 
-# Install SimpleAmqpClient
+#---------
+# SimpleAmqpClient
+#---------
 ARG LIB_SIMPLEAMQPCLIENT_VERSION=2.4.0
 RUN set -ex ;\
     cd /tmp ;\
@@ -203,7 +227,9 @@ RUN set -ex ;\
     cd /tmp ;\
     rm -rf SimpleAmqpClient
 
-# Install Protobuf
+#---------
+# Protobuf
+#---------
 ARG LIB_PROTOBUF_VERSION=2.6.1
 RUN set -ex ;\
     cd /tmp ;\
@@ -218,7 +244,9 @@ RUN set -ex ;\
     rm -rf protobuf-${LIB_PROTOBUF_VERSION}.tar \
            protobuf-${LIB_PROTOBUF_VERSION}
 
-# Install XTrace
+#---------
+# XTrace
+#---------
 RUN set -ex ;\
     cd /tmp ;\
     git clone https://github.com/JonathanMace/xtrace-cpp.git ;\
@@ -231,7 +259,18 @@ RUN set -ex ;\
     cd /tmp ;\
     rm -rf xtrace-cpp
 
-# Install run dependencies
+#---------
+# Dockerize
+#---------
+ENV DOCKERIZE_VERSION v0.6.1
+RUN set -ex ;\
+    wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz ;\
+    tar -C /usr/local/bin -xzvf dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz ;\
+    rm dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz
+
+#---------
+# Run
+#---------
 ARG RUN_DEPS="g++ \
               make \
               libssl-dev \

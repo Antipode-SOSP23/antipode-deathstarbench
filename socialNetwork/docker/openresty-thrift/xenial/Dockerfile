@@ -242,9 +242,8 @@ RUN wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSI
     && tar -C /usr/local/bin -xzvf dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
     && rm dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz
 
-
 #---------
-# Finalnginx configuration
+# nginx configuration
 #---------
 # Copy nginx configuration files
 COPY nginx.conf /usr/local/openresty/nginx/conf/nginx.conf

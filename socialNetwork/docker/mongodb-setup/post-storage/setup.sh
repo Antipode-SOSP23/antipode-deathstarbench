@@ -31,7 +31,7 @@ echo "*********************************"
 echo "Opening HTTP:8000 server for dockerize coordination"
 echo "*********************************"
 
-python3 -m http.server
+ran -p 8000 -l -r /tmp/
 
 echo "*********************************"
 echo "HTTP:8000 server for dockerize coordination DONE!"
