@@ -4,6 +4,8 @@
 #include <thrift/transport/TBufferTransports.h>
 #include <signal.h>
 #include <chrono>
+#include <iostream>
+#include <fstream>
 
 #include "../utils.h"
 #include "ComposePostHandler.h"
@@ -76,7 +78,11 @@ int main(int argc, char *argv[]) {
       std::make_shared<TFramedTransportFactory>(),
       std::make_shared<TBinaryProtocolFactory>()
   );
+  // Write a file for dockerize sync
+  std::ofstream outfile ("/tmp/dockerize.sync");
+  outfile << "DONE" << std::endl;
+  outfile.close();
+
   std::cout << "Starting the compose-post-service server ..." << std::endl;
   server.serve();
-
 }
