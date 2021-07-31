@@ -1,0 +1,44 @@
+---
+- hosts: compose-post.pluribus
+  gather_facts: no
+  become: yes
+  any_errors_fatal: true
+  vars:
+    - stack: deathstarbench
+    - app: socialNetwork
+
+  tasks:
+    - name: Remove dockerize.sync from container
+      shell: >
+          docker exec $( docker ps -a --filter name='compose-post-service' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) rm -f /tmp/dockerize.sync
+      ignore_errors: True
+
+- hosts: swarm_manager
+  any_errors_fatal: true
+  gather_facts: no
+  become: yes
+  vars:
+    - stack: deathstarbench
+
+  tasks:
+    - name: Scale DSB to 0
+      shell: >
+          docker service scale $(CMD="" ; for SERVICE in $(docker stack services {{ stack }} --format {% raw %}'{{.Name}}'{% endraw %}) ; do CMD="$CMD $SERVICE=0"; done; echo $CMD)
+
+    - name: Scale DSB to 1
+      shell: >
+          docker service scale $(CMD="" ; for SERVICE in $(docker stack services {{ stack }} --format {% raw %}'{{.Name}}'{% endraw %}) ; do CMD="$CMD $SERVICE=1"; done; echo $CMD)
+
+- hosts: compose-post.pluribus
+  gather_facts: no
+  become: yes
+  any_errors_fatal: true
+  vars:
+    - stack: deathstarbench
+    - app: socialNetwork
+
+  tasks:
+    - name: Wait for compose-post-service to be ready for posts by creating dockerize.sync file
+      shell: >
+          docker exec $( docker ps -a --filter name='compose-post-service' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) dockerize -wait file:///tmp/dockerize.sync
+      ignore_errors: True

@@ -931,7 +931,7 @@ def clean__socialNetwork__gcp(args):
     for name,host in client_inventory.items():
       _gcp_delete_instance(host['zone'], name)
   elif args['restart']:
-    ansible_playbook['rescale-dsb.yml', '-e', 'app=socialNetwork'] & FG
+    ansible_playbook['restart-dsb.yml', '-e', 'app=socialNetwork'] & FG
   else:
     ansible_playbook['undeploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
 
