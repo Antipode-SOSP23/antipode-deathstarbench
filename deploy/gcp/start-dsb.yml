@@ -24,3 +24,17 @@
       retries: 15
       delay: 30
       until: (cmd_res.stdout | int) == num_services
+
+- hosts: compose-post.pluribus
+  gather_facts: no
+  become: yes
+  any_errors_fatal: true
+  vars:
+    - stack: deathstarbench
+    - app: socialNetwork
+
+  tasks:
+    - name: Wait for compose-post-service to be ready for posts by creating dockerize.sync file
+      shell: >
+          docker exec $( docker ps -a --filter name='compose-post-service' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) dockerize -wait file:///tmp/dockerize.sync
+      ignore_errors: True
