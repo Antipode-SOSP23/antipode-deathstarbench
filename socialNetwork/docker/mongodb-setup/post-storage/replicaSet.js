@@ -10,7 +10,7 @@ rsconf = {
     {
       _id: 1,
       host: "post-storage-mongodb-us:27017",
-      priority: 1
+      priority: 0
     },
   ]
 }

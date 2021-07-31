@@ -229,7 +229,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == post-storage-mongo-eu
+        - node.hostname == post-storage-eu
     hostname: post-storage-mongodb-eu
     image: mongodb-delayed
     networks:
@@ -261,7 +261,7 @@ services:
     deploy:
       placement:
         constraints:
-        - node.hostname == post-storage-mongo-us
+        - node.hostname == post-storage-us
     hostname: post-storage-mongodb-us
     image: mongodb-delayed
     networks:

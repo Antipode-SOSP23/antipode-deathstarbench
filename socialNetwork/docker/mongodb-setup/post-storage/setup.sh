@@ -28,6 +28,12 @@ echo "Replica set DONE!"
 echo "*********************************"
 
 echo "*********************************"
+echo "More MongoDB settings"
+echo "*********************************"
+mongo mongodb://post-storage-mongodb-eu:27017 --eval "db.adminCommand( { setParameter: 1, enableFlowControl: false  } )"
+mongo mongodb://post-storage-mongodb-us:27017 --eval "db.adminCommand( { setParameter: 1, enableFlowControl: false  } )"
+
+echo "*********************************"
 echo "Opening HTTP:8000 server for dockerize coordination"
 echo "*********************************"
 
