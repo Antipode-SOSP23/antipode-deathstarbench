@@ -36,5 +36,5 @@
   tasks:
     - name: Wait for compose-post-service to be ready for posts by creating dockerize.sync file
       shell: >
-          docker exec $( docker ps -a --filter name='compose-post-service' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) dockerize -wait file:///tmp/dockerize.sync
+          docker exec $( docker ps -a --filter name='compose-post-service' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) dockerize -wait file:///tmp/dockerize.sync -wait-retry-interval 10s -timeout 300s
       ignore_errors: True
