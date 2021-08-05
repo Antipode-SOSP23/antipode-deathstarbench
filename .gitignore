@@ -13,4 +13,8 @@ deploy/wkld-data/*
 # vscode settigs
 .vscode/*
 
+# debug
+debug.py
+loop.bash
+
 _env/*
