@@ -234,6 +234,8 @@ def _force_docker():
 
     args = list()
     args.extend(['docker', 'run', '--rm', '-t',
+      # env variables
+      '-e', f"HOST_ROOT_PATH={ROOT_PATH}",
       # run docker from host inside the container
       '-v', '/var/run/docker.sock:/var/run/docker.sock',
       '-v', '/usr/bin/docker:/usr/bin/docker',
@@ -246,8 +248,8 @@ def _force_docker():
       GCP_DOCKER_IMAGE_NAME
     ])
     args = args + sys.argv
-    subprocess.call(args)
     # print(' '.join(args))
+    subprocess.call(args)
     exit()
 
 def _gcp_create_instance(zone, name, machine_type, hostname, firewall_tags):
@@ -931,7 +933,7 @@ def clean__socialNetwork__gcp(args):
     for name,host in client_inventory.items():
       _gcp_delete_instance(host['zone'], name)
   elif args['restart']:
-    ansible_playbook['restart-dsb.yml', '-e', 'app=socialNetwork'] & FG
+    ansible_playbook['restart-dsb.yml', '-i', 'inventory.cfg', '-i', 'clients_inventory.cfg', '-e', 'app=socialNetwork'] & FG
   else:
     ansible_playbook['undeploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
 
@@ -1006,12 +1008,12 @@ def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms, jitt
 
         - name: Spam ping to kickstart delay
           shell: >
-              docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) bash -c "for IP in \$(dig +short post-storage-mongodb-us); do ping -c 200 -f \$IP 2>&1; done"
+              docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) bash -c "for IP in \$(dig +short post-storage-mongodb-us); do ping -c 200 -f \$IP 2>&1 | tail -1; done"
           register: ping_out
 
         - name: Check delay
           debug:
-            msg: {% raw %}"{{ ping_out.stdout }}"{% endraw %}
+            msg: {% raw %}"{{ ping_out.stdout.split('\\n') }}"{% endraw %}
 
   """
   playbook = Environment().from_string(template).render({
@@ -1273,17 +1275,32 @@ def wkld__socialNetwork__gcp__run(args, hosts, exe_path, exe_args):
     template = """
       [clients]
       {% for node_name,node in client_nodes.items() %}
-      {{ node['hostname'] }} ansible_host={{ node['external_ip'] }} gcp_zone={{ node['zone'] }} gcp_name={{ node_name }} gcp_host={{ node['internal_ip'] }} ansible_user=root ansible_ssh_private_key_file=/code/deploy/gcp/{{ project_id }}_google_compute_engine
+      {{ node['hostname'] }} ansible_host={{ node['external_ip'] }} gcp_zone={{ node['zone'] }} gcp_name={{ node_name }} gcp_host={{ node['internal_ip'] }} ansible_user=root ansible_ssh_private_key_file={{ private_ssh_key_path }}
       {% endfor %}
     """
-    inventory = Environment().from_string(template).render({
+
+    # save the docker version of the client_inventory
+    inventory_contents = Environment().from_string(template).render({
       'project_id': GCP_PROJECT_ID,
+      'private_ssh_key_path': f"/code/deploy/gcp/{GCP_PROJECT_ID}_google_compute_engine",
       'client_nodes': inventory,
     })
     inventory_filepath = ROOT_PATH / 'deploy' / 'gcp' / 'clients_inventory.cfg'
     with open(inventory_filepath, 'w') as f:
       # remove empty lines and dedent for easier read
-      f.write(textwrap.dedent(inventory))
+      f.write(textwrap.dedent(inventory_contents))
+    print(f"[SAVED] '{inventory_filepath}'")
+
+    # save the local version of the client_inventory
+    inventory_contents = Environment().from_string(template).render({
+      'project_id': GCP_PROJECT_ID,
+      'private_ssh_key_path': f"{ os.environ.get('HOST_ROOT_PATH') }/deploy/gcp/{ GCP_PROJECT_ID }_google_compute_engine",
+      'client_nodes': inventory,
+    })
+    inventory_filepath = ROOT_PATH / 'deploy' / 'gcp' / 'clients_inventory_local.cfg'
+    with open(inventory_filepath, 'w') as f:
+      # remove empty lines and dedent for easier read
+      f.write(textwrap.dedent(inventory_contents))
     print(f"[SAVED] '{inventory_filepath}'")
 
     # Create script to run
@@ -1500,8 +1517,8 @@ def gather(args):
     df,missing_info = _fetch_compose_post_service_traces(jaeger_host, limit)
 
     # merge result with mongodb change stream consistency diff information
-    consistency_df,_ = _fetch_mongo_change_stream_traces(jaeger_host, limit)
-    df = df.join(consistency_df.set_index('post_id'), on='post_id')
+    # consistency_df,_ = _fetch_mongo_change_stream_traces(jaeger_host, limit)
+    # df = df.join(consistency_df.set_index('post_id'), on='post_id')
 
     # remove unecessary columns
     del df['post_id']
@@ -1517,8 +1534,8 @@ def gather(args):
     # compute extra info to output in info file
     consistent_df = df[df['consistency_bool'] == True]
     inconsistent_df = df[df['consistency_bool'] == False]
-    inconsistent_count = len(consistent_df)
-    consistent_count = len(inconsistent_df)
+    inconsistent_count = len(inconsistent_df)
+    consistent_count = len(consistent_df)
 
     # save to file
     with open('traces.info', 'w') as f:
@@ -1604,8 +1621,8 @@ if __name__ == "__main__":
   deploy_file_group.add_argument('-l', '--latest', action='store_true', help="Use last used deploy file")
   deploy_file_group.add_argument('-f', '--file', type=argparse.FileType('r', encoding='UTF-8'), help="Use specific file")
   # other options
-  delay_parser.add_argument('-d', '--delay', type=int, default='100', help="Delay in ms")
-  delay_parser.add_argument('-j', '--jitter', type=int, default='0', help="Jitter in ms")
+  delay_parser.add_argument('-d', '--delay', type=float, default='100', help="Delay in ms")
+  delay_parser.add_argument('-j', '--jitter', type=float, default='0', help="Jitter in ms")
   delay_parser.add_argument('-c', '--correlation', type=int, default='0', help="Correlation in % (0-100)")
   delay_parser.add_argument('-dist', '--distribution', choices=[ 'uniform', 'normal', 'pareto', 'paretonormal' ], default='uniform', help="Delay distribution")
 
