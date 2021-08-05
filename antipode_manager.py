@@ -1342,8 +1342,6 @@ def wkld__socialNetwork__gcp__run(args, hosts, exe_path, exe_args):
   else:
     input("Press any key when workload is done ...")
 
-  ansible_playbook['wkld-gather.yml', '-i', 'clients_inventory.cfg', '-e', 'app=socialNetwork', '-e', f'conf_path={conf_path}' ] & FG
-
 
 #############################
 # GATHER
@@ -1482,6 +1480,10 @@ def gather(args):
   import pandas as pd
   from plumbum.cmd import sudo, hostname
 
+  print("[INFO] Gather client output ...")
+  getattr(sys.modules[__name__], f"gather__{args['app']}__{_deploy_type(args)}__client_output")(args)
+
+  print("[INFO] Gather jaeger traces ...")
   # pd.set_option('display.float_format', lambda x: '%.3f' % x)
   pd.set_option('display.html.table_schema', True)
   pd.set_option('display.precision', 5)
@@ -1510,8 +1512,8 @@ def gather(args):
 
   try:
     # get host for each zone
-    jaeger_host = getattr(sys.modules[__name__], f"gather__{args['app']}__{_deploy_type(args)}")(args)
-    limit = int(input(f"Visit {jaeger_host}/dependencies to check number of flowing requests: "))
+    jaeger_host = getattr(sys.modules[__name__], f"gather__{args['app']}__{_deploy_type(args)}__jaeger_host")(args)
+
     tag = input(f"Input any tag for this gather: ")
 
     df,missing_info = _fetch_compose_post_service_traces(jaeger_host, limit)
@@ -1563,14 +1565,14 @@ def gather(args):
     # if the compose gets interrupted we just continue with the script
     pass
 
-def gather__socialNetwork__local(args):
+def gather__socialNetwork__local__jaeger_host(args):
   from plumbum import FG, BG
   from plumbum.cmd import sudo, hostname
 
   public_ip = hostname['-I']().split()[1]
   return f'http://{public_ip}:16686'
 
-def gather__socialNetwork__gsd(args):
+def gather__socialNetwork__gsd__jaeger_host(args):
   import yaml
 
   filepath = args['configuration_path']
@@ -1578,7 +1580,7 @@ def gather__socialNetwork__gsd(args):
     conf = yaml.load(f_conf, Loader=yaml.FullLoader)
     return f"http://{GSD_AVAILABLE_NODES[conf['services']['jaeger']]}:16686"
 
-def gather__socialNetwork__gcp(args):
+def gather__socialNetwork__gcp__jaeger_host(args):
   import yaml
 
   filepath = args['configuration_path']
@@ -1588,6 +1590,21 @@ def gather__socialNetwork__gcp(args):
 
     jaeger_public_ip = inventory[conf['services']['jaeger']]['external_ip']
     return f"http://{jaeger_public_ip}:16686"
+
+def gather__socialNetwork__local__client_output(args):
+  return None
+
+def gather__socialNetwork__gsd__client_output(args):
+  return None
+
+def gather__socialNetwork__gcp__client_output(args):
+  from plumbum.cmd import ansible_playbook
+
+  filepath = args['configuration_path']
+  conf_path = f"{filepath.stem}"
+
+  os.chdir(ROOT_PATH / 'deploy' / 'gcp')
+  ansible_playbook['wkld-gather.yml', '-i', 'clients_inventory_local.cfg', '-e', 'app=socialNetwork', '-e', f'conf_path={conf_path}' ] & FG
 
 #############################
 # MAIN
