@@ -65,7 +65,7 @@ if __name__ == "__main__":
 
   deploy_file_group = main_parser.add_mutually_exclusive_group(required=True)
   deploy_file_group.add_argument('-l', '--latest', action='store_true', help="Use last used deploy file")
-  deploy_file_group.add_argument('-d', '--dir', help="Use specific directory")
+  deploy_file_group.add_argument('-d', '--dir', nargs='*', help="Use specific directory")
 
   args = vars(main_parser.parse_args())
 
@@ -79,6 +79,8 @@ if __name__ == "__main__":
       raise argparse.ArgumentError(args['dir'], "is an empty dir.")
   else:
     raise argparse.ArgumentError(args['dir'], "does not exist")
+
+  pprint(args )
 
   # no errors call plot - for now we only have one
   plot_debug(args['dir'])
