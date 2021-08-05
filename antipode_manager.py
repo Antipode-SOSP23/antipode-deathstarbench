@@ -1514,7 +1514,13 @@ def gather(args):
     # get host for each zone
     jaeger_host = getattr(sys.modules[__name__], f"gather__{args['app']}__{_deploy_type(args)}__jaeger_host")(args)
 
-    tag = input(f"Input any tag for this gather: ")
+    limit = args['num_requests']
+    if limit is None:
+      limit = int(input(f"Visit {jaeger_host}/dependencies to check number of flowing requests: "))
+
+    tag = args['tag']
+    if tag is None:
+      tag = input(f"Input any tag for this gather: ")
 
     df,missing_info = _fetch_compose_post_service_traces(jaeger_host, limit)
 
@@ -1686,6 +1692,8 @@ if __name__ == "__main__":
   deploy_file_group = gather_parser.add_mutually_exclusive_group(required=False)
   deploy_file_group.add_argument('-l', '--latest', action='store_true', help="Use last used deploy file")
   deploy_file_group.add_argument('-f', '--file', type=argparse.FileType('r', encoding='UTF-8'), help="Use specific file")
+  gather_parser.add_argument('-n', '--num-requests', type=int, default=None, help="Gather this amount of requests skipping the input")
+  gather_parser.add_argument('-t', '--tag', type=str, default=None, help="Tags the input with the following string")
 
 
   args = vars(main_parser.parse_args())
