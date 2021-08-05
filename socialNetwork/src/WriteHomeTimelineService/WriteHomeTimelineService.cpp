@@ -574,7 +574,7 @@ int main(int argc, char *argv[]) {
   // init antipode tables
   // AntipodeMongodb::init_cscope_listener(mongodb_uri, "post");
 
-  std::thread tmongo_stream_listener(mongoStreamListener, mongodb_uri, "post", "post");
+  // std::thread tmongo_stream_listener(mongoStreamListener, mongodb_uri, "post", "post");
   //----------
   // +ANTIPODE
   //----------
