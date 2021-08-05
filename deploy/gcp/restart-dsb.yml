@@ -2,6 +2,7 @@
 - hosts: clients
   gather_facts: no
   become: yes
+  any_errors_fatal: false
   vars:
     - stack: deathstarbench
     - app: socialNetwork
@@ -10,7 +11,7 @@
     - name: Reboot clients
       reboot:
         reboot_command: sudo reboot
-      ignore_errors: True
+      ignore_unreachable: true # we skip unreachable because clients might not yet exist
 
 - hosts: compose-post.pluribus
   gather_facts: no
