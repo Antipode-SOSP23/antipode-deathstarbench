@@ -1,7 +1,7 @@
 ---
 - hosts: clients
   gather_facts: no
-  become: no
+  become: yes
   any_errors_fatal: true
   vars:
     - app: socialNetwork
@@ -24,13 +24,6 @@
       file:
         path: "/code/deploy/gcp/"
         state: directory
-
-    - name: Copy wkld-run script
-      synchronize:
-        src: "./wkld-run.sh"
-        dest: "/code/deploy/gcp/"
-        use_ssh_args: yes
-        mode: push
 
     - name: Copy wkld-run script
       synchronize:
