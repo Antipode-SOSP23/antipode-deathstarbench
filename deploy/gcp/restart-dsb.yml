@@ -1,4 +1,17 @@
 ---
+- hosts: clients
+  gather_facts: no
+  become: yes
+  vars:
+    - stack: deathstarbench
+    - app: socialNetwork
+
+  tasks:
+    - name: Reboot clients
+      reboot:
+        reboot_command: sudo reboot
+      ignore_errors: True
+
 - hosts: compose-post.pluribus
   gather_facts: no
   become: yes
@@ -40,5 +53,5 @@
   tasks:
     - name: Wait for compose-post-service to be ready for posts by creating dockerize.sync file
       shell: >
-          docker exec $( docker ps -a --filter name='compose-post-service' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) dockerize -wait file:///tmp/dockerize.sync
+          docker exec $( docker ps -a --filter name='compose-post-service' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) dockerize -wait file:///tmp/ -wait-retry-interval 10s -timeout 300s
       ignore_errors: True
