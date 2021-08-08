@@ -2,14 +2,17 @@
 
 import os
 import glob
+import re
 from pprint import pprint
 from pathlib import Path
 import sys
 import json
 import ast
 from datetime import datetime
+from itertools import groupby
 import matplotlib
 import matplotlib.pyplot as plt
+import seaborn as sns
 import numpy as np
 import pandas as pd
 pd.set_option('display.float_format', lambda x: '%.3f' % x)
@@ -76,24 +79,176 @@ def plot__per_inconsistencies(args):
     # insert at the position of the round
     data[tag].insert(tag_round - 1, inconsistent_per)
 
+  pprint(data)
   # transform dict into dataframe
   df = pd.DataFrame.from_dict(data)
-  pprint(df)
+
+  # sort columns by the delay number in the string
+  # sorted_columns = sorted(df.columns, key=lambda x: float(x.split('ms')[0]))
+  # df = df.reindex(sorted_columns, axis=1)
 
   # plt.ylim([0, 100]) # percentage
-  plt.bar(np.arange(df.shape[1]), df.median(),
-    yerr=[df.median()-df.min(), df.max()-df.median()],
-    log=True,
-    capsize=8,
-  )
-  plt.ylabel('Inconsistency %')
-  plt.xlabel('DSB replication pair')
+  # plt.bar(np.arange(df.shape[1]), df.median(),
+  #   yerr=[df.median()-df.min(), df.max()-df.median()],
+  #   log=True,
+  #   capsize=8,
+  # )
+
+  df.boxplot()
+  plt.yscale('log')
+
+  plt.ylabel('% of inconsistencies')
+  plt.xlabel('DSB replication pair', labelpad=20)
+  # add label at the top right of the plot
+  ax = plt.gca()
+  plt.text(1, 1, "$\it{150 qps}$   $\it{n=5}$", horizontalalignment='right', verticalalignment='bottom', transform=ax.transAxes)
 
   # replace xticks labels with dataframe info
-  locs, labels = plt.xticks(np.arange(len(df.columns)), df.columns)
+  locs, labels = plt.xticks(np.arange(len(df.columns) + 1), [""] + df.columns.to_list(), horizontalalignment='right', rotation=45)
 
   # save with a unique timestamp
-  plt.savefig(PLOTS_PATH / f"per_inconsistencies__{datetime.now().strftime('%Y%m%d%H%M')}")
+  plt.savefig(PLOTS_PATH / f"per_inconsistencies__{datetime.now().strftime('%Y%m%d%H%M')}", bbox_inches = 'tight', pad_inches = 0.1)
+
+
+def plot__throughput_latency(args):
+  data = {}
+  for d in args['dir']:
+    tag, tag_round = _fetch_gather_tag(d)
+
+    if 'antipode' in tag:
+      baseline_or_antipode = 'antipode'
+    else:
+      baseline_or_antipode = 'baseline'
+
+    latency_90 = None
+    throughput = None
+    with open(d / 'client01.out') as f:
+      lines = f.readlines()
+      for line in lines:
+        # this is the line latency
+        if line.startswith(' 90.000%'):
+          parts = re.split('(ms|s|m)', line.split('%')[1].strip())
+          value = float(parts[0])
+          unit = parts[1]
+
+          # convert all units to ms
+          if unit == 'm':
+            latency_90 = (value * 60) * 1000
+          elif unit == 's':
+            latency_90 = (value * 1000)
+          else: # ms
+            latency_90 = value
+
+          # round latency
+          latency_90 = round(latency_90, 0)
+
+        # this is the line for throughput
+        if line.startswith('Requests/sec:'):
+          throughput = float(line.split(':')[1].strip())
+
+    if tag not in data:
+      data[tag] = []
+    # insert at the position of the round
+    data[tag].insert(tag_round - 1, { 'type': baseline_or_antipode, 'latency_90': latency_90, 'throughput': throughput})
+
+  # since each tag/type has multiple rounds we have to group them
+  # into a single row
+  df_data = {}
+  for tag, values in data.items():
+    # group by baseline or antipode
+    for t,vs in groupby(values, key=lambda x: x['type']):
+      vs = list(vs)
+      df_data[tag] = {
+        'type': t,
+        'latency_90': np.median([ v['latency_90'] for v in vs]),
+        'throughput': np.median([ v['throughput'] for v in vs]),
+      }
+
+  # transform dict into dataframe
+  df = pd.DataFrame.from_dict(df_data, orient='index')
+
+  # index -> x -> throughput
+  # values -> y -> latency_90
+  # columns -> line
+  fig, ax = plt.subplots()
+  ax = sns.lineplot(data=df, x='throughput', y='latency_90', hue='type', markers=True, dashes=False)
+
+  for gtype, item in df.groupby('type'):
+    # move index labels to the dataframe for plotting as labels
+    item.reset_index(inplace=True)
+    for qps,throughput,latency in item[['index', 'throughput', 'latency_90']].values:
+      ax.text(throughput,latency,qps)
+
+  plt.ylabel('Latency (ms)\n$\it{Client\ side}$')
+  plt.xlabel('Throughput (req/s)', labelpad=20)
+
+  # save with a unique timestamp
+  plt.savefig(PLOTS_PATH / f"throughput_latency__{datetime.now().strftime('%Y%m%d%H%M')}", bbox_inches = 'tight', pad_inches = 0.1)
+
+def plot__throughput_visibility_latency(args):
+  data = {}
+  for d in args['dir']:
+    tag, tag_round = _fetch_gather_tag(d)
+
+    if 'antipode' in tag:
+      baseline_or_antipode = 'antipode'
+    else:
+      baseline_or_antipode = 'baseline'
+
+    latency_90 = None
+    throughput = None
+
+    # get throughput from client file
+    with open(d / 'client01.out') as f:
+      lines = f.readlines()
+      for line in lines:
+        # this is the line for throughput
+        if line.startswith('Requests/sec:'):
+          throughput = float(line.split(':')[1].strip())
+
+    # get visibility latency from csv
+    df = pd.read_csv(d / 'traces.csv', sep=';', index_col='ts')
+    latency_90 = np.percentile(df[['post_notification_diff_ms']], 90)
+
+    if tag not in data:
+      data[tag] = []
+    # insert at the position of the round
+    data[tag].insert(tag_round - 1, { 'type': baseline_or_antipode, 'latency_90': latency_90, 'throughput': throughput})
+
+  # since each tag/type has multiple rounds we have to group them
+  # into a single row
+  df_data = {}
+  for tag, values in data.items():
+    # group by baseline or antipode
+    for t,vs in groupby(values, key=lambda x: x['type']):
+      vs = list(vs)
+      df_data[tag] = {
+        'type': t,
+        'latency_90': np.median([ v['latency_90'] for v in vs]),
+        'throughput': np.median([ v['throughput'] for v in vs]),
+      }
+
+  # transform dict into dataframe
+  df = pd.DataFrame.from_dict(df_data, orient='index')
+
+  # index -> x -> throughput
+  # values -> y -> latency_90
+  # columns -> line
+  fig, ax = plt.subplots()
+  ax = sns.lineplot(data=df, x='throughput', y='latency_90', hue='type', markers=True, dashes=False)
+
+  for gtype, item in df.groupby('type'):
+    # move index labels to the dataframe for plotting as labels
+    item.reset_index(inplace=True)
+    for qps,throughput,latency in item[['index', 'throughput', 'latency_90']].values:
+      ax.text(throughput,latency,qps)
+
+  plt.ylabel('Visibility Latency (ms)\n$\it{Difference\ from\ post\ to\ notification}$')
+  plt.xlabel('Throughput (req/s)', labelpad=20)
+
+  # save with a unique timestamp
+  plt.savefig(PLOTS_PATH / f"throughput_visibility_latency__{datetime.now().strftime('%Y%m%d%H%M')}", bbox_inches = 'tight', pad_inches = 0.1)
+
 
 #-----------
 # CONSTANTS

@@ -3,6 +3,7 @@ pluribus.json
 *google_compute_engine*
 # generated files
 clients_inventory.cfg
+clients_inventory_local.cfg
 inventory.cfg
 delay-container.yml
 wkld-run.sh
