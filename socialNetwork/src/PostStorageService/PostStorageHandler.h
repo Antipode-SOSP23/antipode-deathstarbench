@@ -90,7 +90,7 @@ void PostStorageHandler::StorePost(
 
   // force WritHomeTimeline to an error by sleeping
   // LOG(debug) << "[ANTIPODE] Sleeping ...";
-  // std::this_thread ::sleep_for (std::chrono::milliseconds(100));
+  // std::this_thread ::sleep_for (std::chrono::milliseconds(1000));
   // LOG(debug) << "[ANTIPODE] Done Sleeping!";
   //----------
   // -ANTIPODE
@@ -210,90 +210,6 @@ void PostStorageHandler::StorePost(
   auto insert_span = opentracing::Tracer::Global()->StartSpan(
       "MongoInsertPost", { opentracing::ChildOf(&span->context()) });
 
-  //----------
-  // -ANTIPODE
-  //----------
-  // // Replacing the mongoc_collection_insert_one with a transaction so we can store the
-  // // ctx_id on Antipode table
-  // //
-  // // ref: http://mongoc.org/libmongoc/1.14.0/mongoc_transaction_opt_t.html#
-
-  // // Step 1: Start a client session.
-  // mongoc_client_session_t *session = NULL;
-  // session = mongoc_client_start_session (mongodb_client, NULL /* opts */, &error);
-  // if (!session) {
-  //   LOG(error) << "Error: Failed to start MongoDB session: " << error.message;
-  //   ServiceException se;
-  //   se.errorCode = ErrorCode::SE_MONGODB_ERROR;
-  //   se.message = error.message;
-
-  //   mongoc_client_session_destroy (session);
-  //   mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
-  //   throw se;
-  // }
-
-  // // Step 2: Start Antipode client
-  // AntipodeMongodb* antipode_client = new AntipodeMongodb(mongodb_client, "post");
-  // Cscope cscope = Cscope::from_json(cscope_str);
-
-  // // Step 3: Use mongoc_client_session_with_transaction to start a transaction
-  // // execute the callback, and commit (or abort on error)
-  // while(true) {
-  //   bool r;
-  //   r = mongoc_client_session_start_transaction(session, NULL /* txn_opts */, &error);
-  //   if (!r) {
-  //     LOG(error) << "Error: Failed to start MongoDB transaction: " << error.message;
-  //     continue;
-  //   }
-
-  //   // Step 4: Insert objects into transaction insert post into the transaction
-  //   r = mongoc_collection_insert_one (collection, new_doc, nullptr, nullptr, &error);
-  //   if (!r) {
-  //     LOG(error) << "Error: Failed to insert post to MongoDB: " << error.message;
-  //     continue;
-  //   }
-
-  //   // insert cscope_id into the transaction
-  //   // antipode_client->inject(session, cscope_id, "post-storage-service", "post-storage", &oid);
-  //   char append_id[25];
-  //   bson_oid_to_string(&oid, append_id);
-  //   cscope = cscope.append(std::string(append_id), "post-storage-service", "post-storage");
-
-  //   // in case of transient errors, retry for 5 seconds to commit transaction
-  //   bson_t reply = BSON_INITIALIZER;
-  //   int64_t start = bson_get_monotonic_time ();
-  //   while (bson_get_monotonic_time () - start < 5 * 1000 * 1000) {
-  //     bson_destroy (&reply);
-  //     r = mongoc_client_session_commit_transaction (session, &reply, &error);
-  //     if (r) {
-  //       // success
-  //       bson_destroy (&reply);
-  //       break;
-  //     } else {
-  //       MONGOC_ERROR ("Warning: commit failed: %s", error.message);
-  //       if (mongoc_error_has_label (&reply, "UnknownTransactionCommitResult")) {
-  //         // try again to commit
-  //         continue;
-  //       }
-  //       // unrecoverable error trying to commit
-  //       bson_destroy (&reply);
-  //       break;
-  //     }
-  //   }
-
-  //   // close scope
-  //   cscope = cscope.close_branch("post-storage");
-  //   antipode_client->close_scope(cscope);
-
-  //   // clean objects
-  //   mongoc_client_session_destroy (session);
-  //   break;
-  // }
-  //----------
-  // -ANTIPODE
-  //----------
-
-  // original:
   // include write concern in command options
   // example: http://mongoc.org/libmongoc/current/mongoc_client_write_command_with_opts.html
   bson_t* opts = bson_new();
@@ -301,22 +217,108 @@ void PostStorageHandler::StorePost(
   mongoc_write_concern_set_w (write_concern, MONGOC_WRITE_CONCERN_W_DEFAULT);
   mongoc_write_concern_append (write_concern, opts);
 
-  bool inserted = mongoc_collection_insert_one (collection, new_doc, opts, nullptr, &error);
+  //----------
+  // -ANTIPODE
+  //----------
+  // Replacing the mongoc_collection_insert_one with a transaction so we can store the
+  // ctx_id on Antipode table
+  //
+  // ref: http://mongoc.org/libmongoc/1.14.0/mongoc_transaction_opt_t.html#
 
-  // XTRACE("MongoInsertPost complete");
-  insert_span->Finish();
-  if (!inserted) {
-    LOG(error) << "Error: Failed to insert post to MongoDB: "
-                << error.message;
+  // Step 1: Start a client session.
+  mongoc_client_session_t *session = NULL;
+  session = mongoc_client_start_session (mongodb_client, NULL /* opts */, &error);
+  if (!session) {
+    LOG(error) << "Error: Failed to start MongoDB session: " << error.message;
     ServiceException se;
     se.errorCode = ErrorCode::SE_MONGODB_ERROR;
     se.message = error.message;
-    bson_destroy(new_doc);
-    mongoc_collection_destroy(collection);
+
+    mongoc_client_session_destroy (session);
     mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
-    // XTRACE("Failed to insert post to MongoDB");
     throw se;
   }
+
+  // Step 2: Start Antipode client
+  AntipodeMongodb* antipode_client = new AntipodeMongodb(mongodb_client, "post");
+  Cscope cscope = Cscope::from_json(cscope_str);
+
+  // Step 3: Use mongoc_client_session_with_transaction to start a transaction
+  // execute the callback, and commit (or abort on error)
+  while(true) {
+    bool r;
+    r = mongoc_client_session_start_transaction(session, NULL /* txn_opts */, &error);
+    if (!r) {
+      LOG(error) << "Error: Failed to start MongoDB transaction: " << error.message;
+      continue;
+    }
+
+    // Step 4: Insert objects into transaction insert post into the transaction
+    r = mongoc_collection_insert_one (collection, new_doc, nullptr, nullptr, &error);
+    if (!r) {
+      LOG(error) << "Error: Failed to insert post to MongoDB: " << error.message;
+      continue;
+    }
+
+    // insert cscope_id into the transaction
+    // antipode_client->inject(session, cscope_id, "post-storage-service", "post-storage", &oid);
+    char append_id[25];
+    bson_oid_to_string(&oid, append_id);
+    cscope = cscope.append(std::string(append_id), "post-storage-service", "post-storage");
+
+    // in case of transient errors, retry for 5 seconds to commit transaction
+    bson_t reply = BSON_INITIALIZER;
+    int64_t start = bson_get_monotonic_time ();
+    while (bson_get_monotonic_time () - start < 5 * 1000 * 1000) {
+      bson_destroy (&reply);
+      r = mongoc_client_session_commit_transaction (session, &reply, &error);
+      if (r) {
+        // success
+        bson_destroy (&reply);
+        break;
+      } else {
+        MONGOC_ERROR ("Warning: commit failed: %s", error.message);
+        if (mongoc_error_has_label (&reply, "UnknownTransactionCommitResult")) {
+          // try again to commit
+          continue;
+        }
+        // unrecoverable error trying to commit
+        bson_destroy (&reply);
+        break;
+      }
+    }
+
+    // close scope
+    cscope = cscope.close_branch("post-storage");
+    antipode_client->close_scope(cscope);
+
+    // clean objects
+    mongoc_client_session_destroy (session);
+    break;
+  }
+  //----------
+  // -ANTIPODE
+  //----------
+  // // original:
+  // bool inserted = mongoc_collection_insert_one (collection, new_doc, opts, nullptr, &error);
+
+  // // XTRACE("MongoInsertPost complete");
+  // insert_span->Finish();
+  // if (!inserted) {
+  //   LOG(error) << "Error: Failed to insert post to MongoDB: "
+  //               << error.message;
+  //   ServiceException se;
+  //   se.errorCode = ErrorCode::SE_MONGODB_ERROR;
+  //   se.message = error.message;
+  //   bson_destroy(new_doc);
+  //   mongoc_collection_destroy(collection);
+  //   mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
+  //   // XTRACE("Failed to insert post to MongoDB");
+  //   throw se;
+  // }
+  //----------
+  // -ORIGINAL
+  //----------
 
   // eval
   ts = high_resolution_clock::now();
