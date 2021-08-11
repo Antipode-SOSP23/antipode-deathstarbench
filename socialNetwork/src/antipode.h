@@ -310,6 +310,68 @@ AntipodeMongodb::~AntipodeMongodb() {
   LOG(debug) << "[AntipodeMongodb] Finished Init Store";
 }
 
+bool AntipodeMongodb::close_scope(Cscope cscope) {
+  bson_error_t error;
+  bson_t *selector = BCON_NEW("cscope_id", BCON_UTF8(cscope._id.c_str()));
+
+  bson_t *action = bson_new();
+  bson_t action__set;
+  BSON_APPEND_DOCUMENT_BEGIN(action, "$set", &action__set);
+    BSON_APPEND_UTF8(&action__set, "object", cscope.to_json().c_str());
+  bson_append_document_end(action, &action__set);
+
+  bson_t *opts = BCON_NEW("upsert",  BCON_BOOL(true));
+
+  bool r = mongoc_collection_update_one(_collection, selector, action, opts, NULL /* reply */, &error);
+  if (!r) {
+    MONGOC_ERROR ("[Antipode] Inject failed: %s", error.message);
+  }
+  return r;
+}
+
+Cscope AntipodeMongodb::barrier(Cscope cscope) {
+  bson_t* filter = BCON_NEW ("cscope_id", BCON_UTF8(cscope._id.c_str()));
+  bson_t* opts = BCON_NEW ("limit", BCON_INT64(1));
+  mongoc_cursor_t* cursor;
+
+  // blocking behaviour waiting for all branches to be closed
+  while(!cscope._open_branches.empty()) {
+    const bson_t* doc;
+    cursor = mongoc_collection_find_with_opts(_collection, filter, opts, NULL);
+    bool cscope_id_visible = mongoc_cursor_next(cursor, &doc);
+
+    if (cscope_id_visible) {
+      // -- debug
+      // char* str = bson_as_canonical_extended_json (doc, NULL);
+      // LOG(debug) << " IS_VISIBLE DONE: " << str;
+      // bson_free (str);
+      // --
+
+      // -- Update with new cscope
+      bson_iter_t cscope_iter;
+      if (bson_iter_init_find (&cscope_iter, doc, "object") && BSON_ITER_HOLDS_UTF8 (&cscope_iter)) {
+        std::string cscope_serialized(bson_iter_utf8(&cscope_iter, /* length */ NULL));
+        cscope = Cscope::from_json(cscope_serialized);
+      }
+    }
+  }
+
+  mongoc_cursor_destroy (cursor);
+  bson_destroy (filter);
+  bson_destroy (opts);
+
+  return cscope;
+}
+
+void AntipodeMongodb::close() {
+  mongoc_collection_destroy(_collection);
+  mongoc_database_destroy(_db);
+}
+
+//------------
+// DEPRECATED
+//------------
+
 /* static */ void AntipodeMongodb::init_cscope_listener (std::string uri, std::string dbname) {
   boost::thread tserver(&AntipodeMongodb::_init_cscope_listener, uri, dbname);
   // tserver.join();
@@ -372,61 +434,6 @@ AntipodeMongodb::~AntipodeMongodb() {
   mongoc_collection_destroy(collection);
   mongoc_database_destroy(db);
   mongoc_client_destroy (client);
-}
-
-bool AntipodeMongodb::close_scope(Cscope cscope) {
-  bson_error_t error;
-  bson_t *selector = BCON_NEW("cscope_id", BCON_UTF8(cscope._id.c_str()));
-
-  bson_t *action = bson_new();
-  bson_t action__set;
-  BSON_APPEND_DOCUMENT_BEGIN(action, "$set", &action__set);
-    BSON_APPEND_UTF8(&action__set, "object", cscope.to_json().c_str());
-  bson_append_document_end(action, &action__set);
-
-  bson_t *opts = BCON_NEW("upsert",  BCON_BOOL(true));
-
-  bool r = mongoc_collection_update_one(_collection, selector, action, opts, NULL /* reply */, &error);
-
-  // debug
-  if (!r) {
-    MONGOC_ERROR ("[Antipode] Inject failed: %s", error.message);
-  }
-  return r;
-}
-
-Cscope AntipodeMongodb::barrier(Cscope cscope) {
-  bson_t* filter = BCON_NEW ("cscope_id", BCON_UTF8(cscope._id.c_str()));
-  bson_t* opts = BCON_NEW ("limit", BCON_INT64(1));
-  mongoc_cursor_t* cursor;
-
-  // blocking behaviour
-  while(!cscope._open_branches.empty()) {
-    const bson_t* doc;
-    cursor = mongoc_collection_find_with_opts(_collection, filter, opts, NULL);
-    bool cscope_id_visible = mongoc_cursor_next(cursor, &doc);
-
-    if (cscope_id_visible) {
-      // -- debug
-      // char* str = bson_as_canonical_extended_json (doc, NULL);
-      // LOG(debug) << " IS_VISIBLE DONE: " << str;
-      // bson_free (str);
-      // --
-
-      // -- Update with new cscope
-      bson_iter_t cscope_iter;
-      if (bson_iter_init_find (&cscope_iter, doc, "object") && BSON_ITER_HOLDS_UTF8 (&cscope_iter)) {
-        std::string cscope_serialized(bson_iter_utf8(&cscope_iter, /* length */ NULL));
-        cscope = Cscope::from_json(cscope_serialized);
-      }
-    }
-  }
-
-  mongoc_cursor_destroy (cursor);
-  bson_destroy (filter);
-  bson_destroy (opts);
-
-  return cscope;
 }
 
 void AntipodeMongodb::_barrier_change_stream(std::string cscope_id) {
@@ -500,11 +507,6 @@ void AntipodeMongodb::_barrier_change_stream_listener(std::string cscope_id) {
   // for(tbb::concurrent_hash_map<std::string, bool>::iterator i=cscope_change_stream_cache.begin(); i!=cscope_change_stream_cache.end(); ++i ) {
   //   printf("%s %d\n",i->first.c_str(),i->second);
   // }
-}
-
-void AntipodeMongodb::close() {
-  mongoc_collection_destroy(_collection);
-  mongoc_database_destroy(_db);
 }
 
 } // namespace antipode

@@ -176,6 +176,8 @@ def plot__throughput_latency(args):
   for gtype, item in df.groupby('type'):
     # move index labels to the dataframe for plotting as labels
     item.reset_index(inplace=True)
+    # remove the antiopode tag from those rows
+    item['index'] = item['index'].apply(lambda x: x.split(' - ')[0])
     for qps,throughput,latency in item[['index', 'throughput', 'latency_90']].values:
       ax.text(throughput,latency,qps)
 
@@ -240,6 +242,8 @@ def plot__throughput_visibility_latency(args):
   for gtype, item in df.groupby('type'):
     # move index labels to the dataframe for plotting as labels
     item.reset_index(inplace=True)
+    # remove the antiopode tag from those rows
+    item['index'] = item['index'].apply(lambda x: x.split(' - ')[0])
     for qps,throughput,latency in item[['index', 'throughput', 'latency_90']].values:
       ax.text(throughput,latency,qps)
 
