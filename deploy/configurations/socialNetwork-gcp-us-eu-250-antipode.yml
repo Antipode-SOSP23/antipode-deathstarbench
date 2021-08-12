@@ -1,0 +1,201 @@
+services:
+  #----------------------------------------------------------
+  # Write notifications at EU replica
+  #----------------------------------------------------------
+  # 4 cores
+  social-graph-service: social-graph
+  social-graph-redis: social-graph
+  #
+  # 1 / 2 cores
+  social-graph-mongodb: social-graph
+  #
+  #
+  # 5 cores
+  write-home-timeline-service-eu: home-timeline-eu
+  write-home-timeline-rabbitmq-eu: home-timeline-eu
+  home-timeline-redis-eu: home-timeline-eu
+
+  #----------------------------------------------------------
+  # read notifications at US replica
+  #----------------------------------------------------------
+
+  write-home-timeline-service-us: home-timeline-us
+  write-home-timeline-rabbitmq-us: home-timeline-us
+  home-timeline-redis-us: home-timeline-us
+
+  # 4 cores
+  home-timeline-service: home-timeline-us
+
+  #----------------------------------------------------------
+  # write post at replica EU
+  #----------------------------------------------------------
+  # 4 cores
+  post-storage-service-eu: post-storage-eu
+  post-storage-memcached-eu: post-storage-eu
+  #
+  # 1 / 2 cores
+  post-storage-mongodb-eu: post-storage-eu
+
+  #----------------------------------------------------------
+  # read post at US replica
+  #----------------------------------------------------------
+  # 4 cores
+  post-storage-service-us: post-storage-us
+  post-storage-memcached-us: post-storage-us
+  #
+  # 1 / 2 cores
+  post-storage-mongodb-us: post-storage-us
+
+  #----------------------------------------------------------
+  # compose posts EU
+  #----------------------------------------------------------
+  # 5 cores
+  compose-post-redis: compose-post
+  compose-post-service: compose-post
+  unique-id-service: compose-post
+  text-service: compose-post
+  #
+  #
+  # 5 cores
+  user-timeline-service: user-timeline
+  user-timeline-redis: user-timeline
+  user-timeline-mongodb: user-timeline
+  #
+  #
+  # 5 cores
+  url-shorten-service: compose-others
+  url-shorten-memcached: compose-others
+  url-shorten-mongodb: compose-others
+  user-mention-service: compose-others
+  #
+  #
+  # 1 / 2 cores
+  user-service: compose-others
+  user-memcached: compose-others
+  user-mongodb: compose-others
+  #
+  #
+  # 1 core
+  media-service: compose-others
+  media-memcached: compose-others
+  media-mongodb: compose-others
+  media-frontend: compose-others
+
+  #----------------------------------------------------------
+  # Coordinator
+  #----------------------------------------------------------
+  # 1 / 2 cores
+  antipode-oracle: antipode-oracle
+
+  #----------------------------------------------------------
+  # Frontend EU
+  #----------------------------------------------------------
+  # 1 / 2 cores
+  nginx-thrift: frontend-eu
+
+  #----------------------------------------------------------
+  # Frontend US
+  #----------------------------------------------------------
+  # 1 / 2 cores
+  nginx-thrift-us: frontend-us
+
+  #----------------------------------------------------------
+  # Admin tasks
+  #----------------------------------------------------------
+  # 1 / 2 cores
+  jaeger: admin-tracing
+  xtrace-server: admin-tracing
+  mongodb-admin: admin-tracing
+  post-storage-mongodb-setup: admin-tracing
+  write-home-timeline-rabbitmq-setup: admin-tracing
+
+clients:
+  - client01
+  - client02
+  - client03
+  - client04
+
+nodes:
+  social-graph:
+    hostname: social-graph.pluribus
+    zone: us-central1-a
+    machine_type: e2-standard-4
+  home-timeline-eu:
+    hostname: home-timeline-eu.pluribus
+    zone: us-central1-a
+    machine_type: e2-standard-4
+  home-timeline-us:
+    hostname: home-timeline-us.pluribus
+    zone: europe-west3-a
+    machine_type: e2-standard-4
+  # post-storage-mongo-eu:
+  #   hostname: post-storage-mongo-eu.pluribus
+  #   zone: us-central1-a
+  #   machine_type: e2-standard-4
+  # post-storage-mongo-us:
+  #   hostname: post-storage-mongo-us.pluribus
+  #   zone: europe-west3-a
+  #   machine_type: e2-standard-4
+  post-storage-eu:
+    hostname: post-storage-eu.pluribus
+    zone: us-central1-a
+    machine_type: e2-standard-4
+  post-storage-us:
+    hostname: post-storage-us.pluribus
+    zone: europe-west3-a
+    machine_type: e2-standard-4
+  compose-post:
+    hostname: compose-post.pluribus
+    zone: us-central1-a
+    machine_type: e2-standard-4
+  user-timeline:
+    hostname: user-timeline.pluribus
+    zone: us-central1-a
+    machine_type: e2-standard-4
+  compose-others:
+    hostname: compose-others.pluribus
+    zone: us-central1-a
+    machine_type: e2-standard-4
+  antipode-oracle:
+    hostname: antipode-oracle.pluribus
+    zone: us-central1-a
+    machine_type: e2-standard-4
+  frontend-eu:
+    hostname: frontend-eu.pluribus
+    zone: us-central1-a
+    machine_type: e2-standard-4
+  frontend-us:
+    hostname: frontend-us.pluribus
+    zone: europe-west3-a
+    machine_type: e2-standard-4
+  admin-tracing:
+    hostname: admin-tracing.pluribus
+    zone: us-central1-a
+    machine_type: e2-standard-4
+  # clients
+  client01:
+    hostname: client01.pluribus
+    zone: us-central1-a
+    machine_type: e2-standard-2
+  client02:
+    hostname: client02.pluribus
+    zone: us-central1-a
+    machine_type: e2-standard-2
+  client03:
+    hostname: client03.pluribus
+    zone: us-central1-a
+    machine_type: e2-standard-2
+  client04:
+    hostname: client04.pluribus
+    zone: us-central1-a
+    machine_type: e2-standard-2
+
+########
+#
+# total DSB cores: 54
+# total DSB cores @ US: 12
+# total DSB cores @ EU: 42
+
+# * for 3 zones: 42 * 3 = 126
+
+# total client cores: N clients / 2
