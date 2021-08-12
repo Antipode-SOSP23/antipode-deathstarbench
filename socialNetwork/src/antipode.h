@@ -322,6 +322,7 @@ bool AntipodeMongodb::close_scope(Cscope cscope) {
 
   bson_t *opts = BCON_NEW("upsert",  BCON_BOOL(true));
 
+  // TODO: does this merge the document with different keys?
   bool r = mongoc_collection_update_one(_collection, selector, action, opts, NULL /* reply */, &error);
   if (!r) {
     MONGOC_ERROR ("[Antipode] Inject failed: %s", error.message);
@@ -359,6 +360,53 @@ Cscope AntipodeMongodb::barrier(Cscope cscope) {
   mongoc_cursor_destroy (cursor);
   bson_destroy (filter);
   bson_destroy (opts);
+
+  // now we check if all the objects inside at their respective datastores
+
+  // add a read concern to opts
+  // example: http://mongoc.org/libmongoc/current/mongoc_client_write_command_with_opts.html
+  bson_t *read_opts = bson_new();
+  mongoc_read_concern_t *read_concern = mongoc_read_concern_new();
+  mongoc_read_concern_set_level (read_concern, MONGOC_READ_CONCERN_LEVEL_LOCAL);
+  mongoc_read_concern_append (read_concern, read_opts);
+  mongoc_read_prefs_t *read_prefs;
+  read_prefs = mongoc_read_prefs_new(MONGOC_READ_SECONDARY);
+
+  for (Cscope::append_t& a : cscope._append_list) {
+    bool read_post = false;
+    while(!read_post) {
+      // TODO: colleciton should be inside the append list
+      // append_list should be more like a KV store so extra fields would be added
+      // that allow for different datastores to be queried
+      // And here is where we would use `a.target`
+      auto post_collection = mongoc_client_get_collection(_client, "post", "post");
+
+      bson_t *query = bson_new();
+      bson_oid_t oid;
+      bson_oid_init_from_string (&oid, a.txid.c_str());
+      BSON_APPEND_OID(query, "_id", &oid);
+      mongoc_cursor_t *read_cursor = mongoc_collection_find_with_opts(post_collection, query, read_opts, read_prefs);
+
+      const bson_t *read_doc;
+      read_post = mongoc_cursor_next(read_cursor, &read_doc);
+
+      bson_error_t error;
+      if (mongoc_cursor_error (read_cursor, &error)) {
+        LOG(error) << "An error occurred: " << error.message;
+        continue;
+      }
+
+      // LOG(debug) << "[ANTIPODE] Was post #" << a.txid << " found at " << std::getenv("ZONE") << " replica? " << read_post;
+
+      bson_destroy(query);
+      mongoc_cursor_destroy(read_cursor);
+      mongoc_collection_destroy(post_collection);
+    }
+  }
+
+  bson_destroy (read_opts);
+  mongoc_read_prefs_destroy (read_prefs);
+  mongoc_read_concern_destroy (read_concern);
 
   return cscope;
 }

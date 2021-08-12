@@ -236,7 +236,7 @@ services:
     # command: --replSet rs0 --oplogSize 128
     command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata --syncdelay 0 --journalCommitInterval 500 --wiredTigerCacheSizeGB 1 --replSet rs0 --oplogSize 128"
     # ports:
-      # - 27018:27017
+    #   - 27018:27017
     # restart: 'no'
     volumes:
       - type: tmpfs
