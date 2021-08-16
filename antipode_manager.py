@@ -765,6 +765,9 @@ def deploy__socialNetwork__gcp(args):
 
     print(f"[SAVED] '{inventory_filepath}'")
 
+  # sleep before
+  time.sleep(30)
+
   # run playbooks
   os.chdir(ROOT_PATH / 'deploy' / 'gcp')
 
