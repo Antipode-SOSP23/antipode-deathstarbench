@@ -32,6 +32,12 @@ def _fetch_gather_tag(exp_dir):
         tag, tag_round = line.rstrip().split('GATHER TAG: ')[1].split(' --- round ')
         return tag, int(tag_round)
 
+def _get(list, index, default):
+  try:
+    return list[index]
+  except IndexError:
+    return default
+
 #-----------
 # PLOTS
 #-----------
