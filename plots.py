@@ -107,7 +107,7 @@ def plot__per_inconsistencies(args):
   plt.xlabel('DSB replication pair', labelpad=20)
   # add label at the top right of the plot
   ax = plt.gca()
-  plt.text(1, 1, "$\it{150 qps}$   $\it{n=5}$", horizontalalignment='right', verticalalignment='bottom', transform=ax.transAxes)
+  plt.text(1, 1, "$\it{150 rps}$   $\it{n=5}$", horizontalalignment='right', verticalalignment='bottom', transform=ax.transAxes)
 
   # replace xticks labels with dataframe info
   locs, labels = plt.xticks(np.arange(len(df.columns) + 1), [""] + df.columns.to_list(), horizontalalignment='right', rotation=45)
@@ -117,14 +117,10 @@ def plot__per_inconsistencies(args):
 
 
 def plot__throughput_latency(args):
-  data = {}
+  parsed_data = []
   for d in args['dir']:
     tag, tag_round = _fetch_gather_tag(d)
-
-    if 'antipode' in tag:
-      baseline_or_antipode = 'antipode'
-    else:
-      baseline_or_antipode = 'baseline'
+    info_tags = tag.split(' - ')
 
     latency_90 = None
     throughput = None
@@ -152,46 +148,84 @@ def plot__throughput_latency(args):
         if line.startswith('Requests/sec:'):
           throughput = float(line.split(':')[1].strip())
 
-    if tag not in data:
-      data[tag] = []
     # insert at the position of the round
-    data[tag].insert(tag_round - 1, { 'type': baseline_or_antipode, 'latency_90': latency_90, 'throughput': throughput})
+    parsed_data.append({
+      'rps': int(info_tags[0].split('qps')[0].split('rps')[0]),
+      'zone_pair': info_tags[1],
+      'type': _get(info_tags, 2, 'baseline'),
+      'round': tag_round,
+      'latency_90': latency_90,
+      'throughput': throughput,
+    })
 
-  # since each tag/type has multiple rounds we have to group them
-  # into a single row
-  df_data = {}
-  for tag, values in data.items():
-    # group by baseline or antipode
-    for t,vs in groupby(values, key=lambda x: x['type']):
-      vs = list(vs)
-      df_data[tag] = {
-        'type': t,
-        'latency_90': np.median([ v['latency_90'] for v in vs]),
-        'throughput': np.median([ v['throughput'] for v in vs]),
-      }
+  # since each tag/type has multiple rounds we have to group them into a single row
+  df_data = []
+  for t,vs in groupby(parsed_data, key=lambda x: [ x['rps'], x['zone_pair'], x['type'] ]):
+    vs = list(vs)
+    df_data.append({
+      'rps': t[0],
+      'zone_pair': t[1],
+      'type': t[2],
+      'latency_90': np.median([ v['latency_90'] for v in vs]),
+      'throughput': np.median([ v['throughput'] for v in vs]),
+    })
 
   # transform dict into dataframe
-  df = pd.DataFrame.from_dict(df_data, orient='index')
+  df = pd.DataFrame(df_data)
+  # split dataframe into multiple based on the amount of unique zone_pairs we have
+  df_zone_pairs = [(x, pd.DataFrame(y)) for x, y in df.groupby('zone_pair', as_index=False)]
 
-  # index -> x -> throughput
-  # values -> y -> latency_90
-  # columns -> line
-  fig, ax = plt.subplots()
-  ax = sns.lineplot(data=df, x='throughput', y='latency_90', hue='type', markers=True, dashes=False)
+  # build the subplots
+  fig, axes = plt.subplots(len(df_zone_pairs), 1)
 
-  for gtype, item in df.groupby('type'):
-    # move index labels to the dataframe for plotting as labels
-    item.reset_index(inplace=True)
-    # remove the antiopode tag from those rows
-    item['index'] = item['index'].apply(lambda x: x.split(' - ')[0])
-    for qps,throughput,latency in item[['index', 'throughput', 'latency_90']].values:
-      ax.text(throughput,latency,qps)
+  # Setting the values for all axes
+  xlims = (df['throughput'].min(), df['throughput'].max())
+  ylims = (df['latency_90'].min(), df['latency_90'].max())
+  plt.setp(axes, xlim=xlims, ylim=ylims)
 
-  plt.ylabel('Latency (ms)\n$\it{Client\ side}$')
-  plt.xlabel('Throughput (req/s)', labelpad=20)
+  for i, (zone_pair, df_zone_pair) in enumerate(df_zone_pairs):
+    # select the row of the subplot where to plot
+    ax=axes[i]
+
+    # index -> x -> throughput
+    # values -> y -> latency_90
+    # columns -> line
+    sns.lineplot(ax=ax, data=df_zone_pair, x='throughput', y='latency_90', hue='type', style='type', markers=True, dashes=False)
+
+    for gtype, item in df_zone_pair.groupby('type'):
+      # move index labels to the dataframe for plotting as labels
+      item.reset_index(inplace=True)
+
+      for rps,throughput,latency in item[['rps', 'throughput', 'latency_90']].values:
+        ax.text(throughput,latency, f"{int(rps)} rps", size='x-small')
+
+    # set title for the zone pair
+    ax.set_title(zone_pair)
+
+    # clean ylabels so we set common ones after
+    ax.set_ylabel('')
+    ax.set_xlabel('')
+
+    if i < len(df_zone_pairs) - 1:
+      ax.set_xticklabels([])
+
+    # get legend handles and labels
+    handles, labels = ax.get_legend_handles_labels()
+    # but remove the legend since we will only show one
+    ax.get_legend().remove()
+
+
+  # set a single legend for all the plots
+  fig.legend(handles, labels, bbox_to_anchor=(1.18, 0.5), loc='center right')
+
+  # set a single yaxis title
+  fig.supxlabel(y=0, t='Throughput (req/s)')
+  fig.supylabel(x=0, t='Latency (ms)\n$\it{Client\ side}$')
 
   # save with a unique timestamp
+  fig.tight_layout()
   plt.savefig(PLOTS_PATH / f"throughput_latency__{datetime.now().strftime('%Y%m%d%H%M')}", bbox_inches = 'tight', pad_inches = 0.1)
+
 
 def plot__throughput_visibility_latency(args):
   data = {}
