@@ -1392,9 +1392,10 @@ def _fetch_compose_post_service_traces(jaeger_host, limit):
     }
     # search trace info in different spans
     for s in trace['spans']:
-      if s['operationName'] == '_ComposeAndUpload':
-        trace_info['post_id'] = int(_fetch_span_tag(s['tags'], 'composepost_id'))
+      if s['operationName'] == '/wrk2-api/post/compose':
         trace_info['ts'] = datetime.fromtimestamp(s['startTime']/1000000.0)
+      elif s['operationName'] == '_ComposeAndUpload':
+        trace_info['post_id'] = int(_fetch_span_tag(s['tags'], 'composepost_id'))
       elif s['operationName'] == 'StorePost':
         trace_info['poststorage_post_written_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_post_written_ts'))
       elif s['operationName'] == 'FanoutHomeTimelines':
@@ -1422,6 +1423,10 @@ def _fetch_compose_post_service_traces(jaeger_host, limit):
     # computes time spent queued in rabbitmq
     diff = datetime.fromtimestamp(trace_info['wht_start_worker_ts']/1000.0) - datetime.fromtimestamp(trace_info['wht_start_queue_ts']/1000.0)
     trace_info['wht_queue_duration'] = float(diff.total_seconds() * 1000)
+
+    # vl from nginx to notification
+    diff = datetime.fromtimestamp(trace_info['poststorage_read_notification_ts']/1000.0) - trace_info['ts']
+    trace_info['wht_vl_duration'] = float(diff.total_seconds() * 1000)
 
     traces.append(trace_info)
 
