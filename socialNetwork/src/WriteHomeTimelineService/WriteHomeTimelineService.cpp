@@ -102,7 +102,7 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
     // -ANTIPODE
     //----------
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
-    Cscope cscope = Cscope::from_json(msg_json["cscope_str"].dump());
+    // Cscope cscope = Cscope::from_json(msg_json["cscope_str"].dump()); // ANTIPODE-TOGGLE
 
     //----------
     // CENTRALIZED
@@ -134,16 +134,15 @@ bool OnReceivedWorker(const AMQP::Message &msg) {
     //----------
     // DISTRIBUTED
     //----------
-    mongoc_client_t *mongodb_client = mongoc_client_pool_pop(_mongodb_client_pool);
-    AntipodeMongodb antipode_client = AntipodeMongodb(mongodb_client, "post");
+    // mongoc_client_t *mongodb_client = mongoc_client_pool_pop(_mongodb_client_pool); // ANTIPODE-TOGGLE
+    // AntipodeMongodb antipode_client = AntipodeMongodb(mongodb_client, "post"); // ANTIPODE-TOGGLE
 
-    // gets cscopes with writes by caller
-    std::list<std::string> wanted_callers {"post-storage-service"};
+    // std::list<std::string> wanted_callers {"post-storage-service"}; // ANTIPODE-TOGGLE
 
-    cscope = antipode_client.barrier(cscope);
+    // cscope = antipode_client.barrier(cscope); // ANTIPODE-TOGGLE
 
-    antipode_client.close();
-    mongoc_client_pool_push(_mongodb_client_pool, mongodb_client);
+    // antipode_client.close(); // ANTIPODE-TOGGLE
+    // mongoc_client_pool_push(_mongodb_client_pool, mongodb_client); // ANTIPODE-TOGGLE
     //----------
     // DISTRIBUTED
     //----------
