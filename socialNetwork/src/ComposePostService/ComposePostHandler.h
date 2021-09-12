@@ -826,6 +826,11 @@ void ComposePostHandler::_UploadPostHelper(
       writer_text_map["baggage"] = BRANCH_CURRENT_BAGGAGE().str();
       BaseRpcResponse response;
       post_storage_client->StorePost(response, req_id, post, cscope.to_json(), writer_text_map);
+
+      // update post with new scope that came from post
+      Cscope post_cscope = Cscope::from_json(response.cscope_json);
+      cscope = post_cscope;
+
       Baggage b = Baggage::deserialize(response.baggage);
       JOIN_CURRENT_BAGGAGE(b);
     } catch (...) {

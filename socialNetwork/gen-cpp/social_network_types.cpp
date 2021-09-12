@@ -1158,6 +1158,10 @@ BaseRpcResponse::~BaseRpcResponse() throw() {
 void BaseRpcResponse::__set_baggage(const std::string& val) {
   this->baggage = val;
 }
+
+void BaseRpcResponse::__set_cscope_json(const std::string& val) {
+  this->cscope_json = val;
+}
 std::ostream& operator<<(std::ostream& out, const BaseRpcResponse& obj)
 {
   obj.printTo(out);
@@ -1194,6 +1198,14 @@ uint32_t BaseRpcResponse::read(::apache::thrift::protocol::TProtocol* iprot) {
           xfer += iprot->skip(ftype);
         }
         break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_STRING) {
+          xfer += iprot->readString(this->cscope_json);
+          this->__isset.cscope_json = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
       default:
         xfer += iprot->skip(ftype);
         break;
@@ -1215,6 +1227,10 @@ uint32_t BaseRpcResponse::write(::apache::thrift::protocol::TProtocol* oprot) co
   xfer += oprot->writeString(this->baggage);
   xfer += oprot->writeFieldEnd();
 
+  xfer += oprot->writeFieldBegin("cscope_json", ::apache::thrift::protocol::T_STRING, 2);
+  xfer += oprot->writeString(this->cscope_json);
+  xfer += oprot->writeFieldEnd();
+
   xfer += oprot->writeFieldStop();
   xfer += oprot->writeStructEnd();
   return xfer;
@@ -1223,15 +1239,18 @@ uint32_t BaseRpcResponse::write(::apache::thrift::protocol::TProtocol* oprot) co
 void swap(BaseRpcResponse &a, BaseRpcResponse &b) {
   using ::std::swap;
   swap(a.baggage, b.baggage);
+  swap(a.cscope_json, b.cscope_json);
   swap(a.__isset, b.__isset);
 }
 
 BaseRpcResponse::BaseRpcResponse(const BaseRpcResponse& other34) {
   baggage = other34.baggage;
+  cscope_json = other34.cscope_json;
   __isset = other34.__isset;
 }
 BaseRpcResponse& BaseRpcResponse::operator=(const BaseRpcResponse& other35) {
   baggage = other35.baggage;
+  cscope_json = other35.cscope_json;
   __isset = other35.__isset;
   return *this;
 }
@@ -1239,6 +1258,7 @@ void BaseRpcResponse::printTo(std::ostream& out) const {
   using ::apache::thrift::to_string;
   out << "BaseRpcResponse(";
   out << "baggage=" << to_string(baggage);
+  out << ", " << "cscope_json=" << to_string(cscope_json);
   out << ")";
 }
 

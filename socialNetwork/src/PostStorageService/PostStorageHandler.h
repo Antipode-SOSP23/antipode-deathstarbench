@@ -252,7 +252,8 @@ void PostStorageHandler::StorePost(
   //----------
   // -ORIGINAL
   //----------
-  // cscope = cscope.close_branch("post-storage"); // ANTIPODE-TOGGLE
+  // ANTIPODE-TOGGLE
+  cscope = cscope.close_branch("post-storage");
   // antipode_client->close_scope(cscope); // ANTIPODE-TOGGLE
   //----------
   // -ANTIPODE
@@ -272,6 +273,7 @@ void PostStorageHandler::StorePost(
   span->Finish();
   // XTRACE("PostStorageHandler::StorePost complete");
   response.baggage = GET_CURRENT_BAGGAGE().str();
+  response.cscope_json = cscope.to_json();
   DELETE_CURRENT_BAGGAGE();
 }
 

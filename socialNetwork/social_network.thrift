@@ -73,6 +73,7 @@ struct Post {
 
 struct BaseRpcResponse {
   1: string baggage;
+  2: string cscope_json;
 }
 
 struct LoginRpcResponse {
