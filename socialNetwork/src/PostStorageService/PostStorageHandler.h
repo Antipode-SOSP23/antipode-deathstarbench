@@ -226,9 +226,11 @@ void PostStorageHandler::StorePost(
 
   // insert cscope_id into the transaction
   // antipode_client->inject(session, cscope_id, "post-storage-service", "post-storage", &oid);
-  // char append_id[25]; // ANTIPODE-TOGGLE
-  // bson_oid_to_string(&oid, append_id); // ANTIPODE-TOGGLE
-  // cscope = cscope.append(std::string(append_id), "post-storage-service", "post-storage"); // ANTIPODE-TOGGLE
+
+  // ANTIPODE-TOGGLE
+  char append_id[25];
+  bson_oid_to_string(&oid, append_id);
+  cscope = cscope.append(std::string(append_id), "post-storage-service", "post-storage");
 
   //----------
   // -ORIGINAL
@@ -254,7 +256,6 @@ void PostStorageHandler::StorePost(
   //----------
   // ANTIPODE-TOGGLE
   cscope = cscope.close_branch("post-storage");
-  // antipode_client->close_scope(cscope); // ANTIPODE-TOGGLE
   //----------
   // -ANTIPODE
   //----------

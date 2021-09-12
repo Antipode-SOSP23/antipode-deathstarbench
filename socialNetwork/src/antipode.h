@@ -200,12 +200,17 @@ class AntipodeMongodb {
     ~AntipodeMongodb();
     void close();
 
+    Cscope barrier(Cscope);
+
+    //-----------
+    // only needed for RP
+    //-----------
+
     static void init_store(std::string, std::string);
     static void init_cscope_listener(std::string, std::string);
 
-
-    Cscope barrier(Cscope);
     bool close_scope(Cscope);
+    Cscope retrieve_cscope(std::string);
 
   private:
     static void _init_cscope_listener(std::string, std::string);
@@ -330,30 +335,28 @@ bool AntipodeMongodb::close_scope(Cscope cscope) {
   return r;
 }
 
-Cscope AntipodeMongodb::barrier(Cscope cscope) {
-  bson_t* filter = BCON_NEW ("cscope_id", BCON_UTF8(cscope._id.c_str()));
+Cscope AntipodeMongodb::retrieve_cscope(std::string cscope_id) {
+  bson_t* filter = BCON_NEW ("cscope_id", BCON_UTF8(cscope_id.c_str()));
   bson_t* opts = BCON_NEW ("limit", BCON_INT64(1));
   mongoc_cursor_t* cursor;
+  Cscope cscope;
 
-  // blocking behaviour waiting for all branches to be closed
-  while(!cscope._open_branches.empty()) {
-    const bson_t* doc;
-    cursor = mongoc_collection_find_with_opts(_collection, filter, opts, NULL);
-    bool cscope_id_visible = mongoc_cursor_next(cursor, &doc);
+  const bson_t* doc;
+  cursor = mongoc_collection_find_with_opts(_collection, filter, opts, NULL);
+  bool cscope_id_visible = mongoc_cursor_next(cursor, &doc);
 
-    if (cscope_id_visible) {
-      // -- debug
-      // char* str = bson_as_canonical_extended_json (doc, NULL);
-      // LOG(debug) << " IS_VISIBLE DONE: " << str;
-      // bson_free (str);
-      // --
+  if (cscope_id_visible) {
+    // -- debug
+    // char* str = bson_as_canonical_extended_json (doc, NULL);
+    // LOG(debug) << " IS_VISIBLE DONE: " << str;
+    // bson_free (str);
+    // --
 
-      // -- Update with new cscope
-      bson_iter_t cscope_iter;
-      if (bson_iter_init_find (&cscope_iter, doc, "object") && BSON_ITER_HOLDS_UTF8 (&cscope_iter)) {
-        std::string cscope_serialized(bson_iter_utf8(&cscope_iter, /* length */ NULL));
-        cscope = Cscope::from_json(cscope_serialized);
-      }
+    // -- Update with new cscope
+    bson_iter_t cscope_iter;
+    if (bson_iter_init_find (&cscope_iter, doc, "object") && BSON_ITER_HOLDS_UTF8 (&cscope_iter)) {
+      std::string cscope_serialized(bson_iter_utf8(&cscope_iter, /* length */ NULL));
+      cscope = Cscope::from_json(cscope_serialized);
     }
   }
 
@@ -361,6 +364,10 @@ Cscope AntipodeMongodb::barrier(Cscope cscope) {
   bson_destroy (filter);
   bson_destroy (opts);
 
+  return cscope;
+}
+
+Cscope AntipodeMongodb::barrier(Cscope cscope) {
   // now we check if all the objects inside at their respective datastores
 
   // add a read concern to opts
