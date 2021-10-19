@@ -10,11 +10,15 @@ deploy/container-images/*
 deploy/wkld-data/*
 !deploy/wkld-data/.keep
 
+# generated plots
+deploy/plots/*
+!deploy/plots/.keep
+
 # vscode settigs
 .vscode/*
 
 # debug
 debug.py
-loop.bash
+debug.bash
 
 _env/*

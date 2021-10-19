@@ -14,7 +14,7 @@ import sys
 import stat
 import itertools
 
-#############################
+#-----------------
 # Pre-requisites
 #
 # > sudo apt-get install libssl-dev libz-dev lua5.1 lua5.1-dev luarocks python3
@@ -22,11 +22,11 @@ import itertools
 # > sudo luarocks install json-lua
 # > sudo luarocks install penlight
 # > pip install plumbum ansible
-#
+#-----------------
 
-#############################
+#-----------------
 # CONSTANTS
-#
+#-----------------
 ROOT_PATH = Path(os.path.abspath(os.path.dirname(sys.argv[0])))
 
 # available deploys
@@ -185,9 +185,9 @@ GCP_MACHINE_IMAGE_LINK = f"https://www.googleapis.com/compute/v1/projects/{GCP_P
 PERCENTILES_TO_PRINT = [.25, .5, .75, .90, .99]
 
 
-#############################
+#-----------------
 # HELPER
-#
+#-----------------
 def _index_containing_substring(the_list, substring):
   for i, s in enumerate(the_list):
     if substring in s:
@@ -233,7 +233,7 @@ def _force_docker():
       docker['build', '-t', 'gcp-manager:antipode', '.'] & FG
 
     args = list()
-    args.extend(['docker', 'run', '--rm', '-t',
+    args.extend(['docker', 'run', '--rm', '-it',
       # env variables
       '-e', f"HOST_ROOT_PATH={ROOT_PATH}",
       # run docker from host inside the container
@@ -341,9 +341,9 @@ def _wait_url_up(url):
   while urllib.request.urlopen("http://www.stackoverflow.com").getcode() != 200:
     True
 
-#############################
+#-----------------
 # BUILD
-#
+#-----------------
 def build(args):
   try:
     getattr(sys.modules[__name__], f"build__{args['app']}__{_deploy_type(args)}")(args)
@@ -492,9 +492,9 @@ def build__socialNetwork__gcp(args):
     docker['rmi', gcp_tag] & FG
 
 
-#############################
+#-----------------
 # DEPLOY
-#
+#-----------------
 def deploy(args):
   try:
     getattr(sys.modules[__name__], f"deploy__{args['app']}__{_deploy_type(args)}")(args)
@@ -777,9 +777,9 @@ def deploy__socialNetwork__gcp(args):
   ansible_playbook['deploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
 
 
-#############################
+#-----------------
 # RUN
-#
+#-----------------
 def run(args):
   try:
     getattr(sys.modules[__name__], f"run__{args['app']}__{_deploy_type(args)}")(args)
@@ -888,9 +888,9 @@ def run__socialNetwork__gcp(args):
   print("[INFO] Run Complete!")
 
 
-#############################
+#-----------------
 # CLEAN
-#
+#-----------------
 def clean(args):
   try:
     getattr(sys.modules[__name__], f"clean__{args['app']}__{_deploy_type(args)}")(args)
@@ -943,9 +943,9 @@ def clean__socialNetwork__gcp(args):
   print("[INFO] Clean Complete!")
 
 
-#############################
+#-----------------
 # DELAY
-#
+#-----------------
 def delay(args):
   try:
     delay_ms = f"{args['delay']}ms"
@@ -1041,9 +1041,9 @@ def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms, jitt
   ] & FG
   print("[INFO] Delay Complete!")
 
-#############################
+#-----------------
 # WORKLOAD
-#
+#-----------------
 def wkld(args):
   import urllib.parse
 
@@ -1265,7 +1265,7 @@ def wkld__socialNetwork__gcp__run(args, hosts, exe_path, exe_args):
           inventory[node_key]['internal_ip'] = None
 
     # we faced some connections bugs from time to time, we sleep to wait a bit more for the machines to be ready
-    time.sleep(20)
+    time.sleep(60)
     print("[INFO] GCP Nodes ready!")
 
     # now build the inventory
@@ -1346,9 +1346,9 @@ def wkld__socialNetwork__gcp__run(args, hosts, exe_path, exe_args):
     input("Press any key when workload is done ...")
 
 
-#############################
+#-----------------
 # GATHER
-#
+#-----------------
 def _fetch_span_tag(tags, tag_to_search):
   return next(item for item in tags if item['key'] == tag_to_search)['value']
 
@@ -1620,9 +1620,9 @@ def gather__socialNetwork__gcp__client_output(args):
   os.chdir(ROOT_PATH / 'deploy' / 'gcp')
   ansible_playbook['wkld-gather.yml', '-i', 'clients_inventory_local.cfg', '-e', 'app=socialNetwork', '-e', f'conf_path={conf_path}' ] & FG
 
-#############################
+#-----------------
 # MAIN
-#
+#-----------------
 if __name__ == "__main__":
   import argparse
 
