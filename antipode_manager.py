@@ -805,8 +805,6 @@ def run__socialNetwork__local(args):
   # run containers in detached mode
   if args['detached']:
     run_args.insert(1, '-d')
-  if args['build']:
-    run_args.insert(1, '--build')
 
   # Fixes error: "WARNING: Connection pool is full, discarding connection: localhost"
   # ref: https://github.com/docker/compose/issues/6638#issuecomment-576743595
@@ -1040,6 +1038,7 @@ def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms, jitt
     '-e', 'app=socialNetwork',
   ] & FG
   print("[INFO] Delay Complete!")
+
 
 #-----------------
 # WORKLOAD
@@ -1660,7 +1659,6 @@ if __name__ == "__main__":
   # run application
   run_parser = subparsers.add_parser('run', help='Run application')
   run_parser.add_argument('-d', '--detached', action='store_true', help="detached")
-  run_parser.add_argument('--build', action='store_true', help="build")
   run_parser.add_argument('--info', action='store_true', help="build")
   # deploy file group
   deploy_file_group = run_parser.add_mutually_exclusive_group(required=False)
