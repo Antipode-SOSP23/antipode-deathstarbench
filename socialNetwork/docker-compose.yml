@@ -53,7 +53,7 @@ services:
     image: yg397/social-network-microservices:antipode
     hostname: write-home-timeline-service-eu
     environment:
-      - ZONE=eu
+      ZONE: eu
     restart: 'no'
     command: dockerize -wait tcp://write-home-timeline-rabbitmq-setup:8000 -wait tcp://write-home-timeline-rabbitmq-eu:5672 -wait-retry-interval 10s -timeout 300s WriteHomeTimelineService
     deploy:
@@ -64,7 +64,7 @@ services:
     image: yg397/social-network-microservices:antipode
     hostname: write-home-timeline-service-us
     environment:
-      - ZONE=us
+      ZONE: us
     restart: 'no'
     command: dockerize -wait tcp://write-home-timeline-rabbitmq-setup:8000 -wait tcp://write-home-timeline-rabbitmq-us:5672 -wait-retry-interval 10s -timeout 300s WriteHomeTimelineService
     deploy:
@@ -154,8 +154,9 @@ services:
     image: yg397/social-network-microservices:antipode
     hostname: post-storage-service-eu
     environment:
-      - ZONE=eu
-      - MASTER=true
+      ZONE: eu
+      MASTER: 1
+      ANTIPODE: 0
     # ports:
     #   - 10002:9090
     restart: 'always'
@@ -208,8 +209,9 @@ services:
     restart: 'always'
     command: dockerize -wait tcp://post-storage-mongodb-setup:8000 -wait tcp://post-storage-mongodb-us:27017 -wait-retry-interval 10s -timeout 300s PostStorageService
     environment:
-      - ZONE=us
-      - MASTER=false
+      ZONE: us
+      MASTER: 0
+      ANTIPODE: 0
     deploy:
       placement:
         constraints: [node.hostname == node06]
@@ -303,7 +305,7 @@ services:
     image: yg397/social-network-microservices:antipode
     hostname: compose-post-service
     environment:
-      - ZONE=eu
+      ZONE: eu
     # ports:
       # - 10001:9090
     restart: 'no'
@@ -542,7 +544,7 @@ services:
       # - 9411:9411
     restart: 'no'
     environment:
-      - COLLECTOR_ZIPKIN_HTTP_PORT=9411
+      COLLECTOR_ZIPKIN_HTTP_PORT: 9411
     deploy:
       placement:
         constraints: [node.hostname == node25]
@@ -565,7 +567,7 @@ services:
     image: mrvautin/adminmongo
     restart: 'no'
     environment:
-      - HOST=0.0.0.0
+      HOST: 0.0.0.0
     ports:
       - 1234:1234
     deploy:
