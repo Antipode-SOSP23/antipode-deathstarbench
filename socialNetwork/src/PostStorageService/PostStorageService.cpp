@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
   // parse bson to json
   json is_master_json = json::parse(is_master_bson);
 
-  if (std::strcmp(std::getenv("MASTER"), "true") == 0 && !is_master_json["ismaster"]) {
+  if (atoi(std::getenv("MASTER")) != 0 && !is_master_json["ismaster"]) {
     LOG(fatal) << "Replica is not master!";
     return EXIT_FAILURE;
   }

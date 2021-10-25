@@ -228,9 +228,11 @@ void PostStorageHandler::StorePost(
   // antipode_client->inject(session, cscope_id, "post-storage-service", "post-storage", &oid);
 
   // ANTIPODE-TOGGLE
-  char append_id[25];
-  bson_oid_to_string(&oid, append_id);
-  cscope = cscope.append(std::string(append_id), "post-storage-service", "post-storage");
+  if (is_antipode_enabled()) {
+    char append_id[25];
+    bson_oid_to_string(&oid, append_id);
+    cscope = cscope.append(std::string(append_id), "post-storage-service", "post-storage");
+  }
 
   //----------
   // -ORIGINAL
@@ -255,7 +257,7 @@ void PostStorageHandler::StorePost(
   // -ORIGINAL
   //----------
   // ANTIPODE-TOGGLE
-  cscope = cscope.close_branch("post-storage");
+  // cscope = cscope.close_branch("post-storage");
   //----------
   // -ANTIPODE
   //----------
