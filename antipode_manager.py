@@ -790,6 +790,7 @@ def run(args):
 def run__socialNetwork__local(args):
   from plumbum import FG, BG
   from plumbum.cmd import docker_compose, docker
+  import yaml
 
   if args['info']:
     from plumbum.cmd import hostname
@@ -806,11 +807,31 @@ def run__socialNetwork__local(args):
   if args['detached']:
     run_args.insert(1, '-d')
 
+  # copy docker-compose to the deploy file
+  with open(ROOT_PATH / args['app'] / 'docker-compose.yml', 'r') as f_compose:
+    compose = yaml.load(f_compose, Loader=yaml.FullLoader)
+    # update file with dynamic run flags
+    # TODO CHANGE ANTIPODE FLAG
+    for _,e in compose['services'].items():
+      if ('environment' in e) and ('ANTIPODE' in e['environment']):
+        e['environment']['ANTIPODE'] = int(args['antipode']) # 0 - False, 1 - True
+
+  # create deployable docker compose
+  new_compose_filepath = ROOT_PATH / 'deploy' / 'local' / 'docker-compose.yml'
+  with open(new_compose_filepath, 'w') as f_compose:
+    yaml.dump(compose, f_compose)
+  print(f"[SAVED] '{new_compose_filepath}'")
+
+  env_args = [
+    '--project-directory', str(ROOT_PATH / args['app']),
+    '--file', str(new_compose_filepath),
+  ]
+
   # Fixes error: "WARNING: Connection pool is full, discarding connection: localhost"
   # ref: https://github.com/docker/compose/issues/6638#issuecomment-576743595
   with local.env(COMPOSE_PARALLEL_LIMIT=99):
     os.chdir(ROOT_PATH / args['app'])
-    docker_compose[run_args] & FG
+    docker_compose[env_args + run_args] & FG
 
 def run__socialNetwork__gsd(args):
   from plumbum.cmd import ansible_playbook
@@ -1659,6 +1680,7 @@ if __name__ == "__main__":
   # run application
   run_parser = subparsers.add_parser('run', help='Run application')
   run_parser.add_argument('-d', '--detached', action='store_true', help="detached")
+  run_parser.add_argument('-ant', '--antipode', action='store_true', default=False, help="enable antipode")
   run_parser.add_argument('--info', action='store_true', help="build")
   # deploy file group
   deploy_file_group = run_parser.add_mutually_exclusive_group(required=False)

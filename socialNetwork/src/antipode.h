@@ -33,6 +33,10 @@
 
 namespace antipode {
 
+bool is_antipode_enabled() {
+  return atoi(std::getenv("ANTIPODE")) != 0;
+}
+
 class Cscope {
   public:
     struct append_t {
