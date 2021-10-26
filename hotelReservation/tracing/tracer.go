@@ -12,8 +12,10 @@ import (
 func Init(serviceName, host string) (opentracing.Tracer, error) {
 	cfg := config.Configuration{
 		Sampler: &config.SamplerConfig{
-			Type:  "probabilistic",
-			Param: 0.3,
+			// ANTIPODE
+			// Requires constant tracing
+			Type:  "const",
+			Param: 1,
 		},
 		Reporter: &config.ReporterConfig{
 			LogSpans:            false,

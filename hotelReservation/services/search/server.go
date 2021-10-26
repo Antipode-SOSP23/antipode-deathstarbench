@@ -9,9 +9,11 @@ import (
 	// "os"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	"github.com/harlow/go-micro-services/dialer"
 	"github.com/harlow/go-micro-services/registry"
+	"github.com/harlow/go-micro-services/tls"
 	geo "github.com/harlow/go-micro-services/services/geo/proto"
 	rate "github.com/harlow/go-micro-services/services/rate/proto"
 	pb "github.com/harlow/go-micro-services/services/search/proto"
@@ -32,6 +34,7 @@ type Server struct {
 	Port     int
 	IpAddr	 string
 	Registry *registry.Client
+	uuid       string
 }
 
 // Run starts the server
@@ -40,7 +43,9 @@ func (s *Server) Run() error {
 		return fmt.Errorf("server port must be set")
 	}
 
-	srv := grpc.NewServer(
+	s.uuid = uuid.New().String()
+
+	opts := []grpc.ServerOption{
 		grpc.KeepaliveParams(keepalive.ServerParameters{
 			Timeout: 120 * time.Second,
 		}),
@@ -50,7 +55,13 @@ func (s *Server) Run() error {
 		grpc.UnaryInterceptor(
 			otgrpc.OpenTracingServerInterceptor(s.Tracer),
 		),
-	)
+	}
+
+	if tlsopt := tls.GetServerOpt(); tlsopt != nil {
+		opts = append(opts, tlsopt)
+	}
+
+	srv := grpc.NewServer(opts...)
 	pb.RegisterSearchServer(srv, s)
 
 	// init grpc clients
@@ -79,7 +90,7 @@ func (s *Server) Run() error {
 	// var result map[string]string
 	// json.Unmarshal([]byte(byteValue), &result)
 
-	err = s.Registry.Register(name, s.IpAddr, s.Port)
+	err = s.Registry.Register(name, s.uuid, s.IpAddr, s.Port)
 	if err != nil {
 		return fmt.Errorf("failed register: %v", err)
 	}
@@ -89,7 +100,7 @@ func (s *Server) Run() error {
 
 // Shutdown cleans up any processes
 func (s *Server) Shutdown() {
-	s.Registry.Deregister(name)
+	s.Registry.Deregister(s.uuid)
 }
 
 func (s *Server) initGeoClient(name string) error {
@@ -131,7 +142,8 @@ func (s *Server) Nearby(ctx context.Context, req *pb.NearbyRequest) (*pb.SearchR
 		Lon: req.Lon,
 	})
 	if err != nil {
-		log.Fatalf("nearby error: %v", err)
+		fmt.Printf("nearby error: %v", err)
+		return nil, err
 	}
 
 	// for _, hid := range nearby.HotelIds {
@@ -145,7 +157,8 @@ func (s *Server) Nearby(ctx context.Context, req *pb.NearbyRequest) (*pb.SearchR
 		OutDate:  req.OutDate,
 	})
 	if err != nil {
-		log.Fatalf("rates error: %v", err)
+		fmt.Printf("rates error: %v", err)
+		return nil, err
 	}
 
 	// TODO(hw): add simple ranking algo to order hotel ids:

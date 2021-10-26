@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	
+
 	jsonFile, err := os.Open("config.json")
 	if err != nil {
 		fmt.Println(err)
@@ -34,10 +34,10 @@ func main() {
 	serv_ip   := result["GeoIP"]
 
 	fmt.Printf("geo ip = %s, port = %d\n", serv_ip, serv_port)
-	
+
 	var (
 		// port       = flag.Int("port", 8083, "Server port")
-		jaegeraddr = flag.String("jaegeraddr", result["consulAddress"], "Jaeger address")
+		jaegeraddr = flag.String("jaegeraddr", result["jaegerAddress"], "Jaeger address")
 		consuladdr = flag.String("consuladdr", result["consulAddress"], "Consul address")
 	)
 	flag.Parse()

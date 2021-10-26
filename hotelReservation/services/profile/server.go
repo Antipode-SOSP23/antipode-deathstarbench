@@ -11,8 +11,10 @@ import (
 	// "os"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	"github.com/harlow/go-micro-services/registry"
+	"github.com/harlow/go-micro-services/tls"
 	pb "github.com/harlow/go-micro-services/services/profile/proto"
 	"github.com/opentracing/opentracing-go"
 	"golang.org/x/net/context"
@@ -28,6 +30,7 @@ const name = "srv-profile"
 // Server implements the profile service
 type Server struct {
 	Tracer   opentracing.Tracer
+	uuid     string
 	Port     int
 	IpAddr	 string
 	MongoSession	*mgo.Session
@@ -41,9 +44,11 @@ func (s *Server) Run() error {
 		return fmt.Errorf("server port must be set")
 	}
 
+	s.uuid = uuid.New().String()
+
 	// fmt.Printf("in run s.IpAddr = %s, port = %d\n", s.IpAddr, s.Port)
 
-	srv := grpc.NewServer(
+	opts := []grpc.ServerOption{
 		grpc.KeepaliveParams(keepalive.ServerParameters{
 			Timeout: 120 * time.Second,
 		}),
@@ -53,7 +58,13 @@ func (s *Server) Run() error {
 		grpc.UnaryInterceptor(
 			otgrpc.OpenTracingServerInterceptor(s.Tracer),
 		),
-	)
+	}
+
+	if tlsopt := tls.GetServerOpt(); tlsopt != nil {
+		opts = append(opts, tlsopt)
+	}
+
+	srv := grpc.NewServer(opts...)
 
 	pb.RegisterProfileServer(srv, s)
 
@@ -75,7 +86,7 @@ func (s *Server) Run() error {
 	// var result map[string]string
 	// json.Unmarshal([]byte(byteValue), &result)
 
-	err = s.Registry.Register(name, s.IpAddr, s.Port)
+	err = s.Registry.Register(name, s.uuid, s.IpAddr, s.Port)
 	if err != nil {
 		return fmt.Errorf("failed register: %v", err)
 	}
@@ -85,7 +96,7 @@ func (s *Server) Run() error {
 
 // Shutdown cleans up any processes
 func (s *Server) Shutdown() {
-	s.Registry.Deregister(name)
+	s.Registry.Deregister(s.uuid)
 }
 
 // GetProfiles returns hotel profiles for requested IDs

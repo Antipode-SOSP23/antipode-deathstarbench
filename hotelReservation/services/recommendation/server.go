@@ -3,9 +3,11 @@ package recommendation
 import (
 	// "encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	"github.com/hailocab/go-geoindex"
 	"github.com/harlow/go-micro-services/registry"
+	"github.com/harlow/go-micro-services/tls"
 	pb "github.com/harlow/go-micro-services/services/recommendation/proto"
 	"github.com/opentracing/opentracing-go"
 	"golang.org/x/net/context"
@@ -33,6 +35,7 @@ type Server struct {
 	IpAddr	 string
 	MongoSession	*mgo.Session
 	Registry *registry.Client
+	uuid    string
 }
 
 // Run starts the server
@@ -45,7 +48,9 @@ func (s *Server) Run() error {
 		s.hotels = loadRecommendations(s.MongoSession)
 	}
 
-	srv := grpc.NewServer(
+	s.uuid = uuid.New().String()
+
+	opts := []grpc.ServerOption{
 		grpc.KeepaliveParams(keepalive.ServerParameters{
 			Timeout: 120 * time.Second,
 		}),
@@ -55,7 +60,13 @@ func (s *Server) Run() error {
 		grpc.UnaryInterceptor(
 			otgrpc.OpenTracingServerInterceptor(s.Tracer),
 		),
-	)
+	}
+
+	if tlsopt := tls.GetServerOpt(); tlsopt != nil {
+		opts = append(opts, tlsopt)
+	}
+
+	srv := grpc.NewServer(opts...)
 
 	pb.RegisterRecommendationServer(srv, s)
 
@@ -77,7 +88,7 @@ func (s *Server) Run() error {
 	// var result map[string]string
 	// json.Unmarshal([]byte(byteValue), &result)
 
-	err = s.Registry.Register(name, s.IpAddr, s.Port)
+	err = s.Registry.Register(name, s.uuid, s.IpAddr, s.Port)
 	if err != nil {
 		return fmt.Errorf("failed register: %v", err)
 	}
@@ -87,13 +98,13 @@ func (s *Server) Run() error {
 
 // Shutdown cleans up any processes
 func (s *Server) Shutdown() {
-	s.Registry.Deregister(name)
+	s.Registry.Deregister(s.uuid)
 }
 
 // GiveRecommendation returns recommendations within a given requirement.
 func (s *Server) GetRecommendations(ctx context.Context, req *pb.Request) (*pb.Result, error) {
 	res := new(pb.Result)
-	fmt.Printf("GetRecommendations\n")
+	//fmt.Printf("GetRecommendations\n")
 	require := req.Require
 	if require == "dis" {
 		p1 := &geoindex.GeoPoint{

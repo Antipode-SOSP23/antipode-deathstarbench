@@ -11,9 +11,11 @@ import (
 	// "os"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	"github.com/hailocab/go-geoindex"
 	"github.com/harlow/go-micro-services/registry"
+	"github.com/harlow/go-micro-services/tls"
 	pb "github.com/harlow/go-micro-services/services/geo/proto"
 	opentracing "github.com/opentracing/opentracing-go"
 	"golang.org/x/net/context"
@@ -49,23 +51,31 @@ func (s *Server) Run() error {
 		s.index = newGeoIndex(s.MongoSession)
 	}
 
+	s.uuid = uuid.New().String()
+
 	// opts := []grpc.ServerOption {
 	// 	grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 	// 		PermitWithoutStream: true,
 	// 	}),
 	// }
 
-	srv := grpc.NewServer(
-		grpc.KeepaliveParams(keepalive.ServerParameters {
+	opts := []grpc.ServerOption{
+		grpc.KeepaliveParams(keepalive.ServerParameters{
 			Timeout: 120 * time.Second,
 		}),
-		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy {
+		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 			PermitWithoutStream: true,
 		}),
 		grpc.UnaryInterceptor(
 			otgrpc.OpenTracingServerInterceptor(s.Tracer),
 		),
-	)
+	}
+
+	if tlsopt := tls.GetServerOpt(); tlsopt != nil {
+		opts = append(opts, tlsopt)
+	}
+
+	srv := grpc.NewServer(opts...)
 
 	pb.RegisterGeoServer(srv, s)
 
@@ -90,7 +100,7 @@ func (s *Server) Run() error {
 
 	// fmt.Printf("geo server ip = %s, port = %d\n", s.IpAddr, s.Port)
 
-	err = s.Registry.Register(name, s.IpAddr, s.Port)
+	err = s.Registry.Register(name, s.uuid, s.IpAddr, s.Port)
 	if err != nil {
 		return fmt.Errorf("failed register: %v", err)
 	}
@@ -100,7 +110,7 @@ func (s *Server) Run() error {
 
 // Shutdown cleans up any processes
 func (s *Server) Shutdown() {
-	s.Registry.Deregister(name)
+	s.Registry.Deregister(s.uuid)
 }
 
 // Nearby returns all hotels within a given distance.
