@@ -39,6 +39,7 @@ AVAILABLE_DEPLOY_TYPES = {
 AVAILABLE_APPLICATIONS = [
   'socialNetwork',
   'hotelReservation',
+  'mediaMicroservices',
 ]
 AVAILABLE_WKLD_ENDPOINTS = {
   'socialNetwork': {
@@ -65,10 +66,12 @@ AVAILABLE_WKLD_ENDPOINTS = {
     'antipode-wht-error': {
       'type': 'python',
       'script_path': './scripts/antipode-wht-error.py',
+      'args': [],
     },
     'init-social-graph': {
       'type': 'python',
       'script_path': './scripts/init_social_graph.py',
+      'args': [],
     },
   },
   'hotelReservation': {
@@ -76,6 +79,25 @@ AVAILABLE_WKLD_ENDPOINTS = {
       'type': 'wrk2',
       'uri': '',
       'script_path': './wrk2/scripts/hotel-reservation/reserve.lua',
+    },
+  },
+  'mediaMicroservices': {
+    'compose-review': {
+      'type': 'wrk2',
+      'uri': 'wrk2-api/review/compose',
+      'script_path': './wrk2/scripts/media-microservices/compose-review.lua',
+    },
+    'init-movies': {
+      'type': 'python',
+      'script_path': './scripts/write_movie_info.py',
+      'args': [
+        '--cast', './datasets/tmdb/casts.json',
+        '--movie', './datasets/tmdb/movies.json',
+      ]
+    },
+    'init-users': {
+      'type': 'bash',
+      'script_path': './scripts/register_users.sh',
     },
   }
 }
@@ -344,7 +366,7 @@ def _inventory_to_dict(filepath):
 
 def _wait_url_up(url):
   import urllib.request
-  while urllib.request.urlopen("http://www.stackoverflow.com").getcode() != 200:
+  while urllib.request.urlopen(url).getcode() != 200:
     True
 
 #-----------------
@@ -408,6 +430,12 @@ def build__socialNetwork__local(args):
   docker['build', '-t', 'yg397/social-network-microservices:antipode', '.'] & FG
 
 def build__hotelReservation__local(args):
+  from plumbum.cmd import docker
+
+  app_dir = ROOT_PATH / args['app']
+  os.chdir(app_dir)
+
+def build__mediaMicroservices__local(args):
   from plumbum.cmd import docker
 
   app_dir = ROOT_PATH / args['app']
@@ -889,6 +917,50 @@ def run__hotelReservation__local(args):
     os.chdir(ROOT_PATH / args['app'])
     docker_compose[env_args + run_args] & FG
 
+def run__mediaMicroservices__local(args):
+  from plumbum import FG, BG
+  from plumbum.cmd import docker_compose, docker
+  import yaml
+
+  if args['info']:
+    from plumbum.cmd import hostname
+
+    public_ip = hostname['-I']().split()[1]
+    print(f"Jaeger:\thttp://{public_ip}:16686")
+    print("\tuser: admin / pwd: admin")
+    return
+
+  run_args = ['up']
+  # run containers in detached mode
+  if args['detached']:
+    run_args.insert(1, '-d')
+
+  # copy docker-compose to the deploy file
+  with open(ROOT_PATH / args['app'] / 'docker-compose.yml', 'r') as f_compose:
+    compose = yaml.load(f_compose, Loader=yaml.FullLoader)
+    # update file with dynamic run flags
+    # TODO CHANGE ANTIPODE FLAG
+    for _,e in compose['services'].items():
+      if ('environment' in e) and ('ANTIPODE' in e['environment']):
+        e['environment']['ANTIPODE'] = int(args['antipode']) # 0 - False, 1 - True
+
+  # create deployable docker compose
+  new_compose_filepath = ROOT_PATH / 'deploy' / 'local' / 'docker-compose.yml'
+  with open(new_compose_filepath, 'w') as f_compose:
+    yaml.dump(compose, f_compose)
+  print(f"[SAVED] '{new_compose_filepath}'")
+
+  env_args = [
+    '--project-directory', str(ROOT_PATH / args['app']),
+    '--file', str(new_compose_filepath),
+  ]
+
+  # Fixes error: "WARNING: Connection pool is full, discarding connection: localhost"
+  # ref: https://github.com/docker/compose/issues/6638#issuecomment-576743595
+  with local.env(COMPOSE_PARALLEL_LIMIT=99):
+    os.chdir(ROOT_PATH / args['app'])
+    docker_compose[env_args + run_args] & FG
+
 def run__socialNetwork__gsd(args):
   from plumbum.cmd import ansible_playbook
 
@@ -1018,6 +1090,18 @@ def clean__socialNetwork__gcp(args):
   print("[INFO] Clean Complete!")
 
 def clean__hotelReservation__local(args):
+  from plumbum.cmd import docker_compose, docker
+
+  os.chdir(ROOT_PATH / args['app'])
+  # first stops the containers
+  docker_compose['stop'] & FG
+
+  if args['strong']:
+    docker_compose['down', '--rmi', 'all', '--remove-orphans'] & FG
+  else:
+    docker_compose['down'] & FG
+
+def clean__mediaMicroservices__local(args):
   from plumbum.cmd import docker_compose, docker
 
   os.chdir(ROOT_PATH / args['app'])
@@ -1183,6 +1267,11 @@ def wkld(args):
     elif endpoint['type'] == 'python':
       script_path = app_dir.joinpath(endpoint['script_path'])
       exe_path = 'python3'
+      exe_args = [script_path] + endpoint['args']
+
+    elif endpoint['type'] == 'bash':
+      script_path = app_dir.joinpath(endpoint['script_path'])
+      exe_path = 'bash'
       exe_args = [script_path]
 
     # run workload for endpoint with correct env variables
@@ -1206,6 +1295,11 @@ def wkld__socialNetwork__local__hosts(args):
 def wkld__hotelReservation__local__hosts(args):
   return {
     'host': 'http://127.0.0.1:5000',
+  }, 'host'
+
+def wkld__mediaMicroservices__local__hosts(args):
+  return {
+    'host': 'http://127.0.0.1:8080',
   }, 'host'
 
 def wkld__socialNetwork__gsd__hosts(args):
