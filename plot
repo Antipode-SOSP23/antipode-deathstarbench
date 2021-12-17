@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
 
 import os
-import glob
 import re
 from pprint import pprint
 from pathlib import Path
 import sys
-import json
-import ast
 from datetime import datetime
 from itertools import groupby
 import matplotlib
@@ -16,6 +13,9 @@ import seaborn as sns
 import numpy as np
 import pandas as pd
 pd.set_option('display.float_format', lambda x: '%.3f' % x)
+from matplotlib.ticker import Locator
+import yaml
+import argparse
 
 #-----------
 # HELPERS
@@ -25,7 +25,7 @@ def _fetch_span_tag(tags, tag_to_search):
 
 def _fetch_gather_tag(exp_dir):
   # get the tag of this experiment
-  with open(exp_dir / 'traces.info') as f:
+  with open(ROOT_PATH / exp_dir / 'traces.info') as f:
     lines = f.readlines()
     for line in lines:
       if line.startswith('GATHER TAG: '):
@@ -40,90 +40,6 @@ def _get(list, index, default):
   except IndexError:
     return default
 
-#-----------
-# PLOTS
-#-----------
-def plot__debug(dataset_folder):
-  os.chdir(dataset_folder)
-
-  ats_df = pd.read_csv('ats_single.csv', sep=';')
-  ats_df = ats_df.set_index('ts')
-
-  vl_df = pd.read_csv('vl_single.csv', sep=';')
-  vl_df = vl_df.set_index('ts')
-
-  df = ats_df.merge(vl_df, left_on='ts', right_on='ts')
-  df = df.sort_values(by=['ts'])
-
-  # row of max queue duration
-  print(df.iloc[df['wht_queue_duration'].argmax()])
-
-  # from ats
-  del df['wht_worker_per_antipode']
-  del df['wht_total_duration']
-  # from vl
-  del df['post_notification_diff_ms']
-
-  axs = df.plot.line(subplots=True, figsize=(5,10))
-
-  axs[0].set_xticklabels([])
-
-  fig = axs[0].get_figure()
-  fig.savefig(f"plot_debug.png")
-
-
-def plot__per_inconsistencies(args):
-  sns.set_theme(style='ticks')
-
-  data = []
-  for d in args['dir']:
-    tag, tag_round = _fetch_gather_tag(d)
-    tag = tag.split(' - ')[1].replace('->',r'$\rightarrow$')
-    df = pd.read_csv(d / 'traces.csv', sep=';', index_col='ts')
-
-    # compute extra info to output in info file
-    consistent_per = round(len(df[df['consistency_bool'] == True])/float(len(df)) * 100, 2)
-    inconsistent_per = round(len(df[df['consistency_bool'] == False])/float(len(df)) * 100, 2)
-
-    # insert at the position of the round
-    data.append({ tag : inconsistent_per})
-
-  # transform dict into dataframe
-  df = pd.DataFrame.from_dict(data)
-
-  # sort columns by the delay number in the string
-  # sorted_columns = sorted(df.columns, key=lambda x: float(x.split('ms')[0]))
-  # df = df.reindex(sorted_columns, axis=1)
-
-  # plt.ylim([0, 100]) # percentage
-  # plt.bar(np.arange(df.shape[1]), df.median(),
-  #   yerr=[df.median()-df.min(), df.max()-df.median()],
-  #   log=True,
-  #   capsize=8,
-  # )
-
-  sns.boxplot(data=df, palette='tab10', width=0.2)
-  # df.boxplot()
-  # plt.yscale('log')
-
-  plt.ylabel('% of inconsistencies')
-  plt.xlabel('Regions', labelpad=20)
-  # add label at the top right of the plot
-  ax = plt.gca()
-  # ax.set_ylim(0,100)
-  # plt.text(1, 1, "$\it{150 rps}$   $\it{n=5}$", horizontalalignment='right', verticalalignment='bottom', transform=ax.transAxes)
-
-  # replace xticks labels with dataframe info
-  # plt.xticks(np.arange(len(df.columns) + 1), [""] + df.columns.to_list(), horizontalalignment='center', rotation=0)
-  plt.xticks([0, 1], df.columns.to_list())
-
-  # save with a unique timestamp
-  plt.savefig(PLOTS_PATH / f"per_inconsistencies__{datetime.now().strftime('%Y%m%d%H%M')}", bbox_inches = 'tight', pad_inches = 0.1)
-
-
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.ticker import Locator
 class MinorSymLogLocator(Locator):
   """
   Dynamically find minor tick positions based on the positions of
@@ -161,15 +77,70 @@ class MinorSymLogLocator(Locator):
       raise NotImplementedError('Cannot get tick locations for a '
                                 '%s type.' % type(self))
 
+
+#-----------
+# PLOTS
+#-----------
+def plot__per_inconsistencies(args):
+  sns.set_theme(style='ticks')
+
+  data = []
+  for d in gather_paths:
+    tag, tag_round = _fetch_gather_tag(d)
+    tag = tag.split(' - ')[1].replace('->',r'$\rightarrow$')
+    df = pd.read_csv(ROOT_PATH / d / 'traces.csv', sep=';', index_col='ts')
+
+    # compute extra info to output in info file
+    consistent_per = round(len(df[df['consistency_bool'] == True])/float(len(df)) * 100, 2)
+    inconsistent_per = round(len(df[df['consistency_bool'] == False])/float(len(df)) * 100, 2)
+
+    # insert at the position of the round
+    data.append({ tag : inconsistent_per})
+
+  # transform dict into dataframe
+  df = pd.DataFrame.from_dict(data)
+  pprint(df)
+
+  # sort columns by the delay number in the string
+  # sorted_columns = sorted(df.columns, key=lambda x: float(x.split('ms')[0]))
+  # df = df.reindex(sorted_columns, axis=1)
+
+  # plt.ylim([0, 100]) # percentage
+  # plt.bar(np.arange(df.shape[1]), df.median(),
+  #   yerr=[df.median()-df.min(), df.max()-df.median()],
+  #   log=True,
+  #   capsize=8,
+  # )
+
+  ax = sns.boxplot(data=df, palette='tab10', width=0.2)
+  # df.boxplot()
+  # plt.yscale('log')
+
+  plt.ylabel('% of inconsistencies')
+  plt.xlabel('Regions', labelpad=20)
+  # add label at the top right of the plot
+  # ax = plt.gca()
+  # ax.set_ylim(0,100)
+  # plt.text(1, 1, "$\it{150 rps}$   $\it{n=5}$", horizontalalignment='right', verticalalignment='bottom', transform=ax.transAxes)
+
+  # replace xticks labels with dataframe info
+  # plt.xticks(np.arange(len(df.columns) + 1), [""] + df.columns.to_list(), horizontalalignment='center', rotation=0)
+  plt.xticks([0, 1], df.columns.to_list())
+
+  # save with a unique timestamp
+  plot_filename = PLOTS_PATH / f"per_inconsistencies__{datetime.now().strftime('%Y%m%d%H%M')}"
+  plt.savefig(plot_filename, bbox_inches = 'tight', pad_inches = 0.1)
+  print(f"[INFO] Saved plot '{plot_filename}'")
+
 def plot__throughput_latency(args):
   parsed_data = []
-  for d in args['dir']:
+  for d in gather_paths:
     tag, tag_round = _fetch_gather_tag(d)
     info_tags = tag.split(' - ')
 
     latency_90 = None
     throughput = None
-    with open(d / 'client01.out') as f:
+    with open(ROOT_PATH / d / 'client01.out') as f:
       lines = f.readlines()
       for line in lines:
         # this is the line latency
@@ -218,7 +189,7 @@ def plot__throughput_latency(args):
     df_data.append({
       'rps': t[0],
       'zone_pair': t[1],
-      'type': t[2],
+      'type': 'Antipode' if t[2] == 'antipode' else 'Original',
       'latency_90': latency_90,
       'throughput': throughput,
     })
@@ -230,7 +201,8 @@ def plot__throughput_latency(args):
 
   # Apply the default theme
   sns.set_theme(style='ticks')
-  plt.rcParams["figure.figsize"] = [6,5]
+  plt.rcParams["figure.figsize"] = [6,4.5]
+  plt.rcParams["figure.dpi"] = 600
 
   # build the subplots
   fig, axes = plt.subplots(len(df_zone_pairs), 1)
@@ -247,7 +219,7 @@ def plot__throughput_latency(args):
     # drop uneeded columns
     df_zone_pair = df_zone_pair.drop(columns=['zone_pair'])
     # sort by rps so we get pretty walls - note the sort=False in lineplot
-    df_zone_pair = df_zone_pair.sort_values(by=['rps'])
+    df_zone_pair = df_zone_pair.sort_values(by=['type', 'rps'])
 
     # index -> x -> throughput -> effective throughput
     #            -> rps        -> client load
@@ -271,11 +243,15 @@ def plot__throughput_latency(args):
     #   interpolated_dfs.append(df)
     # df_zone_pair = pd.concat(interpolated_dfs, ignore_index=False)
 
+    pprint(df_zone_pair)
+
     ax.set(yscale="symlog")
     ax.yaxis.set_minor_locator(MinorSymLogLocator(1e-1))
     # ax.set_yticks([2000, 3000, 4000])
+
+    color_palette = sns.color_palette("deep",2)[::-1]
     sns.lineplot(ax=ax, data=df_zone_pair, sort=False, x='throughput', y='latency_90',
-      hue='type', style='type', markers=False, dashes=False, linewidth = 3)
+      hue='type', style='type', palette=color_palette, markers=True, dashes=False, linewidth = 3)
 
     # set limit for the y axis
     def format_tick(x, pos=None):
@@ -295,7 +271,7 @@ def plot__throughput_latency(args):
     #     ax.text(throughput,latency, f"{int(rps)} rps", size='x-small')
 
     # set title for the zone pair
-    ax.set_title(zone_pair.replace('->',r'$\rightarrow$'),)
+    ax.set_title(zone_pair.replace('->',r'$\rightarrow$'),loc='right',fontdict={'fontsize': 'xx-small'}, style='italic')
 
     # clean ylabels so we set common ones after
     ax.set_ylabel('')
@@ -309,13 +285,13 @@ def plot__throughput_latency(args):
     # but remove the legend since we will only show one
     ax.get_legend().remove()
 
-
   # set a single legend for all the plots
-  fig.legend(handles, labels, loc='upper right')
+  fig.legend(handles, labels, loc='upper left', bbox_to_anchor=(.125, 0.88))
+  # sns.move_legend(fig, "lower center", bbox_to_anchor=(.5, 1), ncol=4, title=None, frameon=True)
 
   # set a single yaxis title
-  fig.supxlabel(y=0, t='Throughput (req/s)')
-  fig.supylabel(x=-0.05, t='Latency (ms)\n$\it{Client\ side}$')
+  fig.supxlabel(y=-0.01, t='Throughput (req/s)', fontsize='medium')
+  fig.supylabel(t='Latency (ms)', fontsize='medium')
 
   # save with a unique timestamp
   # fig.tight_layout()
@@ -323,15 +299,14 @@ def plot__throughput_latency(args):
   plt.savefig(PLOTS_PATH / plot_filename, bbox_inches = 'tight', pad_inches = 0.1)
   print(f"[INFO] Saved plot '{plot_filename}'")
 
-
-def plot__throughput_visibility_latency(args):
+def plot__throughput_visibility_latency(gather_paths):
   parsed_data = []
-  for d in args['dir']:
+  for d in gather_paths:
     tag, tag_round = _fetch_gather_tag(d)
     info_tags = tag.split(' - ')
 
     throughput = None
-    with open(d / 'client01.out') as f:
+    with open(ROOT_PATH / d / 'client01.out') as f:
       lines = f.readlines()
       for line in lines:
         # this is the line for throughput
@@ -339,7 +314,7 @@ def plot__throughput_visibility_latency(args):
           throughput = float(line.split(':')[1].strip())
 
     # get visibility latency from csv
-    df = pd.read_csv(d / 'traces.csv', sep=';', index_col='ts')
+    df = pd.read_csv(ROOT_PATH / d / 'traces.csv', sep=';', index_col='ts')
     latency_90 = np.percentile(df[['post_notification_diff_ms']], 90)
 
     # insert at the position of the round
@@ -414,21 +389,22 @@ def plot__throughput_visibility_latency(args):
 
   # set a single yaxis title
   fig.supxlabel(y=0, t='Throughput (req/s)')
-  fig.supylabel(x=0, t='Visibility Latency (ms)\n$\it{Client\ to\ notification}$')
+  fig.supylabel(x=0, t='Latency (ms)')
 
   # save with a unique timestamp
   fig.tight_layout()
-  plt.savefig(PLOTS_PATH / f"throughput_visibility_latency__{datetime.now().strftime('%Y%m%d%H%M')}", bbox_inches = 'tight', pad_inches = 0.1)
+  plot_filename = PLOTS_PATH / f"throughput_visibility_latency__{datetime.now().strftime('%Y%m%d%H%M')}"
+  plt.savefig(plot_filename, bbox_inches = 'tight', pad_inches = 0.1)
+  print(f"[INFO] Saved plot '{plot_filename}'")
 
-
-def plot__visibility_latency_overhead(args):
+def plot__visibility_latency_overhead(gather_paths):
   parsed_data = []
-  for d in args['dir']:
+  for d in gather_paths:
     tag, tag_round = _fetch_gather_tag(d)
     info_tags = tag.split(' - ')
 
     throughput = None
-    with open(d / 'client01.out') as f:
+    with open(ROOT_PATH / d / 'client01.out') as f:
       lines = f.readlines()
       for line in lines:
         # this is the line for throughput
@@ -436,7 +412,7 @@ def plot__visibility_latency_overhead(args):
           throughput = float(line.split(':')[1].strip())
 
     # get visibility latency from csv
-    df = pd.read_csv(d / 'traces.csv', sep=';', index_col='ts')
+    df = pd.read_csv(ROOT_PATH / d / 'traces.csv', sep=';', index_col='ts')
     latency_90 = np.percentile(df[['post_notification_diff_ms']], 90)
 
     # insert at the position of the round
@@ -471,19 +447,20 @@ def plot__visibility_latency_overhead(args):
   for zone_pair,df_zone_pair in df_zone_pairs:
     data.append({
       'Regions': zone_pair.replace('->',r'$\rightarrow$'),
-      'Baseline': round(df_zone_pair.loc[df_zone_pair.type=='baseline', 'latency_90'].values[0]),
+      'Original': round(df_zone_pair.loc[df_zone_pair.type=='baseline', 'latency_90'].values[0]),
       'Antipode': round(df_zone_pair.loc[df_zone_pair.type=='antipode', 'latency_90'].values[0]),
     })
 
   # for each Baseline / Antipode pair we take the Baseline out of antipode so
   # stacked bars are presented correctly
   for d in data:
-    d['Antipode'] = max(0, d['Antipode'] - d['Baseline'])
+    d['Antipode'] = max(0, d['Antipode'] - d['Original'])
 
 
   # Apply the default theme
   sns.set_theme(style='ticks')
-  plt.figure(figsize=(4,3))
+  plt.rcParams["figure.figsize"] = [6,3]
+  plt.rcParams["figure.dpi"] = 600
 
   df = pd.DataFrame.from_records(data).set_index('Regions')
   log = False
@@ -495,20 +472,24 @@ def plot__visibility_latency_overhead(args):
     ax = df.plot(kind='bar', stacked=True, logy=False, width=0.2)
     plt.xticks(rotation = 0)
 
-  ax.set_ylabel(r'Visibility Latency (ms)')
+  ax.set_ylabel(r'Latency (ms)')
 
   # plot baseline bar
-  ax.bar_label(ax.containers[0], label_type='center', fontsize=9, weight='bold', color='white')
+  ax.bar_label(ax.containers[0], label_type='center', fontsize=8, weight='bold', color='white')
   # plot overhead bar
   labels = [ f"+ {round(e)}" for e in ax.containers[1].datavalues ]
-  ax.bar_label(ax.containers[1], labels=labels, label_type='edge', fontsize=9, weight='bold', color='black')
+  ax.bar_label(ax.containers[1], labels=labels, label_type='edge', padding=-1, fontsize=8, weight='bold', color='black')
 
+  # reverse order of legend
+  handles, labels = ax.get_legend_handles_labels()
+  ax.legend(handles[::-1], labels[::-1])
 
   # save with a unique timestamp
   plt.tight_layout()
   plot_filename = f"visibility_latency_overhead__{datetime.now().strftime('%Y%m%d%H%M')}"
   plt.savefig(PLOTS_PATH / plot_filename, bbox_inches = 'tight', pad_inches = 0.1)
   print(f"[INFO] Saved plot '{plot_filename}'")
+
 
 #-----------
 # CONSTANTS
@@ -520,39 +501,21 @@ PERCENTILES_TO_PRINT = [.25, .5, .75, .90, .99]
 # plot names have to be AFTER the method definitions
 PLOT_NAMES = [ m.split('plot__')[1] for m in dir(sys.modules[__name__]) if m.startswith('plot__') ]
 
-#-----------
-# MAIN
-#-----------
-if __name__ == "__main__":
-  import argparse
 
+#--------------
+# CLI
+#--------------
+if __name__ == '__main__':
   # parse arguments
   main_parser = argparse.ArgumentParser()
+  main_parser.add_argument('config', type=argparse.FileType('r', encoding='UTF-8'), help="Plot config to load")
+  main_parser.add_argument('--plots', nargs='*', choices=PLOT_NAMES, default=PLOT_NAMES, required=False, help="Plot only the passed plot names")
 
-  main_parser.add_argument('-l', '--latest', action='store_true', help="Use last used deploy file")
-  main_parser.add_argument('-d', '--dir', action='append', nargs='+', help="Use specific directory")
-  main_parser.add_argument('-p', '--plot', required=True, action='append', choices=PLOT_NAMES, help="Plot the following plots")
-
+  # parse args
   args = vars(main_parser.parse_args())
+  # load yaml
+  args['config'] = (yaml.safe_load(args['config']) or {})
 
-  if args['dir'] is None:
-    args['dir'] = list()
-
-  if args['latest']:
-    all_ts_dirs = [ ts_dir for ts_dir in glob.glob(str(WKLD_DATA_PATH / '*' / '**')) if os.path.isdir(ts_dir) ]
-    args['dir'].append(max(all_ts_dirs, key=os.path.getmtime))
-  del args['latest']
-
-  # flatten the list of dirs if needed - useful when aplying zsh /* + TAB combo
-  args['dir'] = list(np.array(args['dir']).flat)
-  # parse all paths as path and set all for their absolute paths
-  # also filter paths that do not exist or empty folders
-  args['dir'] = [ Path(d).absolute() for d in args['dir'] if os.path.exists(d) and os.path.isdir(d) and os.listdir(d) ]
-
-  if not args['dir']:
-    print("[WARN] No wkld data dirs available")
-    exit(-1)
-
-  for plot_name in args['plot']:
-    print(f"[INFO] Plotting {plot_name} ...")
-    getattr(sys.modules[__name__], f"plot__{plot_name}")(args)
+  for plot_name in set(args['config'].keys()) & set(args['plots']):
+    gather_paths = args['config'][plot_name]
+    getattr(sys.modules[__name__], f"plot__{plot_name}")(gather_paths)

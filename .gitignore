@@ -11,8 +11,9 @@ deploy/wkld-data/*
 !deploy/wkld-data/.keep
 
 # generated plots
-deploy/plots/*
-!deploy/plots/.keep
+deploy/plots/*.png
+deploy/plots/configs/*
+!deploy/plots/configs/sample.yml
 
 # vscode settigs
 .vscode/*
