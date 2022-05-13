@@ -117,7 +117,7 @@ def plot__per_inconsistencies(args):
   # plt.yscale('log')
 
   plt.ylabel('% of inconsistencies')
-  plt.xlabel('Regions', labelpad=20)
+  plt.xlabel('')
   # add label at the top right of the plot
   # ax = plt.gca()
   # ax.set_ylim(0,100)
@@ -459,7 +459,7 @@ def plot__visibility_latency_overhead(gather_paths):
 
   # Apply the default theme
   sns.set_theme(style='ticks')
-  plt.rcParams["figure.figsize"] = [6,3]
+  plt.rcParams["figure.figsize"] = [6,2.9]
   plt.rcParams["figure.dpi"] = 600
 
   df = pd.DataFrame.from_records(data).set_index('Regions')
@@ -473,6 +473,7 @@ def plot__visibility_latency_overhead(gather_paths):
     plt.xticks(rotation = 0)
 
   ax.set_ylabel(r'Latency (ms)')
+  ax.set_xlabel('')
 
   # plot baseline bar
   ax.bar_label(ax.containers[0], label_type='center', fontsize=8, weight='bold', color='white')
