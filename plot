@@ -564,8 +564,8 @@ def plot__throughput_latency_with_consistency_window(args):
       'type': 'Antipode' if t[2] == 'antipode' else 'Original',
       'latency_90': latency_90,
       'throughput': throughput,
-      'consistency_window_90': np.median([ v['consistency_window_90'] for v in vs]),
-      # 'consistency_window_90': [ v['consistency_window_90'] for v in vs],
+      # 'consistency_window_90': np.median([ v['consistency_window_90'] for v in vs]),
+      'consistency_window_90': [ v['consistency_window_90'] for v in vs],
     })
 
   # transform dict into dataframe
@@ -671,10 +671,12 @@ def plot__throughput_latency_with_consistency_window(args):
     # same limits to both plots
     cw_ax.set_ylim(bottom=0, top=cw_ylim)
 
+    # mention that consistency window is for runs with 125rps only ??
+    cw_ax.set_title(f"{PEAK_RPS} rps",loc='right',fontdict={'fontsize': 'xx-small'}, style='italic')
+
     # only show one yaxis label
     if i == 0:
       cw_ax.set_ylabel('')
-      cw_ax.set_title('qps=125',loc='right',fontdict={'fontsize': 'xx-small'}, style='italic')
     elif i == 1:
       cw_ax.set_ylabel('Consistency Window (ms)', y=1.1)
       cw_ax.yaxis.set_label_position('right')
