@@ -602,6 +602,7 @@ def plot__throughput_latency_with_consistency_window(args):
   sns.set_theme(style='ticks')
   plt.rcParams["figure.figsize"] = [6,4.5]
   plt.rcParams["figure.dpi"] = 600
+  plt.rcParams['axes.labelsize'] = 'small'
 
   # build the subplots
   fig, axes = plt.subplots(len(df_zone_pairs), 2, gridspec_kw={'wspace':0.05, 'hspace':0.23, 'width_ratios': [4, 1]})
@@ -635,8 +636,8 @@ def plot__throughput_latency_with_consistency_window(args):
       # remove title from legends
       tl_ax.legend_.set_title(None)
     elif i == 1:
-      tl_ax.set_xlabel('Throughput (req/s)', labelpad=7.5)
-      tl_ax.set_ylabel('Latency (ms)', labelpad=7.5, y=1.1)
+      tl_ax.set_xlabel('Throughput (req/s)')
+      tl_ax.set_ylabel('Latency (ms)', y=1.1)
       # only keep legend on top plot
       tl_ax.get_legend().remove()
 
@@ -675,7 +676,7 @@ def plot__throughput_latency_with_consistency_window(args):
       cw_ax.set_ylabel('')
       cw_ax.set_title('qps=125',loc='right',fontdict={'fontsize': 'xx-small'}, style='italic')
     elif i == 1:
-      cw_ax.set_ylabel('Consistency Window (ms)', labelpad=7.5, y=1.1)
+      cw_ax.set_ylabel('Consistency Window (ms)', y=1.1)
       cw_ax.yaxis.set_label_position('right')
       cw_ax.set_title('')
 
