@@ -2,7 +2,7 @@
 
 import os
 import re
-from pprint import pprint
+from pprint import pprint as pp
 from pathlib import Path
 import sys
 from datetime import datetime
@@ -39,6 +39,10 @@ def _get(list, index, default):
     return list[index]
   except IndexError:
     return default
+
+def _flatten_list(l):
+  flatten_list = lambda irregular_list: [element for item in irregular_list for element in flatten_list(item)] if type(irregular_list) is list else [irregular_list]
+  return flatten_list(l)
 
 class MinorSymLogLocator(Locator):
   """
@@ -99,7 +103,7 @@ def plot__per_inconsistencies(args):
 
   # transform dict into dataframe
   df = pd.DataFrame.from_dict(data)
-  pprint(df)
+  pp(df)
 
   # sort columns by the delay number in the string
   # sorted_columns = sorted(df.columns, key=lambda x: float(x.split('ms')[0]))
@@ -131,6 +135,7 @@ def plot__per_inconsistencies(args):
   plot_filename = PLOTS_PATH / f"per_inconsistencies__{datetime.now().strftime('%Y%m%d%H%M')}"
   plt.savefig(plot_filename, bbox_inches = 'tight', pad_inches = 0.1)
   print(f"[INFO] Saved plot '{plot_filename}'")
+
 
 def plot__throughput_latency(args):
   parsed_data = []
@@ -243,7 +248,7 @@ def plot__throughput_latency(args):
     #   interpolated_dfs.append(df)
     # df_zone_pair = pd.concat(interpolated_dfs, ignore_index=False)
 
-    pprint(df_zone_pair)
+    pp(df_zone_pair)
 
     ax.set(yscale="symlog")
     ax.yaxis.set_minor_locator(MinorSymLogLocator(1e-1))
@@ -298,6 +303,7 @@ def plot__throughput_latency(args):
   plot_filename = f"throughput_latency__{datetime.now().strftime('%Y%m%d%H%M')}"
   plt.savefig(PLOTS_PATH / plot_filename, bbox_inches = 'tight', pad_inches = 0.1)
   print(f"[INFO] Saved plot '{plot_filename}'")
+
 
 def plot__throughput_visibility_latency(gather_paths):
   parsed_data = []
@@ -397,6 +403,7 @@ def plot__throughput_visibility_latency(gather_paths):
   plt.savefig(plot_filename, bbox_inches = 'tight', pad_inches = 0.1)
   print(f"[INFO] Saved plot '{plot_filename}'")
 
+
 def plot__visibility_latency_overhead(gather_paths):
   parsed_data = []
   for d in gather_paths:
@@ -488,6 +495,194 @@ def plot__visibility_latency_overhead(gather_paths):
   # save with a unique timestamp
   plt.tight_layout()
   plot_filename = f"visibility_latency_overhead__{datetime.now().strftime('%Y%m%d%H%M')}"
+  plt.savefig(PLOTS_PATH / plot_filename, bbox_inches = 'tight', pad_inches = 0.1)
+  print(f"[INFO] Saved plot '{plot_filename}'")
+
+
+def plot__throughput_latency_with_consistency_window(args):
+  parsed_data = []
+  for d in gather_paths:
+    tag, tag_round = _fetch_gather_tag(d)
+    info_tags = tag.split(' - ')
+
+    latency_90 = None
+    throughput = None
+    with open(ROOT_PATH / d / 'client01.out') as f:
+      lines = f.readlines()
+      for line in lines:
+        # this is the line latency
+        if line.startswith(' 90.000%'):
+          parts = re.split('(ms|s|m)', line.split('%')[1].strip())
+          value = float(parts[0])
+          unit = parts[1]
+
+          # convert all units to ms
+          if unit == 'm':
+            latency_90 = (value * 60) * 1000
+          elif unit == 's':
+            latency_90 = (value * 1000)
+          else: # ms
+            latency_90 = value
+
+          # round latency
+          latency_90 = round(latency_90, 0)
+
+        # this is the line for throughput
+        if line.startswith('Requests/sec:'):
+          throughput = float(line.split(':')[1].strip())
+
+    # get visibility latency from csv
+    df = pd.read_csv(ROOT_PATH / d / 'traces.csv', sep=';', index_col='ts')
+    consistency_window_90 = np.percentile(df[['post_notification_diff_ms']], 90)
+
+    # insert at the position of the round
+    parsed_data.append({
+      'rps': int(info_tags[0].split('qps')[0].split('rps')[0]),
+      'zone_pair': info_tags[1],
+      'type': _get(info_tags, 2, 'baseline'),
+      'round': tag_round,
+      'latency_90': latency_90,
+      'consistency_window_90': consistency_window_90,
+      'throughput': throughput,
+    })
+
+  # since each tag/type has multiple rounds we have to group them into a single row
+  df_data = []
+  for t,vs in groupby(parsed_data, key=lambda x: [ x['rps'], x['zone_pair'], x['type'] ]):
+    vs = list(vs)
+    vs = sorted(vs, key=lambda k: (k['throughput'], k['latency_90']) )
+    mid_index = int(len(vs) / 2)
+
+    throughput = vs[mid_index]['throughput']
+    latency_90 = vs[mid_index]['latency_90']
+    # latency_90 = np.median([ v['latency_90'] for v in vs])
+    # throughput = np.median([ v['throughput'] for v in vs])
+
+    df_data.append({
+      'rps': t[0],
+      'zone_pair': t[1],
+      'type': 'Antipode' if t[2] == 'antipode' else 'Original',
+      'latency_90': latency_90,
+      'throughput': throughput,
+      'consistency_window_90': np.median([ v['consistency_window_90'] for v in vs]),
+      # 'consistency_window_90': [ v['consistency_window_90'] for v in vs],
+    })
+
+  # transform dict into dataframe
+  df = pd.DataFrame(df_data)
+
+  # split dataframe into multiple based on the amount of unique zone_pairs we have
+  PEAK_RPS = 125
+  df_zone_pairs = []
+  for zone_pair, df_zone_pair in df.groupby('zone_pair', as_index=False):
+    # drop uneeded columns
+    df_zone_pair = df_zone_pair.drop(columns=['zone_pair'])
+    # sort by rps so we get pretty walls - note the sort=False in lineplot
+    df_zone_pair = df_zone_pair.sort_values(by=['type', 'rps'])
+
+    # gather all consistency window samples from Original and Antipode and then compute the median
+    cw_data = {
+      'Region': zone_pair,
+      'Original': round(np.median(_flatten_list(df_zone_pair[(df_zone_pair['type'] == 'Original') & (df_zone_pair['rps'] == PEAK_RPS)]['consistency_window_90'].values.tolist()))),
+      'Antipode': round(np.median(_flatten_list(df_zone_pair[(df_zone_pair['type'] == 'Antipode') & (df_zone_pair['rps'] == PEAK_RPS)]['consistency_window_90'].values.tolist()))),
+    }
+    # for each Baseline / Antipode pair we take the Baseline out of antipode so
+    # stacked bars are presented correctly
+    cw_data['Antipode'] = max(0, cw_data['Antipode'] - cw_data['Original'])
+    cw_df = pd.DataFrame.from_records([cw_data]).set_index('Region')
+
+    # index -> x -> throughput -> effective throughput
+    #            -> rps        -> client load
+    # values -> y -> latency_90
+    #           y -> consistency_window_90
+    # columns -> line
+    df_zone_pairs.append((zone_pair, df_zone_pair, cw_df))
+
+  # Apply the default theme
+  sns.set_theme(style='ticks')
+  plt.rcParams["figure.figsize"] = [6,4.5]
+  plt.rcParams["figure.dpi"] = 600
+
+  # build the subplots
+  fig, axes = plt.subplots(len(df_zone_pairs), 2, gridspec_kw={'wspace':0.05, 'hspace':0.23, 'width_ratios': [4, 1]})
+
+  # values to apply to all plots
+  cw_ylim = max([ cw_df.sum(axis=1)[0] for (_,_,cw_df) in df_zone_pairs ]) * 1.075
+
+  for i, (zone_pair, df_zone_pair, cw_df) in enumerate(df_zone_pairs):
+    #---------------
+    # Throughput / Latency part
+    #---------------
+    # select the row of the subplot where to plot
+    tl_ax=axes[i][0]
+
+    tl_ax.set(yscale="symlog")
+    tl_ax.yaxis.set_minor_locator(MinorSymLogLocator(1e-1))
+
+    color_palette = sns.color_palette("deep",2)[::-1]
+    sns.lineplot(ax=tl_ax, data=df_zone_pair, sort=False, x='throughput', y='latency_90',
+      hue='type', style='type', palette=color_palette, markers=True, dashes=False, linewidth = 3)
+
+    # set title for the zone pair
+    tl_ax.set_title(zone_pair.replace('->',r'$\rightarrow$'),
+      loc='left',fontdict={'fontsize': 'small'}, style='italic')
+
+    if i == 0:
+      # only keep labels on bottom plot
+      tl_ax.set_xlabel('')
+      tl_ax.set_ylabel('')
+      tl_ax.set_xticklabels([])
+      # remove title from legends
+      tl_ax.legend_.set_title(None)
+    elif i == 1:
+      tl_ax.set_xlabel('Throughput (req/s)', labelpad=7.5)
+      tl_ax.set_ylabel('Latency (ms)', labelpad=7.5, y=1.1)
+      # only keep legend on top plot
+      tl_ax.get_legend().remove()
+
+    #---------------
+    # Consistency window
+    #---------------
+    # select the row of the subplot where to plot
+    cw_ax=axes[i][1]
+
+    cw_df.plot(ax=cw_ax, kind='bar', stacked=True, logy=False, width=0.4)
+
+    # set axis labels
+    cw_ax.set_ylabel(r'Consistency Window (ms)')
+    cw_ax.set_xlabel('')
+
+    # plot baseline bar
+    cw_ax.bar_label(cw_ax.containers[0], label_type='center', fontsize=8, weight='bold', color='white')
+    # plot overhead bar
+    cw_ax.bar_label(cw_ax.containers[1], labels=[ f"+ {round(e)}" for e in cw_ax.containers[1].datavalues ],
+      label_type='edge', padding=-1, fontsize=8, weight='bold', color='black')
+
+    # remove legend
+    cw_ax.get_legend().remove()
+
+    # remove xaxis ticks and labels
+    cw_ax.axes.get_xaxis().set_visible(False)
+
+    # place yticks on the right
+    cw_ax.yaxis.tick_right()
+
+    # same limits to both plots
+    cw_ax.set_ylim(bottom=0, top=cw_ylim)
+
+    # only show one yaxis label
+    if i < len(df_zone_pairs) - 1:
+      cw_ax.set_ylabel('')
+    else:
+      cw_ax.set_ylabel('Consistency Window (ms)', labelpad=7.5, y=1.1)
+      cw_ax.yaxis.set_label_position('right')
+
+    # set title for the zone pair
+    cw_ax.set_title('qps=125',loc='right',fontdict={'fontsize': 'xx-small'}, style='italic')
+
+  # save with a unique timestamp
+  # fig.tight_layout()
+  plot_filename = f"throughput_latency_with_consistency_window__{datetime.now().strftime('%Y%m%d%H%M')}"
   plt.savefig(PLOTS_PATH / plot_filename, bbox_inches = 'tight', pad_inches = 0.1)
   print(f"[INFO] Saved plot '{plot_filename}'")
 
