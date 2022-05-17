@@ -671,14 +671,15 @@ def plot__throughput_latency_with_consistency_window(args):
     cw_ax.set_ylim(bottom=0, top=cw_ylim)
 
     # only show one yaxis label
-    if i < len(df_zone_pairs) - 1:
+    if i == 0:
       cw_ax.set_ylabel('')
-    else:
+      cw_ax.set_title('qps=125',loc='right',fontdict={'fontsize': 'xx-small'}, style='italic')
+    elif i == 1:
       cw_ax.set_ylabel('Consistency Window (ms)', labelpad=7.5, y=1.1)
       cw_ax.yaxis.set_label_position('right')
+      cw_ax.set_title('')
 
     # set title for the zone pair
-    cw_ax.set_title('qps=125',loc='right',fontdict={'fontsize': 'xx-small'}, style='italic')
 
   # save with a unique timestamp
   # fig.tight_layout()
