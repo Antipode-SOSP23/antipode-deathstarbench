@@ -582,14 +582,14 @@ def plot__throughput_latency_with_consistency_window(args):
 
     # gather all consistency window samples from Original and Antipode and then compute the median
     cw_data = {
-      'Region': zone_pair,
+      'Throughput': PEAK_RPS,
       'Original': round(np.median(_flatten_list(df_zone_pair[(df_zone_pair['type'] == 'Original') & (df_zone_pair['rps'] == PEAK_RPS)]['consistency_window_90'].values.tolist()))),
       'Antipode': round(np.median(_flatten_list(df_zone_pair[(df_zone_pair['type'] == 'Antipode') & (df_zone_pair['rps'] == PEAK_RPS)]['consistency_window_90'].values.tolist()))),
     }
     # for each Baseline / Antipode pair we take the Baseline out of antipode so
     # stacked bars are presented correctly
     cw_data['Antipode'] = max(0, cw_data['Antipode'] - cw_data['Original'])
-    cw_df = pd.DataFrame.from_records([cw_data]).set_index('Region')
+    cw_df = pd.DataFrame.from_records([cw_data]).set_index('Throughput')
 
     # index -> x -> throughput -> effective throughput
     #            -> rps        -> client load
@@ -600,7 +600,7 @@ def plot__throughput_latency_with_consistency_window(args):
 
   # Apply the default theme
   sns.set_theme(style='ticks')
-  plt.rcParams["figure.figsize"] = [6,4.5]
+  plt.rcParams["figure.figsize"] = [6,4.25]
   plt.rcParams["figure.dpi"] = 600
   plt.rcParams['axes.labelsize'] = 'small'
 
@@ -608,7 +608,9 @@ def plot__throughput_latency_with_consistency_window(args):
   fig, axes = plt.subplots(len(df_zone_pairs), 2, gridspec_kw={'wspace':0.05, 'hspace':0.23, 'width_ratios': [4, 1]})
 
   # values to apply to all plots
-  cw_ylim = max([ cw_df.sum(axis=1)[0] for (_,_,cw_df) in df_zone_pairs ]) * 1.075
+  cw_ylim = max([ cw_df.sum(axis=1).tolist()[0] for (_,_,cw_df) in df_zone_pairs ]) * 1.075
+  tl_xlim_right = df['throughput'].max() * 1.03
+  # tl_xlim_left = df['throughput'].min() * 0.8
 
   for i, (zone_pair, df_zone_pair, cw_df) in enumerate(df_zone_pairs):
     #---------------
@@ -627,6 +629,9 @@ def plot__throughput_latency_with_consistency_window(args):
     # set title for the zone pair
     tl_ax.set_title(zone_pair.replace('->',r'$\rightarrow$'),
       loc='left',fontdict={'fontsize': 'small'}, style='italic')
+
+    # common xlim for both plots
+    tl_ax.set_xlim(right=tl_xlim_right)
 
     if i == 0:
       # only keep labels on bottom plot
@@ -662,25 +667,23 @@ def plot__throughput_latency_with_consistency_window(args):
     # remove legend
     cw_ax.get_legend().remove()
 
-    # remove xaxis ticks and labels
-    cw_ax.axes.get_xaxis().set_visible(False)
-
     # place yticks on the right
     cw_ax.yaxis.tick_right()
 
     # same limits to both plots
     cw_ax.set_ylim(bottom=0, top=cw_ylim)
 
-    # mention that consistency window is for runs with 125rps only ??
-    cw_ax.set_title(f"{PEAK_RPS} rps",loc='right',fontdict={'fontsize': 'xx-small'}, style='italic')
-
     # only show one yaxis label
     if i == 0:
+      # mention that consistency window is for runs with 125rps only ??
+      cw_ax.set_title(f"peak req/s",loc='right',fontdict={'fontsize': 'xx-small'}, style='italic')
       cw_ax.set_ylabel('')
+      cw_ax.set_xticklabels([])
     elif i == 1:
+      cw_ax.set_title('')
       cw_ax.set_ylabel('Consistency Window (ms)', y=1.1)
       cw_ax.yaxis.set_label_position('right')
-      cw_ax.set_title('')
+      cw_ax.tick_params(axis='x', labelrotation=0)
 
     # set title for the zone pair
 
