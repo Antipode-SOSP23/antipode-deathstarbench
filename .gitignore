@@ -1,7 +1,3 @@
-socialNetwork/wrk2/deps/luajit/src/*.o
-socialNetwork/wrk2/obj
-socialNetwork/wrk2/deps/luajit/src/luajit
-socialNetwork/wrk2/deps/luajit/src/host/*.o
 deploy/container-images/*
 !deploy/container-images/.keep
 *.pyc

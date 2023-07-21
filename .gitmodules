@@ -1,0 +1,4 @@
+[submodule "DeathStarBench"]
+	path = DeathStarBench
+	url = https://github.com/Antipode-SOSP23/DeathStarBench
+	branch = antipode-xtrace
