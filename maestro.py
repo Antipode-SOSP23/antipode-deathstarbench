@@ -270,7 +270,7 @@ def _force_docker():
       '-v', '/usr/bin/docker-compose:/usr/bin/docker-compose',
       # mount code volumes
       '-v', f"{ROOT_PATH / 'deploy'}:/code/deploy",
-      '-v', f"{ROOT_PATH / 'antipode_manager.py'}:/code/antipode_manager.py",
+      '-v', f"{ROOT_PATH / 'maestro.py'}:/code/maestro.py",
       '-v', f"{ROOT_PATH / 'socialNetwork'}:/code/socialNetwork",
       '-w', '/code',
       GCP_DOCKER_IMAGE_NAME

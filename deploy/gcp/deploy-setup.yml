@@ -28,9 +28,9 @@
         use_ssh_args: yes
         mode: push
 
-    - name: Upload antipode_manager
+    - name: Upload maestro
       synchronize:
-        src: "../../antipode_manager.py"
+        src: "../../maestro.py"
         dest: "/code/"
         use_ssh_args: yes
         mode: push

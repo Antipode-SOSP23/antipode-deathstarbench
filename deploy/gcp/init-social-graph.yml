@@ -12,6 +12,6 @@
       shell: >
             sleep 60 ;
             cd /code ;
-            ./antipode_manager.py {{ app }} --gcp wkld -f {{ configuration }} -E init-social-graph -r 1
+            ./maestro.py {{ app }} --gcp wkld -f {{ configuration }} -E init-social-graph -r 1
       register: out
       failed_when: "not(out.rc == 0) or 'fail' in out.stderr"

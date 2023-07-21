@@ -20,6 +20,6 @@
       shell: >
             cd /home/jfloff/nas_inesc/antipode/antipode-deathstarbench ;
             pip3 install -r requirements.txt ;
-            ./antipode_manager.py {{ app }} --local build
+            ./maestro.py {{ app }} --local build
       register: out
       failed_when: "not(out.rc == 0) or 'fail' in out.stderr"
