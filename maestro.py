@@ -28,6 +28,7 @@ import itertools
 # CONSTANTS
 #-----------------
 ROOT_PATH = Path(os.path.abspath(os.path.dirname(sys.argv[0])))
+DSB_PATH = ROOT_PATH / 'DeathStarBench'
 
 # available deploys
 AVAILABLE_DEPLOY_TYPES = {
@@ -382,7 +383,7 @@ def build(args):
 def build__socialNetwork__local(args):
   from plumbum.cmd import docker
 
-  app_dir = ROOT_PATH / args['app']
+  app_dir = DSB_PATH / args['app']
   os.chdir(app_dir)
 
   # By default, the DeathStarBench pulls its containers from docker hub.
@@ -432,13 +433,13 @@ def build__socialNetwork__local(args):
 def build__hotelReservation__local(args):
   from plumbum.cmd import docker
 
-  app_dir = ROOT_PATH / args['app']
+  app_dir = DSB_PATH / args['app']
   os.chdir(app_dir)
 
 def build__mediaMicroservices__local(args):
   from plumbum.cmd import docker
 
-  app_dir = ROOT_PATH / args['app']
+  app_dir = DSB_PATH / args['app']
   os.chdir(app_dir)
 
 def build__socialNetwork__gsd(args):
@@ -553,7 +554,7 @@ def deploy__socialNetwork__gsd(args):
   import textwrap
   from shutil import copyfile
 
-  app_dir = ROOT_PATH / args['app']
+  app_dir = DSB_PATH / args['app']
   os.chdir(ROOT_PATH / 'deploy')
 
   # base path of configuration file
@@ -661,7 +662,7 @@ def deploy__socialNetwork__gcp(args):
   from plumbum.cmd import ansible_playbook
 
 
-  app_dir = ROOT_PATH / args['app']
+  app_dir = DSB_PATH / args['app']
   os.chdir(ROOT_PATH / 'deploy')
 
   # base path of configuration file
@@ -848,7 +849,7 @@ def run__socialNetwork__local(args):
     run_args.insert(1, '-d')
 
   # copy docker-compose to the deploy file
-  with open(ROOT_PATH / args['app'] / 'docker-compose.yml', 'r') as f_compose:
+  with open(DSB_PATH / args['app'] / 'docker-compose.yml', 'r') as f_compose:
     compose = yaml.load(f_compose, Loader=yaml.FullLoader)
     # update file with dynamic run flags
     # TODO CHANGE ANTIPODE FLAG
@@ -863,14 +864,14 @@ def run__socialNetwork__local(args):
   print(f"[SAVED] '{new_compose_filepath}'")
 
   env_args = [
-    '--project-directory', str(ROOT_PATH / args['app']),
+    '--project-directory', str(DSB_PATH / args['app']),
     '--file', str(new_compose_filepath),
   ]
 
   # Fixes error: "WARNING: Connection pool is full, discarding connection: localhost"
   # ref: https://github.com/docker/compose/issues/6638#issuecomment-576743595
   with local.env(COMPOSE_PARALLEL_LIMIT=99):
-    os.chdir(ROOT_PATH / args['app'])
+    os.chdir(DSB_PATH / args['app'])
     docker_compose[env_args + run_args] & FG
 
 def run__hotelReservation__local(args):
@@ -892,7 +893,7 @@ def run__hotelReservation__local(args):
     run_args.insert(1, '-d')
 
   # copy docker-compose to the deploy file
-  with open(ROOT_PATH / args['app'] / 'docker-compose.yml', 'r') as f_compose:
+  with open(DSB_PATH / args['app'] / 'docker-compose.yml', 'r') as f_compose:
     compose = yaml.load(f_compose, Loader=yaml.FullLoader)
     # update file with dynamic run flags
     # TODO CHANGE ANTIPODE FLAG
@@ -907,14 +908,14 @@ def run__hotelReservation__local(args):
   print(f"[SAVED] '{new_compose_filepath}'")
 
   env_args = [
-    '--project-directory', str(ROOT_PATH / args['app']),
+    '--project-directory', str(DSB_PATH / args['app']),
     '--file', str(new_compose_filepath),
   ]
 
   # Fixes error: "WARNING: Connection pool is full, discarding connection: localhost"
   # ref: https://github.com/docker/compose/issues/6638#issuecomment-576743595
   with local.env(COMPOSE_PARALLEL_LIMIT=99):
-    os.chdir(ROOT_PATH / args['app'])
+    os.chdir(DSB_PATH / args['app'])
     docker_compose[env_args + run_args] & FG
 
 def run__mediaMicroservices__local(args):
@@ -936,7 +937,7 @@ def run__mediaMicroservices__local(args):
     run_args.insert(1, '-d')
 
   # copy docker-compose to the deploy file
-  with open(ROOT_PATH / args['app'] / 'docker-compose.yml', 'r') as f_compose:
+  with open(DSB_PATH / args['app'] / 'docker-compose.yml', 'r') as f_compose:
     compose = yaml.load(f_compose, Loader=yaml.FullLoader)
     # update file with dynamic run flags
     # TODO CHANGE ANTIPODE FLAG
@@ -951,14 +952,14 @@ def run__mediaMicroservices__local(args):
   print(f"[SAVED] '{new_compose_filepath}'")
 
   env_args = [
-    '--project-directory', str(ROOT_PATH / args['app']),
+    '--project-directory', str(DSB_PATH / args['app']),
     '--file', str(new_compose_filepath),
   ]
 
   # Fixes error: "WARNING: Connection pool is full, discarding connection: localhost"
   # ref: https://github.com/docker/compose/issues/6638#issuecomment-576743595
   with local.env(COMPOSE_PARALLEL_LIMIT=99):
-    os.chdir(ROOT_PATH / args['app'])
+    os.chdir(DSB_PATH / args['app'])
     docker_compose[env_args + run_args] & FG
 
 def run__socialNetwork__gsd(args):
@@ -1048,7 +1049,7 @@ def clean(args):
 def clean__socialNetwork__local(args):
   from plumbum.cmd import docker_compose, docker
 
-  os.chdir(ROOT_PATH / args['app'])
+  os.chdir(DSB_PATH / args['app'])
   # first stops the containers
   docker_compose['stop'] & FG
 
@@ -1092,7 +1093,7 @@ def clean__socialNetwork__gcp(args):
 def clean__hotelReservation__local(args):
   from plumbum.cmd import docker_compose, docker
 
-  os.chdir(ROOT_PATH / args['app'])
+  os.chdir(DSB_PATH / args['app'])
   # first stops the containers
   docker_compose['stop'] & FG
 
@@ -1104,7 +1105,7 @@ def clean__hotelReservation__local(args):
 def clean__mediaMicroservices__local(args):
   from plumbum.cmd import docker_compose, docker
 
-  os.chdir(ROOT_PATH / args['app'])
+  os.chdir(DSB_PATH / args['app'])
   # first stops the containers
   docker_compose['stop'] & FG
 
@@ -1138,7 +1139,7 @@ def delay(args):
 def delay__socialNetwork__local(args, src_container, dst_container, delay_ms, jitter_ms, correlation_per, distribution):
   from plumbum.cmd import docker_compose, docker
 
-  os.chdir(ROOT_PATH / args['app'])
+  os.chdir(DSB_PATH / args['app'])
 
   # get ip of the dst container since delay only accepts ips
   # dst_container_id = docker_compose['ps', '-q', dst_container].run()[1].rstrip()
@@ -1220,7 +1221,7 @@ def wkld(args):
   import urllib.parse
 
   try:
-    app_dir = ROOT_PATH / args['app']
+    app_dir = DSB_PATH / args['app']
     os.chdir(app_dir)
 
     # get host for each zone
@@ -1345,7 +1346,7 @@ def wkld__gsd__run(args, hosts, exe_path, exe_args):
     wkld__socialNetwork__local__run(args, hosts, exe_path, exe_args)
     return
 
-  app_dir = ROOT_PATH / args['app']
+  app_dir = DSB_PATH / args['app']
   os.chdir(ROOT_PATH / 'deploy')
 
   conf_filepath = args['configuration_path']
