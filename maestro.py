@@ -29,13 +29,15 @@ import itertools
 #-----------------
 ROOT_PATH = Path(os.path.abspath(os.path.dirname(sys.argv[0])))
 DSB_PATH = ROOT_PATH / 'DeathStarBench'
-
+DEPLOY_PATH = ROOT_PATH / 'deploy'
 # available deploys
-AVAILABLE_DEPLOY_TYPES = {
+DEPLOY_TYPES = {
   'local': { 'name': 'Localhost' },
   'gsd': { 'name': 'GSD Cluster' },
   'gcp': { 'name': 'Google Cloud Platform' },
 }
+LAST_DEPLOY_FILE = { dp : DEPLOY_PATH / dp / f".last.yml" for dp in DEPLOY_TYPES }
+
 # name of the folder where the app root is
 AVAILABLE_APPLICATIONS = [
   'socialNetwork',
@@ -189,6 +191,40 @@ PERCENTILES_TO_PRINT = [.25, .5, .75, .90, .99]
 #-----------------
 # HELPER
 #-----------------
+def _load_yaml(path):
+  with open(path, 'r') as f:
+    return yaml.safe_load(f) or {}
+
+def _dump_yaml(path, d):
+  path.parent.mkdir(exist_ok=True, parents=True)
+  with open(path, 'w+') as f:
+    yaml.safe_dump(d, f, default_flow_style=False)
+
+def _put_last(deploy_type,k,v):
+  doc = {}
+  # if file exists parse yaml otherwise create empty dict to write to
+  if Path(LAST_DEPLOY_FILE[deploy_type]).exists():
+    doc = _load_yaml(LAST_DEPLOY_FILE[deploy_type])
+  # write new value and save to file
+  doc[k] = v
+  # create path dirs if needed
+  _dump_yaml(LAST_DEPLOY_FILE[deploy_type],doc)
+
+def _get_last(deploy_type,k):
+  # if file does not exist create empty dict to write to
+  if Path(LAST_DEPLOY_FILE[deploy_type]).exists():
+    doc = _load_yaml(LAST_DEPLOY_FILE[deploy_type])
+  else:
+    # create file with default entries
+    doc = {
+      'cleaned': True
+    }
+    _dump_yaml(LAST_DEPLOY_FILE[deploy_type],doc)
+
+  # default last files entries
+  return doc.get(k)
+
+
 def _index_containing_substring(the_list, substring):
   for i, s in enumerate(the_list):
     if substring in s:
@@ -196,23 +232,9 @@ def _index_containing_substring(the_list, substring):
   return -1
 
 def _deploy_type(args):
-  for k in AVAILABLE_DEPLOY_TYPES.keys():
+  for k in DEPLOY_TYPES.keys():
     if args[k]: return k
   return None
-
-def _last_configuration(app, deploy_type):
-  conf_base_path = ROOT_PATH / 'deploy' / 'configurations'
-  pattern = conf_base_path / f"{app}-{deploy_type}-*.yml"
-  files = glob.glob(str(pattern))
-
-  # not files found
-  if not files:
-    print("[ERROR] No file found!")
-    exit(-1)
-
-  # find most recent one
-  files.sort(key=os.path.getctime)
-  return files[-1]
 
 def _remove_prefix(text, prefix):
   if text.startswith(prefix):
@@ -1695,7 +1717,7 @@ if __name__ == "__main__":
   main_parser.add_argument("app", choices=AVAILABLE_APPLICATIONS, help="Application to deploy")
   # deploy type group
   deploy_type_group = main_parser.add_mutually_exclusive_group(required=True)
-  for dt, dt_info in AVAILABLE_DEPLOY_TYPES.items():
+  for dt, dt_info in DEPLOY_TYPES.items():
     deploy_type_group.add_argument(f'--{dt}', action='store_true', help=f"Deploy app to {dt_info['name']}")
   # different commands
   subparsers = main_parser.add_subparsers(help='commands', dest='which')
