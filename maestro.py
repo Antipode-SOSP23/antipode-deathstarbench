@@ -34,9 +34,7 @@ DEPLOY_TYPES = {
   'gcp': { 'name': 'Google Cloud Platform' },
 }
 LAST_DEPLOY_FILE = { dp : DEPLOY_PATH / dp / f".last.yml" for dp in DEPLOY_TYPES }
-
-# name of the folder where the app root is
-AVAILABLE_APPLICATIONS = [
+DSB_APPLICATIONS = [
   'socialNetwork',
 ]
 AVAILABLE_WKLD_ENDPOINTS = {
@@ -131,8 +129,9 @@ CONTAINERS_BUILT = [
   'rabbitmq-setup:3.8',
   'yg397/openresty-thrift:latest',
   'yg397/social-network-microservices:antipode',
-  'wrk2:antipode',
   'redis-im:antipode',
+  'wrk2:antipode',
+  'python-wkld:antipode',
 ]
 # GSD Constants
 GSD_AVAILABLE_NODES = {
@@ -229,11 +228,6 @@ def _index_containing_substring(the_list, substring):
     if substring in s:
       return i
   return -1
-
-def _remove_prefix(text, prefix):
-  if text.startswith(prefix):
-    return text[len(prefix):]
-  return text
 
 def _is_inside_docker():
   return os.path.isfile('/.dockerenv')
@@ -445,8 +439,7 @@ def build__socialNetwork__local(args):
   # Build the python-wkld image
   with local.cwd(args['app_dir'] / 'docker' / 'python-wkld'):
     docker['build',
-      # '--no-cache' if args['no_cache'] else None,
-      '--no-cache',
+      '--no-cache' if args['no_cache'] else None,
       '-t', 'python-wkld:antipode',
       '.'
     ] & FG
@@ -1760,7 +1753,7 @@ if __name__ == "__main__":
 
   # parse arguments
   main_parser = argparse.ArgumentParser()
-  main_parser.add_argument("app", choices=AVAILABLE_APPLICATIONS, help="Application to deploy")
+  main_parser.add_argument("app", choices=DSB_APPLICATIONS, help="Application to deploy")
   # deploy type group
   deploy_type_group = main_parser.add_mutually_exclusive_group(required=True)
   for dt, dt_info in DEPLOY_TYPES.items():
@@ -1786,18 +1779,6 @@ if __name__ == "__main__":
   run_parser.add_argument('-detached', action='store_true', help="detached")
   run_parser.add_argument('-antipode', action='store_true', default=False, help="enable antipode")
 
-  # clean application
-  clean_parser = subparsers.add_parser('clean', help='Clean application')
-  clean_parser.add_argument('-s', '--strong', action='store_true', help="delete images")
-  clean_parser.add_argument('-r', '--restart', action='store_true', help="clean deployment by restarting containers")
-
-  # delay application
-  delay_parser = subparsers.add_parser('delay', help='Delay application')
-  delay_parser.add_argument('-d', '--delay', type=float, default='100', help="Delay in ms")
-  delay_parser.add_argument('-j', '--jitter', type=float, default='0', help="Jitter in ms")
-  delay_parser.add_argument('-c', '--correlation', type=int, default='0', help="Correlation in % (0-100)")
-  delay_parser.add_argument('-dist', '--distribution', choices=[ 'uniform', 'normal', 'pareto', 'paretonormal' ], default='uniform', help="Delay distribution")
-
   # workload application
   wkld_parser = subparsers.add_parser('wkld', help='Run HTTP workload generator')
   # comparable with wrk2 > ./wrk options
@@ -1812,6 +1793,18 @@ if __name__ == "__main__":
   # -P                     Print each request's latency
   # -p                     Print 99th latency every 0.2s to file
   # -L  --latency          Print latency statistics
+
+  # clean application
+  clean_parser = subparsers.add_parser('clean', help='Clean application')
+  clean_parser.add_argument('-s', '--strong', action='store_true', help="delete images")
+  clean_parser.add_argument('-r', '--restart', action='store_true', help="clean deployment by restarting containers")
+
+  # delay application
+  delay_parser = subparsers.add_parser('delay', help='Delay application')
+  delay_parser.add_argument('-d', '--delay', type=float, default='100', help="Delay in ms")
+  delay_parser.add_argument('-j', '--jitter', type=float, default='0', help="Jitter in ms")
+  delay_parser.add_argument('-c', '--correlation', type=int, default='0', help="Correlation in % (0-100)")
+  delay_parser.add_argument('-dist', '--distribution', choices=[ 'uniform', 'normal', 'pareto', 'paretonormal' ], default='uniform', help="Delay distribution")
 
   # gather application
   gather_parser = subparsers.add_parser('gather', help='Gather data from application')
