@@ -346,8 +346,6 @@ def _wait_url_up(url):
 # BUILD
 #-----------------
 def build(args):
-  args['app_dir'] = DSB_PATH / args['app']
-
   getattr(sys.modules[__name__], f"build__{args['app']}__{_deploy_type(args)}")(args)
   print(f"[INFO] {args['app']} built successfully!")
 
@@ -522,7 +520,6 @@ def build__socialNetwork__gcp(args):
 # DEPLOY
 #-----------------
 def deploy(args):
-  args['app_dir'] = DSB_PATH / args['app']
   getattr(sys.modules[__name__], f"deploy__{args['app']}__{_deploy_type(args)}")(args)
   print(f"[INFO] {args['app']} deployed successfully!")
 
@@ -1767,16 +1764,8 @@ if __name__ == "__main__":
   args = vars(main_parser.parse_args())
   command = args.pop('which')
 
-  # change application dir if necessary
-  # if Path.cwd().name != args['app']:
-  #   os.chdir(Path.cwd().joinpath(args['app']))
-
-  deploy_type = _deploy_type(args)
-  args['configuration_path'] = None
-  if 'latest' in args and args['latest']:
-    args['configuration_path'] = _last_configuration('socialNetwork', deploy_type)
-  if 'file' in args and args['file']:
-    args['configuration_path'] = ROOT_PATH / args['file'].name
+  # set the app dir
+  args['app_dir'] = DSB_PATH / args['app']
 
   # call parser method dynamically
   getattr(sys.modules[__name__], command)(args)
