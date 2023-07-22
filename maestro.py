@@ -1301,7 +1301,7 @@ def clean(args):
   print(f"[INFO] {args['app']} @ {args['deploy_type']} cleaned successfully!")
 
 def clean__socialNetwork__local(args):
-  from plumbum.cmd import docker_compose
+  from plumbum.cmd import docker_compose, docker
 
   with local.cwd(args['deploy_dir']):
     # first stops the containers
@@ -1328,6 +1328,9 @@ def clean__socialNetwork__local(args):
           '-f', 'docker-compose-portainer.yml',
           'down'
         ] & FG
+
+  # extra clean operations
+  docker['system', 'prune', '--volumes'] & FG
 
 def clean__socialNetwork__gsd(args):
   from plumbum.cmd import ansible_playbook
