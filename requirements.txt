@@ -2,7 +2,6 @@ Faker
 plumbum
 python-dateutil
 pandas
-aiohttp
 requests
 pyyaml
 jinja2

@@ -37,28 +37,31 @@ LAST_DEPLOY_FILE = { dp : DEPLOY_PATH / dp / f".last.yml" for dp in DEPLOY_TYPES
 DSB_APPLICATIONS = [
   'socialNetwork',
 ]
-AVAILABLE_WKLD_ENDPOINTS = {
+MAIN_ZONE = 'eu'
+WKLD_ENDPOINTS = {
   'socialNetwork': {
+    # wrk2
     'compose-post': {
       'type': 'wrk2',
-      'uri': 'wrk2-api/post/compose',
       'script_path': './wrk2/scripts/social-network/compose-post.lua',
+      'uri': 'wrk2-api/post/compose',
     },
     'read-home-timeline': {
       'type': 'wrk2',
-      'uri': 'wrk2-api/home-timeline/read',
       'script_path': './wrk2/scripts/social-network/read-home-timeline.lua',
+      'uri': 'wrk2-api/home-timeline/read',
     },
     'read-user-timeline': {
       'type': 'wrk2',
-      'uri': 'wrk2-api/user-timeline/read',
       'script_path': './wrk2/scripts/social-network/read-user-timeline.lua',
+      'uri': 'wrk2-api/user-timeline/read',
     },
     'sequence-compose-post-read-home-timeline': {
       'type': 'wrk2',
-      'uri': 'wrk2-api/home-timeline/read',
       'script_path': './wrk2/scripts/social-network/sequence-compose-post-read-home-timeline.lua',
+      'uri': 'wrk2-api/home-timeline/read',
     },
+    # python scripts
     'antipode-wht-error': {
       'type': 'python',
       'script_path': './scripts/antipode-wht-error.py',
@@ -71,6 +74,8 @@ AVAILABLE_WKLD_ENDPOINTS = {
     },
   },
 }
+
+
 SOCIAL_NETWORK_DEFAULT_SERVICES = {
   'services': {
     'social-graph-service': 'HOSTNAME',
@@ -352,26 +357,26 @@ def _wait_url_up(url):
   while urllib.request.urlopen(url).getcode() != 200:
     True
 
-def _wrk2_args(args, endpoint, hosts):
+def _wrk2_params(args, endpoint, hosts):
   import urllib.parse
 
-  wrk2_args = []
+  params = []
   # optional arguments
   if 'connections' in args:
-    wrk2_args.extend(['--connections', args['connections']])
+    params.extend(['--connections', args['connections']])
   if 'duration' in args:
-    wrk2_args.extend(['--duration', f"{args['duration']}s"])
+    params.extend(['--duration', f"{args['duration']}s"])
   if 'threads' in args:
-    wrk2_args.extend(['--threads', args['threads']])
+    params.extend(['--threads', args['threads']])
   # add rate --> requests per second
-  wrk2_args.extend(['--rate', args['rate']])
+  params.extend(['--rate', args['rate']])
   # we want latency by default
-  wrk2_args.append('--latency')
+  params.append('--latency')
   # we add the script -- relative to wrk2 folder
-  wrk2_args.extend(['--script', './' + endpoint['script_path'].split('wrk2/')[1]])
+  params.extend(['--script', './' + endpoint['script_path'].split('wrk2/scripts/')[1]])
   # url host
-  wrk2_args.append(urllib.parse.urljoin(hosts[MAIN_ZONE], endpoint['uri']))
-  return wrk2_args
+  params.append(urllib.parse.urljoin(hosts[MAIN_ZONE], endpoint['uri']))
+  return params
 
 #-----------------
 # BUILD
@@ -988,253 +993,72 @@ def run__socialNetwork__gcp(args):
 
 
 #-----------------
-# CLEAN
-#-----------------
-def clean(args):
-  args['tag'] = _get_last(args['deploy_type'], 'tag')
-  args['deploy_dir'] = _deploy_dir(args)
-
-  getattr(sys.modules[__name__], f"clean__{args['app']}__{ args['deploy_type'] }")(args)
-  print(f"[INFO] {args['app']} @ {args['deploy_type']} cleaned successfully!")
-
-def clean__socialNetwork__local(args):
-  from plumbum.cmd import docker_compose
-
-  with local.cwd(args['deploy_dir']):
-    # first stops the containers
-    docker_compose['stop'] & FG
-
-    if args['strong']:
-      docker_compose['down',
-        '--rmi', 'all', '--remove-orphans'
-      ] & FG
-    else:
-      docker_compose['down'] & FG
-
-  if _get_last(args['deploy_type'], 'portainer'):
-    _put_last('gcp', 'portainer', False)
-    with local.cwd(ROOT_PATH / 'local'):
-      if args['strong']:
-        docker_compose[
-          '-f', 'docker-compose-portainer.yml',
-          'down',
-          '--rmi', 'all', '--remove-orphans'
-        ] & FG
-      else:
-        docker_compose[
-          '-f', 'docker-compose-portainer.yml',
-          'down'
-        ] & FG
-
-def clean__socialNetwork__gsd(args):
-  from plumbum.cmd import ansible_playbook
-
-  # change path to playbooks folder
-  os.chdir(ROOT_PATH / 'deploy' / 'gsd')
-
-  ansible_playbook['undeploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
-  print("[INFO] Clean Complete!")
-
-def clean__socialNetwork__gcp(args):
-  _force_docker()
-  from plumbum.cmd import ansible_playbook
-
-  # change path to playbooks folder
-  os.chdir(ROOT_PATH / 'deploy' / 'gcp')
-  inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'inventory.cfg')
-  client_inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'clients_inventory.cfg')
-
-  # delete instances if strong enabled
-  if args['strong']:
-    ansible_playbook['undeploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
-    for name,host in inventory.items():
-      _gcp_delete_instance(host['zone'], name)
-    for name,host in client_inventory.items():
-      _gcp_delete_instance(host['zone'], name)
-  elif args['restart']:
-    ansible_playbook['restart-dsb.yml', '-i', 'inventory.cfg', '-i', 'clients_inventory.cfg', '-e', 'app=socialNetwork'] & FG
-  else:
-    ansible_playbook['undeploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
-
-  print("[INFO] Clean Complete!")
-
-
-#-----------------
-# DELAY
-#-----------------
-def delay(args):
-  try:
-    delay_ms = f"{args['delay']}ms"
-    jitter_ms = f"{args['jitter']}ms"
-    correlation_per = f"{args['correlation']}%"
-    distribution = args['distribution']
-    # params - TODO move to args later on
-    src_container = 'post-storage-mongodb-eu'
-    dst_container = 'post-storage-mongodb-us'
-
-    if args['jitter'] == 0 and distribution in [ 'normal', 'pareto', 'paretonormal']:
-      raise argparse.ArgumentTypeError(f"{distribution} does not allow for 0ms jitter")
-
-    getattr(sys.modules[__name__], f"delay__{args['app']}__{ args['deploy_type'] }")(args, src_container, dst_container, delay_ms, jitter_ms, correlation_per, distribution)
-  except KeyboardInterrupt:
-    # if the compose gets interrupted we just continue with the script
-    pass
-
-def delay__socialNetwork__local(args, src_container, dst_container, delay_ms, jitter_ms, correlation_per, distribution):
-  from plumbum.cmd import docker_compose, docker
-
-  os.chdir(DSB_PATH / args['app'])
-
-  # get ip of the dst container since delay only accepts ips
-  # dst_container_id = docker_compose['ps', '-q', dst_container].run()[1].rstrip()
-  # dst_ip = docker['inspect', '-f' '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}', dst_container_id].run()[1].rstrip()
-
-  docker_compose['exec', src_container, '/home/delay.sh', dst_container, delay_ms, jitter_ms, correlation_per, distribution] & FG
-
-def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms, jitter_ms, correlation_per, distribution):
-  _force_docker()
-  from plumbum.cmd import ansible_playbook
-  from jinja2 import Environment
-  import textwrap
-
-  filepath = args['configuration_path']
-  with open(filepath, 'r') as f_conf:
-    conf = yaml.load(f_conf, Loader=yaml.FullLoader)
-
-  # change path to playbooks folder
-  os.chdir(ROOT_PATH / 'deploy' / 'gcp')
-
-  # checks the configuration for the hostname of the delayed container
-  src_gcp_container_hostname = conf['nodes'][conf['services'][src_container]]['hostname']
-  dst_gcp_container_hostname = conf['nodes'][conf['services'][dst_container]]['hostname']
-
-  template = """
-    ---
-    - hosts: {{ src_gcp_container_hostname }}
-      gather_facts: no
-      become: yes
-      any_errors_fatal: true
-      vars:
-        - stack: deathstarbench
-        - app: socialNetwork
-
-      tasks:
-        - name: Delay container
-          shell: >
-              docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) /home/delay.sh {{ dst_container }} {{ delay_ms }} {{ jitter_ms }} {{ correlation_per }} {{ distribution }}
-          ignore_errors: True
-
-        - name: Spam ping to kickstart delay
-          shell: >
-              docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) bash -c "for IP in \$(dig +short post-storage-mongodb-us); do ping -c 200 -f \$IP 2>&1 | tail -1; done"
-          register: ping_out
-
-        - name: Check delay
-          debug:
-            msg: {% raw %}"{{ ping_out.stdout.split('\\n') }}"{% endraw %}
-
-  """
-  playbook = Environment().from_string(template).render({
-    'src_gcp_container_hostname': src_gcp_container_hostname,
-    'dst_gcp_container_hostname': dst_gcp_container_hostname,
-    'src_container': src_container,
-    'dst_container': dst_container,
-    'delay_ms': delay_ms,
-    'jitter_ms': jitter_ms,
-    'correlation_per': correlation_per,
-    'distribution': distribution,
-  })
-
-  playbook_filepath = ROOT_PATH / 'deploy' / 'gcp' / 'delay-container.yml'
-  with open(playbook_filepath, 'w') as f:
-    # remove empty lines and dedent for easier read
-    f.write(textwrap.dedent(playbook))
-    print(f"[SAVED] '{playbook_filepath}'")
-
-  ansible_playbook['delay-container.yml',
-    '-e', 'app=socialNetwork',
-  ] & FG
-  print("[INFO] Delay Complete!")
-
-
-#-----------------
 # WORKLOAD
 #-----------------
 def wkld(args):
-  import urllib.parse
+  args['tag'] = _get_last(args['deploy_type'], 'tag')
+  args['deploy_dir'] = _deploy_dir(args)
+  args['endpoint'] = WKLD_ENDPOINTS[args['app']][args['Endpoint']]
 
-  try:
-    app_dir = DSB_PATH / args['app']
-    os.chdir(app_dir)
+  getattr(sys.modules[__name__], f"wkld__{args['deploy_type']}__run")(args)
+  print(f"[INFO] {args['app']} @ {args['deploy_type']} workload ran successfully!")
 
-    # get host for each zone
-    hosts, main_host = getattr(sys.modules[__name__], f"wkld__{args['app']}__{ args['deploy_type'] }__hosts")(args)
+def wkld__local__run(args):
+  from plumbum.cmd import docker, python
 
-    endpoint = AVAILABLE_WKLD_ENDPOINTS[args['app']][args['Endpoint']]
 
-    if endpoint['type'] == 'wrk2':
-      # build arguments
-      wrk2_args = []
-      if 'connections' in args:
-        wrk2_args.extend(['--connections', args['connections']])
-      if 'duration' in args:
-        wrk2_args.extend(['--duration', f"{args['duration']}s"])
-      if 'threads' in args:
-        wrk2_args.extend(['--threads', args['threads']])
+  hosts = {
+    'eu': 'http://127.0.0.1:8080',
+    'us': 'http://127.0.0.1:8082',
+  }
+  endpoint = args['endpoint']
 
-      # add arguments to previous list
-      wrk2_args.extend([
-          '--latency',
-          '--script', str(Path('/scripts') / endpoint['script_path'].split('wrk2/scripts/')[1]),
-          urllib.parse.urljoin(hosts[main_host], endpoint['uri']),
-          '--rate', args['requests']
-        ])
-
-      # add docker arguments
-      wkld_args = ['run',
-        '--rm', '-it',
-        '--network=host',
-        '-v', f"{app_dir / 'wrk2' / 'scripts'}:/scripts",
-      ]
-      # add hosts env vars
-      for k,v in hosts.items():
-        wkld_args += [ '-e', f"{k.upper()}"]
-      # add remaing vars
-      wkld_args += [
+  # run workload in deploy dir
+  with local.cwd(args['deploy_dir']):
+    # run workload for hosts as env variables
+    with local.env(**{ f"HOST_{k.upper()}":v for k,v in hosts.items() }):
+      if endpoint['type'] == 'wrk2':
+        wrk2_params = _wrk2_params(args, endpoint, hosts)
+        # prepare docker env
+        docker_args = ['run',
+          '--rm', '-it',
+          '--network=host',
+          '-v', f"{local.cwd}/wrk2/scripts:/scripts",
+          '-v', f"{local.cwd}/datasets:/scripts/datasets",
+          '-w', '/scripts',
+        ]
+        # add hosts env vars so the previous vars that were set are captured
+        for k,v in hosts.items():
+          docker_args += [ '-e', f"HOST_{k.upper()}"]
+        # add remaing args
+        docker_args += [
           'wrk2:antipode',
-          './wrk'
-        ] + wrk2_args
-
-      exe_path = 'docker'
-      exe_args = wkld_args
-
-    elif endpoint['type'] == 'python':
-      script_path = app_dir.joinpath(endpoint['script_path'])
-      exe_path = 'python3'
-      exe_args = [script_path] + endpoint['args']
-
-    elif endpoint['type'] == 'bash':
-      script_path = app_dir.joinpath(endpoint['script_path'])
-      exe_path = 'bash'
-      exe_args = [script_path]
-
-    # run workload for endpoint with correct env variables
-    for k,v in hosts.items():
-      k = k.upper()
-      local.env[k] = v
-    getattr(sys.modules[__name__], f"wkld__{ args['deploy_type'] }__run")(args, hosts, exe_path, exe_args)
-
-  except KeyboardInterrupt:
-    # if the compose gets interrupted we just continue with the script
-    pass
+          '/wrk2/wrk'
+        ] + wrk2_params
+        # run docker
+      elif endpoint['type'] == 'python':
+        script_path = local.cwd / endpoint['script_path']
+        # prepare docker env
+        docker_args = ['run',
+          '--rm', '-it',
+          '--network=host',
+          '-v', f"{script_path.parent}:/scripts",
+          '-v', f"{local.cwd}/datasets:/scripts/datasets",
+          '-w', '/scripts',
+        ]
+        # add hosts env vars so the previous vars that were set are captured
+        for k,v in hosts.items():
+          docker_args += [ '-e', f"HOST_{k.upper()}"]
+        # add remaing args
+        docker_args += [
+          'python-wkld:antipode',
+          'python',
+          script_path.name,
+        ] + endpoint['args']
+      # run docker
+      docker[docker_args] & FG
 
 #-----------------
-
-def wkld__socialNetwork__local__hosts(args):
-  return {
-    'host_eu': 'http://127.0.0.1:8080',
-    'host_us': 'http://127.0.0.1:8082',
-  }, 'host_eu'
 
 def wkld__socialNetwork__gsd__hosts(args):
   # eu - nginx-thrift: node23
@@ -1244,26 +1068,19 @@ def wkld__socialNetwork__gsd__hosts(args):
   with open(filepath, 'r') as f_conf:
     conf = yaml.load(f_conf, Loader=yaml.FullLoader)
     return {
-      'host_eu': f"http://{conf['services']['nginx-thrift']}:8080",
-      'host_us': f"http://{conf['services']['nginx-thrift-us']}:8082",
-    }, 'host_eu'
+      'eu': f"http://{conf['services']['nginx-thrift']}:8080",
+      'us': f"http://{conf['services']['nginx-thrift-us']}:8082",
+    }
 
 def wkld__socialNetwork__gcp__hosts(args):
   filepath = args['configuration_path']
   with open(filepath, 'r') as f_conf:
     conf = yaml.load(f_conf, Loader=yaml.FullLoader)
     inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'inventory.cfg')
-
     return {
-      'host_eu': f"http://{inventory[conf['services']['nginx-thrift']]['external_ip']}:8080",
-      'host_us': f"http://{inventory[conf['services']['nginx-thrift-us']]['external_ip']}:8082",
-    }, 'host_eu'
-
-#-----------------
-
-def wkld__local__run(args, hosts, exe_path, exe_args):
-  exe = local[exe_path]
-  exe[exe_args] & FG
+      'eu': f"http://{inventory[conf['services']['nginx-thrift']]['external_ip']}:8080",
+      'us': f"http://{inventory[conf['services']['nginx-thrift-us']]['external_ip']}:8082",
+    }
 
 def wkld__gsd__run(args, hosts, exe_path, exe_args):
   from plumbum.cmd import ansible_playbook
@@ -1310,8 +1127,8 @@ def wkld__gsd__run(args, hosts, exe_path, exe_args):
     {{exe_path}} {{exe_args}} | tee {{out_filepath}}
   """
   script = Environment().from_string(template).render({
-    'host_eu': hosts['host_eu'],
-    'host_us': hosts['host_us'],
+    'host_eu': hosts['eu'],
+    'host_us': hosts['us'],
     'exe_path': exe_path,
     'exe_args': ' '.join([str(e) for e in exe_args]),
     'out_folder': out_folder,
@@ -1446,8 +1263,8 @@ def wkld__gcp__run(args, hosts, exe_path, exe_args):
       {{exe_path}} {{exe_args}} | tee {{wkld_folderpath}}/{{wkld_filename}}
     """
     script = Environment().from_string(template).render({
-      'host_eu': hosts['host_eu'],
-      'host_us': hosts['host_us'],
+      'host_eu': hosts['eu'],
+      'host_us': hosts['us'],
       'exe_path': exe_path,
       'exe_args': ' '.join([str(e) for e in exe_args]),
       'wkld_folderpath': wkld_folderpath,
@@ -1472,6 +1289,175 @@ def wkld__gcp__run(args, hosts, exe_path, exe_args):
   else:
     input("Press any key when workload is done ...")
 
+
+#-----------------
+# CLEAN
+#-----------------
+def clean(args):
+  args['tag'] = _get_last(args['deploy_type'], 'tag')
+  args['deploy_dir'] = _deploy_dir(args)
+
+  getattr(sys.modules[__name__], f"clean__{args['app']}__{args['deploy_type']}")(args)
+  print(f"[INFO] {args['app']} @ {args['deploy_type']} cleaned successfully!")
+
+def clean__socialNetwork__local(args):
+  from plumbum.cmd import docker_compose
+
+  with local.cwd(args['deploy_dir']):
+    # first stops the containers
+    docker_compose['stop'] & FG
+
+    if args['strong']:
+      docker_compose['down',
+        '--rmi', 'all', '--remove-orphans'
+      ] & FG
+    else:
+      docker_compose['down'] & FG
+
+  if _get_last(args['deploy_type'], 'portainer'):
+    _put_last('gcp', 'portainer', False)
+    with local.cwd(ROOT_PATH / 'local'):
+      if args['strong']:
+        docker_compose[
+          '-f', 'docker-compose-portainer.yml',
+          'down',
+          '--rmi', 'all', '--remove-orphans'
+        ] & FG
+      else:
+        docker_compose[
+          '-f', 'docker-compose-portainer.yml',
+          'down'
+        ] & FG
+
+def clean__socialNetwork__gsd(args):
+  from plumbum.cmd import ansible_playbook
+
+  # change path to playbooks folder
+  os.chdir(ROOT_PATH / 'deploy' / 'gsd')
+
+  ansible_playbook['undeploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
+  print("[INFO] Clean Complete!")
+
+def clean__socialNetwork__gcp(args):
+  _force_docker()
+  from plumbum.cmd import ansible_playbook
+
+  # change path to playbooks folder
+  os.chdir(ROOT_PATH / 'deploy' / 'gcp')
+  inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'inventory.cfg')
+  client_inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'clients_inventory.cfg')
+
+  # delete instances if strong enabled
+  if args['strong']:
+    ansible_playbook['undeploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
+    for name,host in inventory.items():
+      _gcp_delete_instance(host['zone'], name)
+    for name,host in client_inventory.items():
+      _gcp_delete_instance(host['zone'], name)
+  elif args['restart']:
+    ansible_playbook['restart-dsb.yml', '-i', 'inventory.cfg', '-i', 'clients_inventory.cfg', '-e', 'app=socialNetwork'] & FG
+  else:
+    ansible_playbook['undeploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
+
+  print("[INFO] Clean Complete!")
+
+
+#-----------------
+# DELAY
+#-----------------
+def delay(args):
+  try:
+    delay_ms = f"{args['delay']}ms"
+    jitter_ms = f"{args['jitter']}ms"
+    correlation_per = f"{args['correlation']}%"
+    distribution = args['distribution']
+    # params - TODO move to args later on
+    src_container = 'post-storage-mongodb-eu'
+    dst_container = 'post-storage-mongodb-us'
+
+    if args['jitter'] == 0 and distribution in [ 'normal', 'pareto', 'paretonormal']:
+      raise argparse.ArgumentTypeError(f"{distribution} does not allow for 0ms jitter")
+
+    getattr(sys.modules[__name__], f"delay__{args['app']}__{args['deploy_type']}")(args, src_container, dst_container, delay_ms, jitter_ms, correlation_per, distribution)
+  except KeyboardInterrupt:
+    # if the compose gets interrupted we just continue with the script
+    pass
+
+def delay__socialNetwork__local(args, src_container, dst_container, delay_ms, jitter_ms, correlation_per, distribution):
+  from plumbum.cmd import docker_compose, docker
+
+  os.chdir(DSB_PATH / args['app'])
+
+  # get ip of the dst container since delay only accepts ips
+  # dst_container_id = docker_compose['ps', '-q', dst_container].run()[1].rstrip()
+  # dst_ip = docker['inspect', '-f' '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}', dst_container_id].run()[1].rstrip()
+
+  docker_compose['exec', src_container, '/home/delay.sh', dst_container, delay_ms, jitter_ms, correlation_per, distribution] & FG
+
+def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms, jitter_ms, correlation_per, distribution):
+  _force_docker()
+  from plumbum.cmd import ansible_playbook
+  from jinja2 import Environment
+  import textwrap
+
+  filepath = args['configuration_path']
+  with open(filepath, 'r') as f_conf:
+    conf = yaml.load(f_conf, Loader=yaml.FullLoader)
+
+  # change path to playbooks folder
+  os.chdir(ROOT_PATH / 'deploy' / 'gcp')
+
+  # checks the configuration for the hostname of the delayed container
+  src_gcp_container_hostname = conf['nodes'][conf['services'][src_container]]['hostname']
+  dst_gcp_container_hostname = conf['nodes'][conf['services'][dst_container]]['hostname']
+
+  template = """
+    ---
+    - hosts: {{ src_gcp_container_hostname }}
+      gather_facts: no
+      become: yes
+      any_errors_fatal: true
+      vars:
+        - stack: deathstarbench
+        - app: socialNetwork
+
+      tasks:
+        - name: Delay container
+          shell: >
+              docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) /home/delay.sh {{ dst_container }} {{ delay_ms }} {{ jitter_ms }} {{ correlation_per }} {{ distribution }}
+          ignore_errors: True
+
+        - name: Spam ping to kickstart delay
+          shell: >
+              docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) bash -c "for IP in \$(dig +short post-storage-mongodb-us); do ping -c 200 -f \$IP 2>&1 | tail -1; done"
+          register: ping_out
+
+        - name: Check delay
+          debug:
+            msg: {% raw %}"{{ ping_out.stdout.split('\\n') }}"{% endraw %}
+
+  """
+  playbook = Environment().from_string(template).render({
+    'src_gcp_container_hostname': src_gcp_container_hostname,
+    'dst_gcp_container_hostname': dst_gcp_container_hostname,
+    'src_container': src_container,
+    'dst_container': dst_container,
+    'delay_ms': delay_ms,
+    'jitter_ms': jitter_ms,
+    'correlation_per': correlation_per,
+    'distribution': distribution,
+  })
+
+  playbook_filepath = ROOT_PATH / 'deploy' / 'gcp' / 'delay-container.yml'
+  with open(playbook_filepath, 'w') as f:
+    # remove empty lines and dedent for easier read
+    f.write(textwrap.dedent(playbook))
+    print(f"[SAVED] '{playbook_filepath}'")
+
+  ansible_playbook['delay-container.yml',
+    '-e', 'app=socialNetwork',
+  ] & FG
+  print("[INFO] Delay Complete!")
 
 
 #-----------------
@@ -1783,11 +1769,11 @@ if __name__ == "__main__":
   wkld_parser = subparsers.add_parser('wkld', help='Run HTTP workload generator')
   # comparable with wrk2 > ./wrk options
   wkld_parser.add_argument('-N', '--node', action='append', default=[], help="Run wkld on the following nodes")
-  wkld_parser.add_argument('-E', '--Endpoint', choices=[ e for app_list in AVAILABLE_WKLD_ENDPOINTS.values() for e in app_list ], help="Endpoints to generate workload for")
+  wkld_parser.add_argument('-E', '--Endpoint', choices=[ e for app_list in WKLD_ENDPOINTS.values() for e in app_list ], help="Endpoints to generate workload for")
   wkld_parser.add_argument('-c', '--connections', type=int, default=1, help="Connections to keep open")
   wkld_parser.add_argument('-d', '--duration', type=int, default='1', help="Duration in s")
   wkld_parser.add_argument('-t', '--threads', type=int, default=1, help="Number of threads")
-  wkld_parser.add_argument('-r', '--requests', type=int, default=1, required=True, help="Work rate (throughput) in request per second total")
+  wkld_parser.add_argument('-r', '--rate', type=int, default=1, required=True, help="Work rate (throughput) in request per second total")
   # Existing options:
   # -D, --dist             fixed, exp, norm, zipf
   # -P                     Print each request's latency
