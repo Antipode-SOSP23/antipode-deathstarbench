@@ -834,47 +834,46 @@ def deploy__socialNetwork__gcp(args):
 # RUN
 #-----------------
 def run(args):
-  try:
-    getattr(sys.modules[__name__], f"run__{args['app']}__{_deploy_type(args)}")(args)
-  except KeyboardInterrupt:
-    # if the compose gets interrupted we just continue with the script
-    pass
+  args['tag'] = _get_last(args['deploy_type'], 'tag')
+  args['deploy_dir'] = _deploy_dir(args)
+  _put_last(args['deploy_type'], 'portainer', False)
+
+  getattr(sys.modules[__name__], f"run__{args['app']}__{ args['deploy_type'] }")(args)
+  print(f"[INFO] {args['app']} @ {args['deploy_type']} ran successfully!")
 
 def run__socialNetwork__local(args):
-  from plumbum import FG, BG
-  from plumbum.cmd import docker_compose, docker
-  import yaml
+  from plumbum import FG
+  from plumbum.cmd import docker_compose, ls
+  from jinja2 import Environment
+  import textwrap
 
-  run_args = ['up']
-  # run containers in detached mode
-  if args['detached']:
-    run_args.insert(1, '-d')
+  print(f"[INFO] Generating .env ...", flush=True)
+  with local.cwd(args['deploy_dir']):
+    template = """
+    ANTIPODE={{ antipode }}
+    """
+    template_render = Environment().from_string(template).render({
+      'antipode': int(args['antipode']),
+    })
+    with open('.env', 'w') as f:
+      # remove empty lines and dedent for easier read
+      f.write(textwrap.dedent(template_render))
+    print(f"[SAVED] '.env'")
 
-  # copy docker-compose to the deploy file
-  with open(DSB_PATH / args['app'] / 'docker-compose.yml', 'r') as f_compose:
-    compose = yaml.load(f_compose, Loader=yaml.FullLoader)
-    # update file with dynamic run flags
-    # TODO CHANGE ANTIPODE FLAG
-    for _,e in compose['services'].items():
-      if ('environment' in e) and ('ANTIPODE' in e['environment']):
-        e['environment']['ANTIPODE'] = int(args['antipode']) # 0 - False, 1 - True
+    # Fixes error: "WARNING: Connection pool is full, discarding connection: localhost"
+    # ref: https://github.com/docker/compose/issues/6638#issuecomment-576743595
+    with local.env(COMPOSE_PARALLEL_LIMIT=99):
+      docker_compose['up',
+        '-d' if args['detached'] else None, # run containers in detached mode
+      ] & FG
 
-  # create deployable docker compose
-  new_compose_filepath = ROOT_PATH / 'deploy' / 'local' / 'docker-compose.yml'
-  with open(new_compose_filepath, 'w') as f_compose:
-    yaml.dump(compose, f_compose)
-  print(f"[SAVED] '{new_compose_filepath}'")
-
-  env_args = [
-    '--project-directory', str(DSB_PATH / args['app']),
-    '--file', str(new_compose_filepath),
-  ]
-
-  # Fixes error: "WARNING: Connection pool is full, discarding connection: localhost"
-  # ref: https://github.com/docker/compose/issues/6638#issuecomment-576743595
-  with local.env(COMPOSE_PARALLEL_LIMIT=99):
-    os.chdir(DSB_PATH / args['app'])
-    docker_compose[env_args + run_args] & FG
+  if args['portainer']:
+    with local.cwd(ROOT_PATH / 'local'):
+      docker_compose[
+        '-f', 'docker-compose-portainer.yml',
+        'up',
+        '-d' # portainer always runs detached
+      ] & FG
 
 def run__socialNetwork__gsd(args):
   from plumbum.cmd import ansible_playbook
@@ -1700,10 +1699,11 @@ def info(args):
 def info__socialNetwork__local(args):
   from plumbum.cmd import hostname
 
-  public_ip = hostname['-I']().split()[1]
-  print(f"Jaeger:\thttp://{public_ip}:16686")
-  print(f"RabbitMQ-EU:\thttp://{public_ip}:15672 \t (admin / admin)")
-  print(f"RabbitMQ-US:\thttp://{public_ip}:15673 \t (admin / admin)")
+  ip = hostname['-I']().split()[0]
+  print(f"Jaeger:\thttp://{ip}:16686")
+  print(f"Portainer:\thttp://{ip}:9000\t\t(admin / antipode)")
+  print(f"RabbitMQ-EU:\thttp://{ip}:15672\t\t(admin / admin)")
+  print(f"RabbitMQ-US:\thttp://{ip}:15673\t\t(admin / admin)")
 
 
 #-----------------
@@ -1734,6 +1734,11 @@ if __name__ == "__main__":
   # info application
   info_parser = subparsers.add_parser('info', help='Deployment info')
 
+  # run application
+  run_parser = subparsers.add_parser('run', help='Run application')
+  run_parser.add_argument('-portainer', action='store_true', help="Run with portainer enabled")
+  run_parser.add_argument('-detached', action='store_true', help="detached")
+  run_parser.add_argument('-antipode', action='store_true', default=False, help="enable antipode")
 
   # clean application
   clean_parser = subparsers.add_parser('clean', help='Clean application')
