@@ -813,16 +813,6 @@ def run__socialNetwork__local(args):
   from plumbum.cmd import docker_compose, docker
   import yaml
 
-  if args['info']:
-    from plumbum.cmd import hostname
-
-    public_ip = hostname['-I']().split()[1]
-    print(f"Jaeger:\thttp://{public_ip}:16686")
-    print(f"RabbitMQ-EU:\thttp://{public_ip}:15672")
-    print(f"RabbitMQ-US:\thttp://{public_ip}:15673")
-    print("\tuser: admin / pwd: admin")
-    return
-
   run_args = ['up']
   # run containers in detached mode
   if args['detached']:
@@ -1677,6 +1667,23 @@ def gather__socialNetwork__gcp__client_output(args):
   os.chdir(ROOT_PATH / 'deploy' / 'gcp')
   ansible_playbook['wkld-gather.yml', '-i', 'clients_inventory_local.cfg', '-e', 'app=socialNetwork', '-e', f'conf_path={conf_path}' ] & FG
 
+
+#-----------------
+# INFO
+#-----------------
+def info(args):
+  getattr(sys.modules[__name__], f"info__{args['app']}__{_deploy_type(args)}")(args)
+  print(f"[INFO] Shown {args['app']} information!")
+
+def info__socialNetwork__local(args):
+  from plumbum.cmd import hostname
+
+  public_ip = hostname['-I']().split()[1]
+  print(f"Jaeger:\thttp://{public_ip}:16686")
+  print(f"RabbitMQ-EU:\thttp://{public_ip}:15672 \t (admin / admin)")
+  print(f"RabbitMQ-US:\thttp://{public_ip}:15673 \t (admin / admin)")
+
+
 #-----------------
 # MAIN
 #-----------------
@@ -1688,8 +1695,8 @@ if __name__ == "__main__":
   main_parser.add_argument("app", choices=AVAILABLE_APPLICATIONS, help="Application to deploy")
   # deploy type group
   deploy_type_group = main_parser.add_mutually_exclusive_group(required=True)
-  for dt,info in AVAILABLE_DEPLOY_TYPES.items():
-    deploy_type_group.add_argument(f'--{dt}', action='store_true', help=f"Deploy app to {info['name']}")
+  for dt, dt_info in AVAILABLE_DEPLOY_TYPES.items():
+    deploy_type_group.add_argument(f'--{dt}', action='store_true', help=f"Deploy app to {dt_info['name']}")
   # different commands
   subparsers = main_parser.add_subparsers(help='commands', dest='which')
 
@@ -1760,6 +1767,8 @@ if __name__ == "__main__":
   gather_parser.add_argument('-n', '--num-requests', type=int, default=None, help="Gather this amount of requests skipping the input")
   gather_parser.add_argument('-t', '--tag', type=str, default=None, help="Tags the input with the following string")
 
+  # info application
+  info_parser = subparsers.add_parser('info', help='Deployment info')
 
   args = vars(main_parser.parse_args())
   command = args.pop('which')
