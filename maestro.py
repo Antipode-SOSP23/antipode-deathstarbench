@@ -127,9 +127,9 @@ SOCIAL_NETWORK_DEFAULT_SERVICES = {
   }
 }
 CONTAINERS_BUILT = [
-  'mongodb-delayed',
-  'mongodb-setup',
-  'rabbitmq-setup',
+  'mongodb-delayed:4.4.6',
+  'mongodb-setup:4.4.6',
+  'rabbitmq-setup:3.8',
   'yg397/openresty-thrift:latest',
   'yg397/social-network-microservices:antipode',
   'wrk2:antipode',
@@ -346,61 +346,86 @@ def _wait_url_up(url):
 # BUILD
 #-----------------
 def build(args):
-  try:
-    getattr(sys.modules[__name__], f"build__{args['app']}__{_deploy_type(args)}")(args)
-  except KeyboardInterrupt:
-    # if the compose gets interrupted we just continue with the script
-    pass
+  args['app_dir'] = DSB_PATH / args['app']
+
+  getattr(sys.modules[__name__], f"build__{args['app']}__{_deploy_type(args)}")(args)
+  print(f"[INFO] {args['app']} built successfully!")
 
 def build__socialNetwork__local(args):
-  from plumbum.cmd import docker
-
-  app_dir = DSB_PATH / args['app']
-  os.chdir(app_dir)
+  from plumbum.cmd import docker, docker_compose
 
   # By default, the DeathStarBench pulls its containers from docker hub.
   # We need to override these with our modified X-Trace containers.
   # To do this, we will manually build the docker images for the modified components.
 
-  thrift_microservice_args = ['build', '-t', 'yg397/thrift-microservice-deps:antipode', '.']
-  openresty_thrift_args = ['build', '-t', 'yg397/openresty-thrift', '-f', 'xenial/Dockerfile', '.']
-
-  # adds --no-cache option to build so it rebuilds everything
-  if args['strong']:
-    thrift_microservice_args.insert(1, '--no-cache')
-    openresty_thrift_args.insert(1, '--no-cache')
-
   # Build the base docker image that contains all the dependent libraries.  We modified this to add X-Trace and protocol buffers.
-  os.chdir(app_dir.joinpath('docker', 'thrift-microservice-deps', 'cpp'))
-  docker[thrift_microservice_args] & FG
+  with local.cwd(args['app_dir'] / 'docker' / 'thrift-microservice-deps' / 'cpp'):
+    docker['build',
+      '--no-cache' if args['strong'] else None,
+      '-t', 'yg397/thrift-microservice-deps:antipode',
+      '.'
+    ] & FG
 
   # Build the nginx server image. We modified this to add X-Trace and protocol buffers
-  os.chdir(app_dir.joinpath('docker', 'openresty-thrift'))
-  docker[openresty_thrift_args] & FG
+  with local.cwd(args['app_dir'] / 'docker' / 'openresty-thrift'):
+    docker['build',
+      '--no-cache' if args['strong'] else None,
+      '-f', 'xenial/Dockerfile',
+      '-t', 'yg397/openresty-thrift:latest',
+      '.'
+    ] & FG
 
   # Build the mongodb-delayed setup image
-  os.chdir(app_dir.joinpath('docker', 'mongodb-delayed'))
-  docker['build', '-t', 'mongodb-delayed', '.'] & FG
+  with local.cwd(args['app_dir'] / 'docker' / 'mongodb-delayed'):
+    docker['build',
+      '--no-cache' if args['strong'] else None,
+      '-t', 'mongodb-delayed:4.4.6',
+      '.'
+    ] & FG
 
   # Build the mongodb setup image
-  os.chdir(app_dir.joinpath('docker', 'mongodb-setup', 'post-storage'))
-  docker['build', '-t', 'mongodb-setup', '.'] & FG
+  with local.cwd(args['app_dir'] / 'docker' / 'mongodb-setup' / 'post-storage'):
+    docker['build',
+      '--no-cache' if args['strong'] else None,
+      '-t', 'mongodb-setup:4.4.6',
+      '.'
+    ] & FG
 
   # Build the rabbitmq setup image
-  os.chdir(app_dir.joinpath('docker', 'rabbitmq-setup', 'write-home-timeline'))
-  docker['build', '-t', 'rabbitmq-setup', '.'] & FG
+  with local.cwd(args['app_dir'] / 'docker' / 'rabbitmq-setup' / 'write-home-timeline'):
+    docker['build',
+      '--no-cache' if args['strong'] else None,
+      '-t', 'rabbitmq-setup:3.8',
+      '.'
+    ] & FG
 
   # Build the wrk2 image
-  os.chdir(app_dir.joinpath('docker', 'wrk2'))
-  docker['build', '-t', 'wrk2:antipode', '.'] & FG
+  with local.cwd(args['app_dir'] / 'docker' / 'wrk2'):
+    docker['build',
+      '--no-cache' if args['strong'] else None,
+      '-t', 'wrk2:antipode',
+      '.'
+    ] & FG
 
   # Build the redis-im image
-  os.chdir(app_dir.joinpath('docker', 'redis-im'))
-  docker['build', '-t', 'redis-im:antipode', '.'] & FG
+  with local.cwd(args['app_dir'] / 'docker' / 'redis-im'):
+    docker['build',
+      '--no-cache' if args['strong'] else None,
+      '-t', 'redis-im:antipode',
+      '.'
+    ] & FG
 
   # Build the social network docker image
-  os.chdir(app_dir)
-  docker['build', '-t', 'yg397/social-network-microservices:antipode', '.'] & FG
+  with local.cwd(args['app_dir']):
+    docker['build',
+      '--no-cache' if args['strong'] else None,
+      '-t', 'yg397/social-network-microservices:antipode',
+      '.'
+    ] & FG
+
+  # Build docker compose images to download remaining images
+  with local.cwd(args['app_dir']):
+    docker_compose['build'] & FG
 
 def build__socialNetwork__gsd(args):
   from plumbum.cmd import ansible_playbook
@@ -497,11 +522,9 @@ def build__socialNetwork__gcp(args):
 # DEPLOY
 #-----------------
 def deploy(args):
-  try:
-    getattr(sys.modules[__name__], f"deploy__{args['app']}__{_deploy_type(args)}")(args)
-  except KeyboardInterrupt:
-    # if the compose gets interrupted we just continue with the script
-    pass
+  args['app_dir'] = DSB_PATH / args['app']
+  getattr(sys.modules[__name__], f"deploy__{args['app']}__{_deploy_type(args)}")(args)
+  print(f"[INFO] {args['app']} deployed successfully!")
 
 def deploy__socialNetwork__local(args):
   return None

@@ -118,7 +118,7 @@ services:
         constraints:
         - node.hostname == saturn1
     hostname: media-mongodb
-    image: mongo
+    image: mongo:4.4.6
     networks:
     - deathstarbench_network
     volumes:
@@ -214,7 +214,7 @@ services:
         constraints:
         - node.hostname == saturn1
     hostname: post-storage-mongodb-eu
-    image: mongo
+    image: mongo:4.4.6
     networks:
     - deathstarbench_network
     volumes:
@@ -234,7 +234,7 @@ services:
         condition: on-failure
         delay: 1s
         max_attempts: 3
-    image: mongodb-setup
+    image: mongo:4.4.6-db-setup
     networks:
     - deathstarbench_network
     restart: 'no'
@@ -246,7 +246,7 @@ services:
         constraints:
         - node.hostname == saturn1
     hostname: post-storage-mongodb-us
-    image: mongo
+    image: mongo:4.4.6
     networks:
     - deathstarbench_network
     volumes:
@@ -287,7 +287,7 @@ services:
         constraints:
         - node.hostname == saturn1
     hostname: social-graph-mongodb
-    image: mongo
+    image: mongo:4.4.6
     networks:
     - deathstarbench_network
     volumes:
@@ -355,7 +355,7 @@ services:
         constraints:
         - node.hostname == saturn1
     hostname: url-shorten-mongodb
-    image: mongo
+    image: mongo:4.4.6
     networks:
     - deathstarbench_network
     volumes:
@@ -402,7 +402,7 @@ services:
         constraints:
         - node.hostname == saturn1
     hostname: user-mongodb
-    image: mongo
+    image: mongo:4.4.6
     networks:
     - deathstarbench_network
     volumes:
@@ -427,7 +427,7 @@ services:
       placement:
         constraints:
         - node.hostname == saturn1
-    image: mongo
+    image: mongo:4.4.6
     networks:
     - deathstarbench_network
     volumes:

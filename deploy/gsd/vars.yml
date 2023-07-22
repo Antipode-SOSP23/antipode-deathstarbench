@@ -5,7 +5,7 @@ apps:
         - jaegertracing/all-in-one:latest
         - jonathanmace/xtrace-server:latest
         - memcached:latest
-        - mongo:latest
+        - mongo:4.4.6
         - mrvautin/adminmongo:latest
         - rabbitmq:3.8
         - rabbitmq:3.8-management
@@ -15,9 +15,9 @@ apps:
         # this container can be built but we are not modifying this version
         - yg397/media-frontend:xenial
       to_build:
-        - rabbitmq-setup
-        - mongodb-setup
-        - mongodb-delayed
+        - rabbitmq-setup:3.8
+        - mongodb-setup:4.4.6
+        - mongodb-delayed:4.4.6
         - yg397/openresty-thrift:latest
         - yg397/social-network-microservices:antipode
         - wrk2:antipode
