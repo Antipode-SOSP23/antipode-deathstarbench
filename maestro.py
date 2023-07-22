@@ -359,7 +359,7 @@ def build__socialNetwork__local(args):
   # Build the base docker image that contains all the dependent libraries.  We modified this to add X-Trace and protocol buffers.
   with local.cwd(args['app_dir'] / 'docker' / 'thrift-microservice-deps' / 'cpp'):
     docker['build',
-      '--no-cache' if args['strong'] else None,
+      '--no-cache' if args['no_cache'] else None,
       '-t', 'yg397/thrift-microservice-deps:antipode',
       '.'
     ] & FG
@@ -367,7 +367,7 @@ def build__socialNetwork__local(args):
   # Build the nginx server image. We modified this to add X-Trace and protocol buffers
   with local.cwd(args['app_dir'] / 'docker' / 'openresty-thrift'):
     docker['build',
-      '--no-cache' if args['strong'] else None,
+      '--no-cache' if args['no_cache'] else None,
       '-f', 'xenial/Dockerfile',
       '-t', 'yg397/openresty-thrift:latest',
       '.'
@@ -376,7 +376,7 @@ def build__socialNetwork__local(args):
   # Build the mongodb-delayed setup image
   with local.cwd(args['app_dir'] / 'docker' / 'mongodb-delayed'):
     docker['build',
-      '--no-cache' if args['strong'] else None,
+      '--no-cache' if args['no_cache'] else None,
       '-t', 'mongodb-delayed:4.4.6',
       '.'
     ] & FG
@@ -384,7 +384,7 @@ def build__socialNetwork__local(args):
   # Build the mongodb setup image
   with local.cwd(args['app_dir'] / 'docker' / 'mongodb-setup' / 'post-storage'):
     docker['build',
-      '--no-cache' if args['strong'] else None,
+      '--no-cache' if args['no_cache'] else None,
       '-t', 'mongodb-setup:4.4.6',
       '.'
     ] & FG
@@ -392,7 +392,7 @@ def build__socialNetwork__local(args):
   # Build the rabbitmq setup image
   with local.cwd(args['app_dir'] / 'docker' / 'rabbitmq-setup' / 'write-home-timeline'):
     docker['build',
-      '--no-cache' if args['strong'] else None,
+      '--no-cache' if args['no_cache'] else None,
       '-t', 'rabbitmq-setup:3.8',
       '.'
     ] & FG
@@ -400,7 +400,7 @@ def build__socialNetwork__local(args):
   # Build the wrk2 image
   with local.cwd(args['app_dir'] / 'docker' / 'wrk2'):
     docker['build',
-      '--no-cache' if args['strong'] else None,
+      '--no-cache' if args['no_cache'] else None,
       '-t', 'wrk2:antipode',
       '.'
     ] & FG
@@ -408,7 +408,7 @@ def build__socialNetwork__local(args):
   # Build the redis-im image
   with local.cwd(args['app_dir'] / 'docker' / 'redis-im'):
     docker['build',
-      '--no-cache' if args['strong'] else None,
+      '--no-cache' if args['no_cache'] else None,
       '-t', 'redis-im:antipode',
       '.'
     ] & FG
@@ -416,7 +416,7 @@ def build__socialNetwork__local(args):
   # Build the social network docker image
   with local.cwd(args['app_dir']):
     docker['build',
-      '--no-cache' if args['strong'] else None,
+      '--no-cache' if args['no_cache'] else None,
       '-t', 'yg397/social-network-microservices:antipode',
       '.'
     ] & FG
@@ -1702,6 +1702,7 @@ if __name__ == "__main__":
 
   # build application
   build_parser = subparsers.add_parser('build', help='Build application')
+  build_parser.add_argument('--no-cache', action='store_true', help="Rebuild all containers")
 
   # deploy application
   deploy_parser = subparsers.add_parser('deploy', help='Deploy application')
