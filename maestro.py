@@ -221,6 +221,9 @@ def _get_last(deploy_type,k):
   # default last files entries
   return doc.get(k)
 
+def _deploy_dir(args):
+  return DEPLOY_PATH / args['deploy_type'] / args['app'] / args['tag']
+
 def _index_containing_substring(the_list, substring):
   for i, s in enumerate(the_list):
     if substring in s:
@@ -534,17 +537,33 @@ def build__socialNetwork__gcp(args):
 # DEPLOY
 #-----------------
 def deploy(args):
-  getattr(sys.modules[__name__], f"deploy__{args['app']}__{_deploy_type(args)}")(args)
-  print(f"[INFO] {args['app']} deployed successfully!")
+  _put_last(args['deploy_type'], 'app', args['app'])
+
+  if not args['tag']:
+    args['tag'] = f"{datetime.now().strftime('%Y%m%d%H%M')}"
+  _put_last(args['deploy_type'], 'tag', args['tag'])
+
+  args['deploy_dir'] = _deploy_dir(args)
+  _put_last(args['deploy_type'], 'config', args['config'])
+
+  getattr(sys.modules[__name__], f"deploy__{args['app']}__{ args['deploy_type'] }")(args)
+  print(f"[INFO] {args['app']} @ {args['deploy_type']} deployed successfully!")
 
 def deploy__socialNetwork__local(args):
-  return None
+  import shutil
+  from plumbum import local, FG
+
+  deploy_dir = args['deploy_dir']
+  config = _load_yaml(args['config'])
+
+  print(f"[INFO] Copying deploy files... ", flush=True)
+  os.makedirs(deploy_dir, exist_ok=True)
+  shutil.copytree(DSB_PATH / args['app'], deploy_dir, dirs_exist_ok=True)
 
 def deploy__socialNetwork__gsd(args):
   from plumbum.cmd import ansible_playbook
   from jinja2 import Environment
   import click
-  import yaml
   import textwrap
   from shutil import copyfile
 
@@ -651,7 +670,6 @@ def deploy__socialNetwork__gcp(args):
   _force_docker()
   import click
   from jinja2 import Environment
-  import yaml
   import textwrap
   from plumbum.cmd import ansible_playbook
 
@@ -882,7 +900,6 @@ def run__socialNetwork__gsd(args):
 def run__socialNetwork__gcp(args):
   _force_docker()
   from plumbum.cmd import ansible_playbook
-  import yaml
 
   filepath = args['configuration_path']
   if filepath is None:
@@ -1024,7 +1041,6 @@ def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms, jitt
   from plumbum.cmd import ansible_playbook
   from jinja2 import Environment
   import textwrap
-  import yaml
 
   filepath = args['configuration_path']
   with open(filepath, 'r') as f_conf:
@@ -1166,7 +1182,6 @@ def wkld__socialNetwork__local__hosts(args):
   }, 'host_eu'
 
 def wkld__socialNetwork__gsd__hosts(args):
-  import yaml
   # eu - nginx-thrift: node23
   # us - nginx-thrift-us: node24§
 
@@ -1179,8 +1194,6 @@ def wkld__socialNetwork__gsd__hosts(args):
     }, 'host_eu'
 
 def wkld__socialNetwork__gcp__hosts(args):
-  import yaml
-
   filepath = args['configuration_path']
   with open(filepath, 'r') as f_conf:
     conf = yaml.load(f_conf, Loader=yaml.FullLoader)
@@ -1276,7 +1289,6 @@ def wkld__gcp__run(args, hosts, exe_path, exe_args):
   from plumbum.cmd import ansible_playbook
   from jinja2 import Environment
   import textwrap
-  import yaml
 
   conf_filepath = args['configuration_path']
 
@@ -1648,16 +1660,12 @@ def gather__socialNetwork__local__jaeger_host(args):
   return f'http://{public_ip}:16686'
 
 def gather__socialNetwork__gsd__jaeger_host(args):
-  import yaml
-
   filepath = args['configuration_path']
   with open(filepath, 'r') as f_conf:
     conf = yaml.load(f_conf, Loader=yaml.FullLoader)
     return f"http://{GSD_AVAILABLE_NODES[conf['services']['jaeger']]}:16686"
 
 def gather__socialNetwork__gcp__jaeger_host(args):
-  import yaml
-
   filepath = args['configuration_path']
   with open(filepath, 'r') as f_conf:
     conf = yaml.load(f_conf, Loader=yaml.FullLoader)
@@ -1720,6 +1728,12 @@ if __name__ == "__main__":
 
   # deploy application
   deploy_parser = subparsers.add_parser('deploy', help='Deploy application')
+  deploy_parser.add_argument('-config', required=True, help="Deploy configuration")
+  deploy_parser.add_argument('-tag', required=False, help="Deploy with already existing tag")
+
+  # info application
+  info_parser = subparsers.add_parser('info', help='Deployment info')
+
 
   # clean application
   clean_parser = subparsers.add_parser('clean', help='Clean application')
@@ -1728,17 +1742,10 @@ if __name__ == "__main__":
 
   # delay application
   delay_parser = subparsers.add_parser('delay', help='Delay application')
-  # other options
   delay_parser.add_argument('-d', '--delay', type=float, default='100', help="Delay in ms")
   delay_parser.add_argument('-j', '--jitter', type=float, default='0', help="Jitter in ms")
   delay_parser.add_argument('-c', '--correlation', type=int, default='0', help="Correlation in % (0-100)")
   delay_parser.add_argument('-dist', '--distribution', choices=[ 'uniform', 'normal', 'pareto', 'paretonormal' ], default='uniform', help="Delay distribution")
-
-  # run application
-  run_parser = subparsers.add_parser('run', help='Run application')
-  run_parser.add_argument('-d', '--detached', action='store_true', help="detached")
-  run_parser.add_argument('-ant', '--antipode', action='store_true', default=False, help="enable antipode")
-  run_parser.add_argument('--info', action='store_true', help="build")
 
   # workload application
   wkld_parser = subparsers.add_parser('wkld', help='Run HTTP workload generator')
@@ -1760,9 +1767,7 @@ if __name__ == "__main__":
   gather_parser.add_argument('-n', '--num-requests', type=int, default=None, help="Gather this amount of requests skipping the input")
   gather_parser.add_argument('-t', '--tag', type=str, default=None, help="Tags the input with the following string")
 
-  # info application
-  info_parser = subparsers.add_parser('info', help='Deployment info')
-
+  ##
   args = vars(main_parser.parse_args())
   command = args.pop('which')
 
