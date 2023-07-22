@@ -952,23 +952,40 @@ def run__socialNetwork__gcp(args):
 # CLEAN
 #-----------------
 def clean(args):
-  try:
-    getattr(sys.modules[__name__], f"clean__{args['app']}__{ args['deploy_type'] }")(args)
-  except KeyboardInterrupt:
-    # if the compose gets interrupted we just continue with the script
-    pass
+  args['tag'] = _get_last(args['deploy_type'], 'tag')
+  args['deploy_dir'] = _deploy_dir(args)
+
+  getattr(sys.modules[__name__], f"clean__{args['app']}__{ args['deploy_type'] }")(args)
+  print(f"[INFO] {args['app']} @ {args['deploy_type']} cleaned successfully!")
 
 def clean__socialNetwork__local(args):
-  from plumbum.cmd import docker_compose, docker
+  from plumbum.cmd import docker_compose
 
-  os.chdir(DSB_PATH / args['app'])
-  # first stops the containers
-  docker_compose['stop'] & FG
+  with local.cwd(args['deploy_dir']):
+    # first stops the containers
+    docker_compose['stop'] & FG
 
-  if args['strong']:
-    docker_compose['down', '--rmi', 'all', '--remove-orphans'] & FG
-  else:
-    docker_compose['down'] & FG
+    if args['strong']:
+      docker_compose['down',
+        '--rmi', 'all', '--remove-orphans'
+      ] & FG
+    else:
+      docker_compose['down'] & FG
+
+  if _get_last(args['deploy_type'], 'portainer'):
+    _put_last('gcp', 'portainer', False)
+    with local.cwd(ROOT_PATH / 'local'):
+      if args['strong']:
+        docker_compose[
+          '-f', 'docker-compose-portainer.yml',
+          'down',
+          '--rmi', 'all', '--remove-orphans'
+        ] & FG
+      else:
+        docker_compose[
+          '-f', 'docker-compose-portainer.yml',
+          'down'
+        ] & FG
 
 def clean__socialNetwork__gsd(args):
   from plumbum.cmd import ansible_playbook
