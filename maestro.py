@@ -383,7 +383,7 @@ def _wrk2_args(args, endpoint, hosts):
 # BUILD
 #-----------------
 def build(args):
-  getattr(sys.modules[__name__], f"build__{args['app']}__{ args['deploy_type'] }")(args)
+  getattr(sys.modules[__name__], f"build__{args['app']}__{args['deploy_type']}")(args)
   print(f"[INFO] {args['app']} @ {args['deploy_type']} built successfully!")
 
 def build__socialNetwork__local(args):
@@ -439,6 +439,15 @@ def build__socialNetwork__local(args):
     docker['build',
       '--no-cache' if args['no_cache'] else None,
       '-t', 'wrk2:antipode',
+      '.'
+    ] & FG
+
+  # Build the python-wkld image
+  with local.cwd(args['app_dir'] / 'docker' / 'python-wkld'):
+    docker['build',
+      # '--no-cache' if args['no_cache'] else None,
+      '--no-cache',
+      '-t', 'python-wkld:antipode',
       '.'
     ] & FG
 
@@ -566,7 +575,7 @@ def deploy(args):
   args['deploy_dir'] = _deploy_dir(args)
   _put_last(args['deploy_type'], 'config', args['config'])
 
-  getattr(sys.modules[__name__], f"deploy__{args['app']}__{ args['deploy_type'] }")(args)
+  getattr(sys.modules[__name__], f"deploy__{args['app']}__{args['deploy_type']}")(args)
   print(f"[INFO] {args['app']} @ {args['deploy_type']} deployed successfully!")
 
 def deploy__socialNetwork__local(args):
@@ -854,7 +863,7 @@ def deploy__socialNetwork__gcp(args):
 # INFO
 #-----------------
 def info(args):
-  getattr(sys.modules[__name__], f"info__{args['app']}__{ args['deploy_type'] }")(args)
+  getattr(sys.modules[__name__], f"info__{args['app']}__{args['deploy_type']}")(args)
   print(f"[INFO] Shown {args['app']} @ {args['deploy_type']} information!")
 
 def info__socialNetwork__local(args):
@@ -875,7 +884,7 @@ def run(args):
   args['deploy_dir'] = _deploy_dir(args)
   _put_last(args['deploy_type'], 'portainer', False)
 
-  getattr(sys.modules[__name__], f"run__{args['app']}__{ args['deploy_type'] }")(args)
+  getattr(sys.modules[__name__], f"run__{args['app']}__{args['deploy_type']}")(args)
   print(f"[INFO] {args['app']} @ {args['deploy_type']} ran successfully!")
 
 def run__socialNetwork__local(args):
@@ -1615,7 +1624,7 @@ def gather(args):
   from plumbum.cmd import sudo, hostname
 
   print("[INFO] Gather client output ...")
-  getattr(sys.modules[__name__], f"gather__{args['app']}__{ args['deploy_type'] }__client_output")(args)
+  getattr(sys.modules[__name__], f"gather__{args['app']}__{args['deploy_type']}__client_output")(args)
 
   print("[INFO] Gather jaeger traces ...")
   # pd.set_option('display.float_format', lambda x: '%.3f' % x)
@@ -1646,7 +1655,7 @@ def gather(args):
 
   try:
     # get host for each zone
-    jaeger_host = getattr(sys.modules[__name__], f"gather__{args['app']}__{ args['deploy_type'] }__jaeger_host")(args)
+    jaeger_host = getattr(sys.modules[__name__], f"gather__{args['app']}__{args['deploy_type']}__jaeger_host")(args)
 
     limit = args['num_requests']
     if limit is None:
