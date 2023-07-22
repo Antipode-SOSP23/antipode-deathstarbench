@@ -361,7 +361,7 @@ def _wait_url_up(url):
 #-----------------
 def build(args):
   getattr(sys.modules[__name__], f"build__{args['app']}__{ args['deploy_type'] }")(args)
-  print(f"[INFO] {args['app']} built successfully!")
+  print(f"[INFO] {args['app']} @ {args['deploy_type']} built successfully!")
 
 def build__socialNetwork__local(args):
   from plumbum.cmd import docker, docker_compose
@@ -1687,7 +1687,7 @@ def gather__socialNetwork__gcp__client_output(args):
 #-----------------
 def info(args):
   getattr(sys.modules[__name__], f"info__{args['app']}__{ args['deploy_type'] }")(args)
-  print(f"[INFO] Shown {args['app']} information!")
+  print(f"[INFO] Shown {args['app']} @ {args['deploy_type']} information!")
 
 def info__socialNetwork__local(args):
   from plumbum.cmd import hostname
