@@ -358,6 +358,26 @@ def _wait_url_up(url):
   while urllib.request.urlopen(url).getcode() != 200:
     True
 
+def _wrk2_args(args, endpoint, hosts):
+  import urllib.parse
+
+  wrk2_args = []
+  # optional arguments
+  if 'connections' in args:
+    wrk2_args.extend(['--connections', args['connections']])
+  if 'duration' in args:
+    wrk2_args.extend(['--duration', f"{args['duration']}s"])
+  if 'threads' in args:
+    wrk2_args.extend(['--threads', args['threads']])
+  # add rate --> requests per second
+  wrk2_args.extend(['--rate', args['rate']])
+  # we want latency by default
+  wrk2_args.append('--latency')
+  # we add the script -- relative to wrk2 folder
+  wrk2_args.extend(['--script', './' + endpoint['script_path'].split('wrk2/')[1]])
+  # url host
+  wrk2_args.append(urllib.parse.urljoin(hosts[MAIN_ZONE], endpoint['uri']))
+  return wrk2_args
 
 #-----------------
 # BUILD
