@@ -2,17 +2,14 @@
 
 import os
 from plumbum import local
-from plumbum import FG, BG
-from plumbum.cmd import python3
+from plumbum import FG
 from datetime import datetime
 import time
-import glob
-import re
+import yaml
 from pprint import pprint as pp
 from pathlib import Path
 import sys
 import stat
-import itertools
 
 #-----------------
 # Pre-requisites
