@@ -1702,7 +1702,9 @@ if __name__ == "__main__":
 
   # build application
   build_parser = subparsers.add_parser('build', help='Build application')
-  build_parser.add_argument('--strong', action='store_true', help="rebuild all containers")
+
+  # deploy application
+  deploy_parser = subparsers.add_parser('deploy', help='Deploy application')
 
   # clean application
   clean_parser = subparsers.add_parser('clean', help='Clean application')
@@ -1711,10 +1713,6 @@ if __name__ == "__main__":
 
   # delay application
   delay_parser = subparsers.add_parser('delay', help='Delay application')
-  # deploy file group
-  deploy_file_group = delay_parser.add_mutually_exclusive_group(required=False)
-  deploy_file_group.add_argument('-l', '--latest', action='store_true', help="Use last used deploy file")
-  deploy_file_group.add_argument('-f', '--file', type=argparse.FileType('r', encoding='UTF-8'), help="Use specific file")
   # other options
   delay_parser.add_argument('-d', '--delay', type=float, default='100', help="Delay in ms")
   delay_parser.add_argument('-j', '--jitter', type=float, default='0', help="Jitter in ms")
@@ -1726,25 +1724,9 @@ if __name__ == "__main__":
   run_parser.add_argument('-d', '--detached', action='store_true', help="detached")
   run_parser.add_argument('-ant', '--antipode', action='store_true', default=False, help="enable antipode")
   run_parser.add_argument('--info', action='store_true', help="build")
-  # deploy file group
-  deploy_file_group = run_parser.add_mutually_exclusive_group(required=False)
-  deploy_file_group.add_argument('-l', '--latest', action='store_true', help="Use last used deploy file")
-  deploy_file_group.add_argument('-f', '--file', type=argparse.FileType('r', encoding='UTF-8'), help="Use specific file")
-
-  # deploy application
-  deploy_parser = subparsers.add_parser('deploy', help='Deploy application')
-  # deploy file group
-  deploy_file_group = deploy_parser.add_mutually_exclusive_group(required=False)
-  deploy_file_group.add_argument('-n', '--new', action='store_true', help="Build a new deploy file")
-  deploy_file_group.add_argument('-l', '--latest', action='store_true', help="Use last used deploy file")
-  deploy_file_group.add_argument('-f', '--file', type=argparse.FileType('r', encoding='UTF-8'), help="Use specific file")
 
   # workload application
   wkld_parser = subparsers.add_parser('wkld', help='Run HTTP workload generator')
-  # deploy file group
-  deploy_file_group = wkld_parser.add_mutually_exclusive_group(required=False)
-  deploy_file_group.add_argument('-l', '--latest', action='store_true', help="Use last used deploy file")
-  deploy_file_group.add_argument('-f', '--file', type=argparse.FileType('r', encoding='UTF-8'), help="Use specific file")
   # comparable with wrk2 > ./wrk options
   wkld_parser.add_argument('-N', '--node', action='append', default=[], help="Run wkld on the following nodes")
   wkld_parser.add_argument('-E', '--Endpoint', choices=[ e for app_list in AVAILABLE_WKLD_ENDPOINTS.values() for e in app_list ], help="Endpoints to generate workload for")
@@ -1760,10 +1742,6 @@ if __name__ == "__main__":
 
   # gather application
   gather_parser = subparsers.add_parser('gather', help='Gather data from application')
-  # deploy file group
-  deploy_file_group = gather_parser.add_mutually_exclusive_group(required=False)
-  deploy_file_group.add_argument('-l', '--latest', action='store_true', help="Use last used deploy file")
-  deploy_file_group.add_argument('-f', '--file', type=argparse.FileType('r', encoding='UTF-8'), help="Use specific file")
   gather_parser.add_argument('-n', '--num-requests', type=int, default=None, help="Gather this amount of requests skipping the input")
   gather_parser.add_argument('-t', '--tag', type=str, default=None, help="Tags the input with the following string")
 
