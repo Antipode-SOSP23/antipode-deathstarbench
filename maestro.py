@@ -221,17 +221,11 @@ def _get_last(deploy_type,k):
   # default last files entries
   return doc.get(k)
 
-
 def _index_containing_substring(the_list, substring):
   for i, s in enumerate(the_list):
     if substring in s:
       return i
   return -1
-
-def _deploy_type(args):
-  for k in DEPLOY_TYPES.keys():
-    if args[k]: return k
-  return None
 
 def _remove_prefix(text, prefix):
   if text.startswith(prefix):
@@ -361,11 +355,12 @@ def _wait_url_up(url):
   while urllib.request.urlopen(url).getcode() != 200:
     True
 
+
 #-----------------
 # BUILD
 #-----------------
 def build(args):
-  getattr(sys.modules[__name__], f"build__{args['app']}__{_deploy_type(args)}")(args)
+  getattr(sys.modules[__name__], f"build__{args['app']}__{ args['deploy_type'] }")(args)
   print(f"[INFO] {args['app']} built successfully!")
 
 def build__socialNetwork__local(args):
@@ -942,7 +937,7 @@ def run__socialNetwork__gcp(args):
 #-----------------
 def clean(args):
   try:
-    getattr(sys.modules[__name__], f"clean__{args['app']}__{_deploy_type(args)}")(args)
+    getattr(sys.modules[__name__], f"clean__{args['app']}__{ args['deploy_type'] }")(args)
   except KeyboardInterrupt:
     # if the compose gets interrupted we just continue with the script
     pass
@@ -1008,7 +1003,7 @@ def delay(args):
     if args['jitter'] == 0 and distribution in [ 'normal', 'pareto', 'paretonormal']:
       raise argparse.ArgumentTypeError(f"{distribution} does not allow for 0ms jitter")
 
-    getattr(sys.modules[__name__], f"delay__{args['app']}__{_deploy_type(args)}")(args, src_container, dst_container, delay_ms, jitter_ms, correlation_per, distribution)
+    getattr(sys.modules[__name__], f"delay__{args['app']}__{ args['deploy_type'] }")(args, src_container, dst_container, delay_ms, jitter_ms, correlation_per, distribution)
   except KeyboardInterrupt:
     # if the compose gets interrupted we just continue with the script
     pass
@@ -1102,7 +1097,7 @@ def wkld(args):
     os.chdir(app_dir)
 
     # get host for each zone
-    hosts, main_host = getattr(sys.modules[__name__], f"wkld__{args['app']}__{_deploy_type(args)}__hosts")(args)
+    hosts, main_host = getattr(sys.modules[__name__], f"wkld__{args['app']}__{ args['deploy_type'] }__hosts")(args)
 
     endpoint = AVAILABLE_WKLD_ENDPOINTS[args['app']][args['Endpoint']]
 
@@ -1156,7 +1151,7 @@ def wkld(args):
     for k,v in hosts.items():
       k = k.upper()
       local.env[k] = v
-    getattr(sys.modules[__name__], f"wkld__{_deploy_type(args)}__run")(args, hosts, exe_path, exe_args)
+    getattr(sys.modules[__name__], f"wkld__{ args['deploy_type'] }__run")(args, hosts, exe_path, exe_args)
 
   except KeyboardInterrupt:
     # if the compose gets interrupted we just continue with the script
@@ -1555,7 +1550,7 @@ def gather(args):
   from plumbum.cmd import sudo, hostname
 
   print("[INFO] Gather client output ...")
-  getattr(sys.modules[__name__], f"gather__{args['app']}__{_deploy_type(args)}__client_output")(args)
+  getattr(sys.modules[__name__], f"gather__{args['app']}__{ args['deploy_type'] }__client_output")(args)
 
   print("[INFO] Gather jaeger traces ...")
   # pd.set_option('display.float_format', lambda x: '%.3f' % x)
@@ -1586,7 +1581,7 @@ def gather(args):
 
   try:
     # get host for each zone
-    jaeger_host = getattr(sys.modules[__name__], f"gather__{args['app']}__{_deploy_type(args)}__jaeger_host")(args)
+    jaeger_host = getattr(sys.modules[__name__], f"gather__{args['app']}__{ args['deploy_type'] }__jaeger_host")(args)
 
     limit = args['num_requests']
     if limit is None:
@@ -1691,7 +1686,7 @@ def gather__socialNetwork__gcp__client_output(args):
 # INFO
 #-----------------
 def info(args):
-  getattr(sys.modules[__name__], f"info__{args['app']}__{_deploy_type(args)}")(args)
+  getattr(sys.modules[__name__], f"info__{args['app']}__{ args['deploy_type'] }")(args)
   print(f"[INFO] Shown {args['app']} information!")
 
 def info__socialNetwork__local(args):
@@ -1773,6 +1768,13 @@ if __name__ == "__main__":
 
   # set the app dir
   args['app_dir'] = DSB_PATH / args['app']
+
+  # parse deploy type
+  args['deploy_type'] = None
+  for dt in DEPLOY_TYPES:
+    if args[dt]:
+      args['deploy_type'] = dt
+    del args[dt]
 
   # call parser method dynamically
   getattr(sys.modules[__name__], command)(args)
