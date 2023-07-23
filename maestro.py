@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
 import os
-from plumbum import local
-from plumbum import FG
+from plumbum import local, path, FG
 from datetime import datetime
 import time
 import yaml
@@ -27,6 +26,7 @@ import stat
 ROOT_PATH = Path(os.path.abspath(os.path.dirname(sys.argv[0])))
 DSB_PATH = ROOT_PATH / 'DeathStarBench'
 DEPLOY_PATH = ROOT_PATH / 'deploy'
+GATHER_PATH = ROOT_PATH / 'gather'
 # available deploys
 DEPLOY_TYPES = {
   'local': { 'name': 'Localhost' },
@@ -1411,81 +1411,6 @@ def wkld__gcp__run(args, hosts, exe_path, exe_args):
 
 
 #-----------------
-# CLEAN
-#-----------------
-def clean(args):
-  args['tag'] = _get_last(args['deploy_type'], 'tag')
-  args['deploy_dir'] = _deploy_dir(args)
-
-  getattr(sys.modules[__name__], f"clean__{args['app']}__{args['deploy_type']}")(args)
-  print(f"[INFO] {args['app']} @ {args['deploy_type']} cleaned successfully!")
-
-def clean__socialNetwork__local(args):
-  from plumbum.cmd import docker_compose, docker
-
-  with local.cwd(args['deploy_dir']):
-    # first stops the containers
-    docker_compose['stop'] & FG
-
-    if args['strong']:
-      docker_compose['down',
-        '--rmi', 'all', '--remove-orphans'
-      ] & FG
-    else:
-      docker_compose['down'] & FG
-
-  if _get_last(args['deploy_type'], 'portainer'):
-    _put_last('gcp', 'portainer', False)
-    with local.cwd(ROOT_PATH / 'local'):
-      if args['strong']:
-        docker_compose[
-          '-f', 'docker-compose-portainer.yml',
-          'down',
-          '--rmi', 'all', '--remove-orphans'
-        ] & FG
-      else:
-        docker_compose[
-          '-f', 'docker-compose-portainer.yml',
-          'down'
-        ] & FG
-
-  # extra clean operations
-  docker['system', 'prune', '-f', '--volumes'] & FG
-
-def clean__socialNetwork__gsd(args):
-  from plumbum.cmd import ansible_playbook
-
-  # change path to playbooks folder
-  os.chdir(ROOT_PATH / 'deploy' / 'gsd')
-
-  ansible_playbook['undeploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
-  print("[INFO] Clean Complete!")
-
-def clean__socialNetwork__gcp(args):
-  _force_docker()
-  from plumbum.cmd import ansible_playbook
-
-  # change path to playbooks folder
-  os.chdir(ROOT_PATH / 'deploy' / 'gcp')
-  inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'inventory.cfg')
-  client_inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'clients_inventory.cfg')
-
-  # delete instances if strong enabled
-  if args['strong']:
-    ansible_playbook['undeploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
-    for name,host in inventory.items():
-      _gcp_delete_instance(host['zone'], name)
-    for name,host in client_inventory.items():
-      _gcp_delete_instance(host['zone'], name)
-  elif args['restart']:
-    ansible_playbook['restart-dsb.yml', '-i', 'inventory.cfg', '-i', 'clients_inventory.cfg', '-e', 'app=socialNetwork'] & FG
-  else:
-    ansible_playbook['undeploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
-
-  print("[INFO] Clean Complete!")
-
-
-#-----------------
 # GATHER
 #-----------------
 def _fetch_span_tag(tags, tag_to_search):
@@ -1622,82 +1547,69 @@ def _fetch_mongo_change_stream_traces(jaeger_host, limit):
 
   return df, missing_info
 
+#-----------------
 
 def gather(args):
+  from plumbum.cmd import sudo
   import pandas as pd
-  from plumbum.cmd import sudo, hostname
-
-  print("[INFO] Gather client output ...")
-  getattr(sys.modules[__name__], f"gather__{args['app']}__{args['deploy_type']}__client_output")(args)
-
-  print("[INFO] Gather jaeger traces ...")
   # pd.set_option('display.float_format', lambda x: '%.3f' % x)
   pd.set_option('display.html.table_schema', True)
   pd.set_option('display.precision', 5)
 
-  # no default configuration use deploy type
-  configuration = _deploy_type(args)
-  if args['configuration_path']:
-    configuration = Path(args['configuration_path']).stem
+  args['tag'] = _get_last(args['deploy_type'], 'tag')
+  args['deploy_dir'] = _deploy_dir(args)
 
+  print("[INFO] Download client output ...")
+  getattr(sys.modules[__name__], f"gather__{args['app']}__{args['deploy_type']}__download")(args)
+
+  print("[INFO] Gather jaeger traces ...")
+  # load jaeger host
+  jaeger_host = _service_ip(args['deploy_type'], 'jaeger')
+  # build gather path
+  rqs = _get_last(args['deploy_type'], 'wkld_rate')
+  gather_tag = f"{Path(_get_last(args['deploy_type'], 'config')).stem}-{rqs}{'-antipode' if _get_last(args['deploy_type'], 'antipode') else ''}"
+  wkld_tag =_get_last(args['deploy_type'], 'wkld_tag')
+  gather_path = GATHER_PATH / args['deploy_type'] / args['app'] / gather_tag / wkld_tag
   # create folder if needed
-  wkld_data_parent_path = ROOT_PATH / 'deploy' / 'wkld-data' / configuration
-  os.makedirs(wkld_data_parent_path, exist_ok=True)
-
-  # get latest conf directory
-  if os.listdir(wkld_data_parent_path):
-    wkld_data_path = max(wkld_data_parent_path.iterdir())
-  else:
-    # create folder with current timestamp if none exist
-    wkld_data_path = wkld_data_parent_path / time.strftime('%Y%m%d%H%M%S')
-    os.makedirs(wkld_data_path)
-
+  os.makedirs(gather_path, exist_ok=True)
   # force chmod of that dir
-  sudo['chmod', 777, wkld_data_path] & FG
+  sudo['chmod', 777, gather_path] & FG
 
-  os.chdir(wkld_data_path)
+  # set number of requests to gather from jaeger
+  limit = args['num_requests']
+  if limit is None:
+    limit = int(input(f"Visit {jaeger_host}/dependencies to check number of flowing requests: "))
 
-  try:
-    # get host for each zone
-    jaeger_host = getattr(sys.modules[__name__], f"gather__{args['app']}__{args['deploy_type']}__jaeger_host")(args)
+  # read traces from jaeger
+  df, missing_info = _fetch_compose_post_service_traces(jaeger_host, limit)
 
-    limit = args['num_requests']
-    if limit is None:
-      limit = int(input(f"Visit {jaeger_host}/dependencies to check number of flowing requests: "))
+  # merge result with mongodb change stream consistency diff information
+  # consistency_df,_ = _fetch_mongo_change_stream_traces(jaeger_host, limit)
+  # df = df.join(consistency_df.set_index('post_id'), on='post_id')
 
-    tag = args['tag']
-    if tag is None:
-      tag = input(f"Input any tag for this gather: ")
+  # remove unecessary columns
+  del df['post_id']
+  del df['poststorage_post_written_ts']
+  del df['poststorage_read_notification_ts']
+  del df['wht_start_queue_ts']
+  del df['wht_start_worker_ts']
 
-    df,missing_info = _fetch_compose_post_service_traces(jaeger_host, limit)
-
-    # merge result with mongodb change stream consistency diff information
-    # consistency_df,_ = _fetch_mongo_change_stream_traces(jaeger_host, limit)
-    # df = df.join(consistency_df.set_index('post_id'), on='post_id')
-
-    # remove unecessary columns
-    del df['post_id']
-    del df['poststorage_post_written_ts']
-    del df['poststorage_read_notification_ts']
-    del df['wht_start_queue_ts']
-    del df['wht_start_worker_ts']
-
+  print(f"[INFO] Save '{local.cwd}/traces.csv'")
+  with local.cwd(gather_path):
     # save to csv so we can plot a timeline later
     df.to_csv('traces.csv', sep=';', mode='w')
-    print(f"[INFO] Save '{wkld_data_path}/traces.csv'")
 
-    # compute extra info to output in info file
-    consistent_df = df[df['consistency_bool'] == True]
-    inconsistent_df = df[df['consistency_bool'] == False]
-    inconsistent_count = len(inconsistent_df)
-    consistent_count = len(consistent_df)
+  # compute extra info to output in info file
+  consistent_df = df[df['consistency_bool'] == True]
+  inconsistent_df = df[df['consistency_bool'] == False]
+  inconsistent_count = len(inconsistent_df)
+  consistent_count = len(consistent_df)
 
-    # save to file
+  with local.cwd(gather_path):
+    # save datatraces to info
+    print(f"[INFO] Save '{local.cwd}/traces.info'\n")
     with open('traces.info', 'w') as f:
       print(f"{missing_info} messages skipped due to missing information", file=f)
-      if tag:
-        print(f"GATHER TAG: {tag}", file=f)
-      print("", file=f)
       print(f"% inconsistencies: {inconsistent_count/float(len(df))}", file=f)
       print("", file=f)
       print("TOTALS", file=f)
@@ -1709,44 +1621,34 @@ def gather(args):
       print("--- CONSISTENCIES", file=f)
       print(consistent_df.describe(percentiles=PERCENTILES_TO_PRINT), file=f)
 
-    # print file to stdout
-    print(f"[INFO] Save '{wkld_data_path}/traces.info'\n")
+    # build info file
+    print(f"[INFO] Save '{local.cwd}/info.yml'\n")
+    plot_info = {
+      'por_inconsistencies': inconsistent_count / float(len(df)),
+      'requests': limit,
+      'type': 'antipode' if _get_last(args['deploy_type'], 'antipode') else 'baseline',
+      'rps': rqs,
+      'zone_pair': _load_yaml(ROOT_PATH / _get_last(args['deploy_type'], 'config'))['replication_pair'].upper(),
+    }
+    _dump_yaml(local.cwd / 'info.yml', plot_info)
+
+    # copy last file
+    print(f"[INFO] Save '{local.cwd}/last.yml'\n")
+    path.utils.copy(Path(LAST_DEPLOY_FILE[args['deploy_type']]), local.cwd)
+
+    # print file to stdout at the end of gather
     with open('traces.info', 'r') as f:
-      print(f.read())
+        print(f.read())
+  #
+  print(f"[INFO] {args['app']} @ {args['deploy_type']} gathered successfully!")
 
-  except KeyboardInterrupt:
-    # if the compose gets interrupted we just continue with the script
-    pass
-
-def gather__socialNetwork__local__jaeger_host(args):
-  from plumbum import FG, BG
-  from plumbum.cmd import sudo, hostname
-
-  public_ip = hostname['-I']().split()[1]
-  return f'http://{public_ip}:16686'
-
-def gather__socialNetwork__gsd__jaeger_host(args):
-  filepath = args['configuration_path']
-  with open(filepath, 'r') as f_conf:
-    conf = yaml.load(f_conf, Loader=yaml.FullLoader)
-    return f"http://{GSD_AVAILABLE_NODES[conf['services']['jaeger']]}:16686"
-
-def gather__socialNetwork__gcp__jaeger_host(args):
-  filepath = args['configuration_path']
-  with open(filepath, 'r') as f_conf:
-    conf = yaml.load(f_conf, Loader=yaml.FullLoader)
-    inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'inventory.cfg')
-
-    jaeger_public_ip = inventory[conf['services']['jaeger']]['external_ip']
-    return f"http://{jaeger_public_ip}:16686"
-
-def gather__socialNetwork__local__client_output(args):
+def gather__socialNetwork__local__download(args):
   return None
 
-def gather__socialNetwork__gsd__client_output(args):
+def gather__socialNetwork__gsd__download(args):
   return None
 
-def gather__socialNetwork__gcp__client_output(args):
+def gather__socialNetwork__gcp__download(args):
   from plumbum.cmd import ansible_playbook
 
   filepath = args['configuration_path']
@@ -1754,6 +1656,81 @@ def gather__socialNetwork__gcp__client_output(args):
 
   os.chdir(ROOT_PATH / 'deploy' / 'gcp')
   ansible_playbook['wkld-gather.yml', '-i', 'clients_inventory_local.cfg', '-e', 'app=socialNetwork', '-e', f'conf_path={conf_path}' ] & FG
+
+
+#-----------------
+# CLEAN
+#-----------------
+def clean(args):
+  args['tag'] = _get_last(args['deploy_type'], 'tag')
+  args['deploy_dir'] = _deploy_dir(args)
+
+  getattr(sys.modules[__name__], f"clean__{args['app']}__{args['deploy_type']}")(args)
+  print(f"[INFO] {args['app']} @ {args['deploy_type']} cleaned successfully!")
+
+def clean__socialNetwork__local(args):
+  from plumbum.cmd import docker_compose, docker
+
+  with local.cwd(args['deploy_dir']):
+    # first stops the containers
+    docker_compose['stop'] & FG
+
+    if args['strong']:
+      docker_compose['down',
+        '--rmi', 'all', '--remove-orphans'
+      ] & FG
+    else:
+      docker_compose['down'] & FG
+
+  if _get_last(args['deploy_type'], 'portainer'):
+    _put_last('gcp', 'portainer', False)
+    with local.cwd(ROOT_PATH / 'local'):
+      if args['strong']:
+        docker_compose[
+          '-f', 'docker-compose-portainer.yml',
+          'down',
+          '--rmi', 'all', '--remove-orphans'
+        ] & FG
+      else:
+        docker_compose[
+          '-f', 'docker-compose-portainer.yml',
+          'down'
+        ] & FG
+
+  # extra clean operations
+  docker['system', 'prune', '-f', '--volumes'] & FG
+
+def clean__socialNetwork__gsd(args):
+  from plumbum.cmd import ansible_playbook
+
+  # change path to playbooks folder
+  os.chdir(ROOT_PATH / 'deploy' / 'gsd')
+
+  ansible_playbook['undeploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
+  print("[INFO] Clean Complete!")
+
+def clean__socialNetwork__gcp(args):
+  _force_docker()
+  from plumbum.cmd import ansible_playbook
+
+  # change path to playbooks folder
+  os.chdir(ROOT_PATH / 'deploy' / 'gcp')
+  inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'inventory.cfg')
+  client_inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'clients_inventory.cfg')
+
+  # delete instances if strong enabled
+  if args['strong']:
+    ansible_playbook['undeploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
+    for name,host in inventory.items():
+      _gcp_delete_instance(host['zone'], name)
+    for name,host in client_inventory.items():
+      _gcp_delete_instance(host['zone'], name)
+  elif args['restart']:
+    ansible_playbook['restart-dsb.yml', '-i', 'inventory.cfg', '-i', 'clients_inventory.cfg', '-e', 'app=socialNetwork'] & FG
+  else:
+    ansible_playbook['undeploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
+
+  print("[INFO] Clean Complete!")
 
 
 #-----------------
@@ -1812,15 +1789,14 @@ if __name__ == "__main__":
   # -p                     Print 99th latency every 0.2s to file
   # -L  --latency          Print latency statistics
 
+  # gather application
+  gather_parser = subparsers.add_parser('gather', help='Gather data from application')
+  gather_parser.add_argument('-n', '--num-requests', type=int, default=None, help="Gather this amount of requests skipping the input")
+
   # clean application
   clean_parser = subparsers.add_parser('clean', help='Clean application')
   clean_parser.add_argument('-s', '--strong', action='store_true', help="delete images")
   clean_parser.add_argument('-r', '--restart', action='store_true', help="clean deployment by restarting containers")
-
-  # gather application
-  gather_parser = subparsers.add_parser('gather', help='Gather data from application')
-  gather_parser.add_argument('-n', '--num-requests', type=int, default=None, help="Gather this amount of requests skipping the input")
-  gather_parser.add_argument('-t', '--tag', type=str, default=None, help="Tags the input with the following string")
 
   ##
   args = vars(main_parser.parse_args())
