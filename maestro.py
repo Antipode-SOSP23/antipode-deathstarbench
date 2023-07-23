@@ -4,7 +4,6 @@ import os
 from plumbum import local, path, FG
 from datetime import datetime
 import time
-import yaml
 from pprint import pprint as pp
 from pathlib import Path
 import sys
@@ -14,13 +13,17 @@ import stat
 # HELPER
 #-----------------
 def _load_yaml(path):
+  import ruamel.yaml
   with open(path, 'r') as f:
-    return yaml.safe_load(f) or {}
+    return ruamel.yaml.YAML().load(f)  or {}
 
 def _dump_yaml(path, d):
+  from ruamel.yaml import YAML
+  yaml=YAML()
   path.parent.mkdir(exist_ok=True, parents=True)
   with open(path, 'w+') as f:
-    yaml.safe_dump(d, f, default_flow_style=False)
+    yaml.default_flow_style = False
+    yaml.dump(d, f)
 
 def _put_last(deploy_type,k,v):
   doc = {}
