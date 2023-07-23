@@ -316,7 +316,7 @@ def build__socialNetwork__gsd(args):
   from plumbum.cmd import ansible_playbook
 
   # change path to playbooks folder
-  os.chdir(ROOT_PATH / 'deploy' / 'gsd')
+  os.chdir(ROOT_PATH / 'gsd')
 
   ansible_playbook['containers-build.yml', '-e', 'app=socialNetwork'] & FG
   ansible_playbook['containers-backup.yml', '-e', 'app=socialNetwork'] & FG
