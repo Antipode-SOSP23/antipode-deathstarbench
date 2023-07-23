@@ -1,3 +1,4 @@
+replication_pair: US->EU
 services:
   #----------------------------------------------------------
   # Write notifications at EU replica
