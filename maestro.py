@@ -993,6 +993,109 @@ def run__socialNetwork__gcp(args):
 
 
 #-----------------
+# DELAY
+#-----------------
+def delay(args):
+  if args['jitter'] == 0 and args['distribution'] in [ 'normal', 'pareto', 'paretonormal']:
+      raise argparse.ArgumentTypeError(f"{args['distribution']} does not allow for 0ms jitter")
+
+  args['tag'] = _get_last(args['deploy_type'], 'tag')
+  args['deploy_dir'] = _deploy_dir(args)
+
+  args['delay'] = f"{args['delay']}ms"
+  args['jitter'] = f"{args['jitter']}ms"
+  args['correlation'] = f"{args['correlation']}%"
+  args['src_container'] = 'post-storage-mongodb-eu'
+  args['dst_container'] = 'post-storage-mongodb-us'
+
+  getattr(sys.modules[__name__], f"delay__{args['app']}__{args['deploy_type']}")(args)
+  print(f"[INFO] {args['app']} @ {args['deploy_type']} delay activated successfully!")
+
+def delay__socialNetwork__local(args):
+  from plumbum.cmd import docker_compose, docker
+
+  with local.cwd(args['deploy_dir']):
+    # get ip of the dst container since delay only accepts ips
+    # dst_container_id = docker_compose['ps', '-q', dst_container].run()[1].rstrip()
+    # dst_ip = docker['inspect', '-f' '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}', dst_container_id].run()[1].rstrip()
+
+    docker_compose['exec',
+      args['src_container'],
+      '/home/delay.sh',
+      args['dst_container'],
+      args['delay'],
+      args['jitter'],
+      args['correlation'],
+      args['distribution']
+    ] & FG
+
+def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms, jitter_ms, correlation_per, distribution):
+  _force_docker()
+  from plumbum.cmd import ansible_playbook
+  from jinja2 import Environment
+  import textwrap
+
+  filepath = args['configuration_path']
+  with open(filepath, 'r') as f_conf:
+    conf = yaml.load(f_conf, Loader=yaml.FullLoader)
+
+  # change path to playbooks folder
+  os.chdir(ROOT_PATH / 'deploy' / 'gcp')
+
+  # checks the configuration for the hostname of the delayed container
+  src_gcp_container_hostname = conf['nodes'][conf['services'][src_container]]['hostname']
+  dst_gcp_container_hostname = conf['nodes'][conf['services'][dst_container]]['hostname']
+
+  template = """
+    ---
+    - hosts: {{ src_gcp_container_hostname }}
+      gather_facts: no
+      become: yes
+      any_errors_fatal: true
+      vars:
+        - stack: deathstarbench
+        - app: socialNetwork
+
+      tasks:
+        - name: Delay container
+          shell: >
+              docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) /home/delay.sh {{ dst_container }} {{ delay_ms }} {{ jitter_ms }} {{ correlation_per }} {{ distribution }}
+          ignore_errors: True
+
+        - name: Spam ping to kickstart delay
+          shell: >
+              docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) bash -c "for IP in \$(dig +short post-storage-mongodb-us); do ping -c 200 -f \$IP 2>&1 | tail -1; done"
+          register: ping_out
+
+        - name: Check delay
+          debug:
+            msg: {% raw %}"{{ ping_out.stdout.split('\\n') }}"{% endraw %}
+
+  """
+  playbook = Environment().from_string(template).render({
+    'src_gcp_container_hostname': src_gcp_container_hostname,
+    'dst_gcp_container_hostname': dst_gcp_container_hostname,
+    'src_container': src_container,
+    'dst_container': dst_container,
+    'delay_ms': delay_ms,
+    'jitter_ms': jitter_ms,
+    'correlation_per': correlation_per,
+    'distribution': distribution,
+  })
+
+  playbook_filepath = ROOT_PATH / 'deploy' / 'gcp' / 'delay-container.yml'
+  with open(playbook_filepath, 'w') as f:
+    # remove empty lines and dedent for easier read
+    f.write(textwrap.dedent(playbook))
+    print(f"[SAVED] '{playbook_filepath}'")
+
+  ansible_playbook['delay-container.yml',
+    '-e', 'app=socialNetwork',
+  ] & FG
+  print("[INFO] Delay Complete!")
+
+
+#-----------------
 # WORKLOAD
 #-----------------
 def wkld(args):
@@ -1330,7 +1433,7 @@ def clean__socialNetwork__local(args):
         ] & FG
 
   # extra clean operations
-  docker['system', 'prune', '--volumes'] & FG
+  docker['system', 'prune', '-f', '--volumes'] & FG
 
 def clean__socialNetwork__gsd(args):
   from plumbum.cmd import ansible_playbook
@@ -1363,104 +1466,6 @@ def clean__socialNetwork__gcp(args):
     ansible_playbook['undeploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
 
   print("[INFO] Clean Complete!")
-
-
-#-----------------
-# DELAY
-#-----------------
-def delay(args):
-  try:
-    delay_ms = f"{args['delay']}ms"
-    jitter_ms = f"{args['jitter']}ms"
-    correlation_per = f"{args['correlation']}%"
-    distribution = args['distribution']
-    # params - TODO move to args later on
-    src_container = 'post-storage-mongodb-eu'
-    dst_container = 'post-storage-mongodb-us'
-
-    if args['jitter'] == 0 and distribution in [ 'normal', 'pareto', 'paretonormal']:
-      raise argparse.ArgumentTypeError(f"{distribution} does not allow for 0ms jitter")
-
-    getattr(sys.modules[__name__], f"delay__{args['app']}__{args['deploy_type']}")(args, src_container, dst_container, delay_ms, jitter_ms, correlation_per, distribution)
-  except KeyboardInterrupt:
-    # if the compose gets interrupted we just continue with the script
-    pass
-
-def delay__socialNetwork__local(args, src_container, dst_container, delay_ms, jitter_ms, correlation_per, distribution):
-  from plumbum.cmd import docker_compose, docker
-
-  os.chdir(DSB_PATH / args['app'])
-
-  # get ip of the dst container since delay only accepts ips
-  # dst_container_id = docker_compose['ps', '-q', dst_container].run()[1].rstrip()
-  # dst_ip = docker['inspect', '-f' '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}', dst_container_id].run()[1].rstrip()
-
-  docker_compose['exec', src_container, '/home/delay.sh', dst_container, delay_ms, jitter_ms, correlation_per, distribution] & FG
-
-def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms, jitter_ms, correlation_per, distribution):
-  _force_docker()
-  from plumbum.cmd import ansible_playbook
-  from jinja2 import Environment
-  import textwrap
-
-  filepath = args['configuration_path']
-  with open(filepath, 'r') as f_conf:
-    conf = yaml.load(f_conf, Loader=yaml.FullLoader)
-
-  # change path to playbooks folder
-  os.chdir(ROOT_PATH / 'deploy' / 'gcp')
-
-  # checks the configuration for the hostname of the delayed container
-  src_gcp_container_hostname = conf['nodes'][conf['services'][src_container]]['hostname']
-  dst_gcp_container_hostname = conf['nodes'][conf['services'][dst_container]]['hostname']
-
-  template = """
-    ---
-    - hosts: {{ src_gcp_container_hostname }}
-      gather_facts: no
-      become: yes
-      any_errors_fatal: true
-      vars:
-        - stack: deathstarbench
-        - app: socialNetwork
-
-      tasks:
-        - name: Delay container
-          shell: >
-              docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) /home/delay.sh {{ dst_container }} {{ delay_ms }} {{ jitter_ms }} {{ correlation_per }} {{ distribution }}
-          ignore_errors: True
-
-        - name: Spam ping to kickstart delay
-          shell: >
-              docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) bash -c "for IP in \$(dig +short post-storage-mongodb-us); do ping -c 200 -f \$IP 2>&1 | tail -1; done"
-          register: ping_out
-
-        - name: Check delay
-          debug:
-            msg: {% raw %}"{{ ping_out.stdout.split('\\n') }}"{% endraw %}
-
-  """
-  playbook = Environment().from_string(template).render({
-    'src_gcp_container_hostname': src_gcp_container_hostname,
-    'dst_gcp_container_hostname': dst_gcp_container_hostname,
-    'src_container': src_container,
-    'dst_container': dst_container,
-    'delay_ms': delay_ms,
-    'jitter_ms': jitter_ms,
-    'correlation_per': correlation_per,
-    'distribution': distribution,
-  })
-
-  playbook_filepath = ROOT_PATH / 'deploy' / 'gcp' / 'delay-container.yml'
-  with open(playbook_filepath, 'w') as f:
-    # remove empty lines and dedent for easier read
-    f.write(textwrap.dedent(playbook))
-    print(f"[SAVED] '{playbook_filepath}'")
-
-  ansible_playbook['delay-container.yml',
-    '-e', 'app=socialNetwork',
-  ] & FG
-  print("[INFO] Delay Complete!")
 
 
 #-----------------
@@ -1768,6 +1773,13 @@ if __name__ == "__main__":
   run_parser.add_argument('-detached', action='store_true', help="detached")
   run_parser.add_argument('-antipode', action='store_true', default=False, help="enable antipode")
 
+  # delay application
+  delay_parser = subparsers.add_parser('delay', help='Delay application')
+  delay_parser.add_argument('-d', '--delay', type=float, default='100', help="Delay in ms")
+  delay_parser.add_argument('-j', '--jitter', type=float, default='0', help="Jitter in ms")
+  delay_parser.add_argument('-c', '--correlation', type=int, default='0', help="Correlation in % (0-100)")
+  delay_parser.add_argument('-dist', '--distribution', choices=[ 'uniform', 'normal', 'pareto', 'paretonormal' ], default='uniform', help="Delay distribution")
+
   # workload application
   wkld_parser = subparsers.add_parser('wkld', help='Run HTTP workload generator')
   # comparable with wrk2 > ./wrk options
@@ -1787,13 +1799,6 @@ if __name__ == "__main__":
   clean_parser = subparsers.add_parser('clean', help='Clean application')
   clean_parser.add_argument('-s', '--strong', action='store_true', help="delete images")
   clean_parser.add_argument('-r', '--restart', action='store_true', help="clean deployment by restarting containers")
-
-  # delay application
-  delay_parser = subparsers.add_parser('delay', help='Delay application')
-  delay_parser.add_argument('-d', '--delay', type=float, default='100', help="Delay in ms")
-  delay_parser.add_argument('-j', '--jitter', type=float, default='0', help="Jitter in ms")
-  delay_parser.add_argument('-c', '--correlation', type=int, default='0', help="Correlation in % (0-100)")
-  delay_parser.add_argument('-dist', '--distribution', choices=[ 'uniform', 'normal', 'pareto', 'paretonormal' ], default='uniform', help="Delay distribution")
 
   # gather application
   gather_parser = subparsers.add_parser('gather', help='Gather data from application')
