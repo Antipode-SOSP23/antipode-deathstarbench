@@ -1,7 +1,6 @@
-FROM python:3.7-slim
+FROM python:3.9-slim
 
-LABEL maintainer="jfloff@gsd.inesc-id.pt"
-LABEL maintainer="daniel@gsd.inesc-id.pt"
+LABEL maintainer="jfloff@dpss.inesc-id.pt"
 
 # install needed packages
 RUN set -ex ;\
@@ -10,6 +9,7 @@ RUN set -ex ;\
         # gcp
         apt-transport-https \
         ca-certificates \
+        openssl \
         gnupg \
         curl \
         jq \
@@ -21,12 +21,13 @@ RUN set -ex ;\
         ;\
     rm -rf /var/lib/apt/lists/*
 
-#-----------------------------------------------------------------------------
+#-------------
 # install gcloud
-#-----------------------------------------------------------------------------
-ARG AUTH_FILE=pluribus.json
+#-------------
+ARG AUTH_FILE=credentials.json
 COPY $AUTH_FILE /configs/$AUTH_FILE
 ENV GOOGLE_APPLICATION_CREDENTIALS /configs/$AUTH_FILE
+ENV CLOUDSDK_PYTHON=/usr/local/bin/python3
 RUN set -ex ;\
     echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list ;\
     curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add - ;\
@@ -47,9 +48,9 @@ RUN set -ex ;\
     gcloud auth configure-docker ;\
     gcloud config list
 
-#-----------------------------------------------------------------------------
+#-------------
 # install python packages
-#-----------------------------------------------------------------------------
+#-------------
 RUN set -ex ;\
     pip install --no-cache-dir --upgrade \
         google-api-python-client \
@@ -58,7 +59,11 @@ RUN set -ex ;\
         pyyaml \
         jinja2 \
         click \
-        ansible
+        ansible \
+        python-dotenv \
+        # error with mounting docker-compose bin as volume
+        docker-compose \
+        ;
 
 # switch user to install zsh with a some plugins
 CMD bash

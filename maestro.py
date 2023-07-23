@@ -80,6 +80,9 @@ SERVICE_PORTS = {
   'rabbitmq-eu': 15672,
   'rabbitmq-us': 15673,
 }
+# gcp
+GCP_DOCKER_IMAGE_NAME = 'gcp-manager:antipode'
+
 
 SOCIAL_NETWORK_DEFAULT_SERVICES = {
   'services': {
@@ -184,7 +187,6 @@ GSD_AVAILABLE_NODES = {
 GSD_SWARM_MANAGER_NODE = { 'node34': '10.100.0.44' }
 
 # GCP Constants
-GCP_DOCKER_IMAGE_NAME = 'gcp-manager:antipode'
 GCP_CREDENTIALS_FILE = ROOT_PATH / 'deploy' / 'gcp' / 'pluribus.json'
 # GCP_PROJECT_ID = 'antipode-296620'
 GCP_PROJECT_ID = 'pluribus'
@@ -247,6 +249,27 @@ def _service_ip(deploy_type, service):
   # return the ip with the common port
   return f'http://{public_ip}:{SERVICE_PORTS[service]}'
 
+def _wrk2_params(args, endpoint, hosts):
+  import urllib.parse
+
+  params = []
+  # optional arguments
+  if 'connections' in args:
+    params.extend(['--connections', args['connections']])
+  if 'duration' in args:
+    params.extend(['--duration', f"{args['duration']}s"])
+  if 'threads' in args:
+    params.extend(['--threads', args['threads']])
+  # add rate --> requests per second
+  params.extend(['--rate', args['rate']])
+  # we want latency by default
+  params.append('--latency')
+  # we add the script -- relative to wrk2 folder
+  params.extend(['--script', './' + endpoint['script_path'].split('wrk2/scripts/')[1]])
+  # url host
+  params.append(urllib.parse.urljoin(hosts[MAIN_ZONE], endpoint['uri']))
+  return params
+
 def _index_containing_substring(the_list, substring):
   for i, s in enumerate(the_list):
     if substring in s:
@@ -256,16 +279,16 @@ def _index_containing_substring(the_list, substring):
 def _is_inside_docker():
   return os.path.isfile('/.dockerenv')
 
-def _force_docker():
+def _force_gcp_docker():
   if not _is_inside_docker():
     import platform
     import subprocess
     from plumbum.cmd import docker
 
     # if image is not built, we do it
-    if docker['images', 'gcp-manager:antipode', '--format', '"{{.ID}}"']().strip() == '':
-      os.chdir(ROOT_PATH / 'deploy' / 'gcp')
-      docker['build', '-t', 'gcp-manager:antipode', '.'] & FG
+    if docker['images', GCP_DOCKER_IMAGE_NAME, '--format', '"{{.ID}}"']().strip() == '':
+      with local.cwd(ROOT_PATH / 'gcp'):
+        docker['build', '-t', GCP_DOCKER_IMAGE_NAME, '.'] & FG
 
     args = list()
     args.extend(['docker', 'run', '--rm', '-it',
@@ -274,16 +297,18 @@ def _force_docker():
       # run docker from host inside the container
       '-v', '/var/run/docker.sock:/var/run/docker.sock',
       '-v', '/usr/bin/docker:/usr/bin/docker',
-      '-v', '/usr/bin/docker-compose:/usr/bin/docker-compose',
       # mount code volumes
-      '-v', f"{ROOT_PATH / 'deploy'}:/code/deploy",
-      '-v', f"{ROOT_PATH / 'maestro.py'}:/code/maestro.py",
-      '-v', f"{ROOT_PATH / 'socialNetwork'}:/code/socialNetwork",
+      '-v', f"{ROOT_PATH}:/code",
+      '-v', f"{ROOT_PATH / 'gcp' / '.ssh'}:/root/.ssh",
       '-w', '/code',
       GCP_DOCKER_IMAGE_NAME
     ])
+    # force first argument to be a relative path -- important for plumbum local exec
+    sys.argv[0] = './' + sys.argv[0].rpartition('/')[-1]
+    # append arguments
     args = args + sys.argv
-    # print(' '.join(args))
+    # DEBUG:
+    # print(' '.join(args)); exit()
     subprocess.call(args)
     exit()
 
@@ -376,26 +401,6 @@ def _wait_url_up(url):
   while urllib.request.urlopen(url).getcode() != 200:
     True
 
-def _wrk2_params(args, endpoint, hosts):
-  import urllib.parse
-
-  params = []
-  # optional arguments
-  if 'connections' in args:
-    params.extend(['--connections', args['connections']])
-  if 'duration' in args:
-    params.extend(['--duration', f"{args['duration']}s"])
-  if 'threads' in args:
-    params.extend(['--threads', args['threads']])
-  # add rate --> requests per second
-  params.extend(['--rate', args['rate']])
-  # we want latency by default
-  params.append('--latency')
-  # we add the script -- relative to wrk2 folder
-  params.extend(['--script', './' + endpoint['script_path'].split('wrk2/scripts/')[1]])
-  # url host
-  params.append(urllib.parse.urljoin(hosts[MAIN_ZONE], endpoint['uri']))
-  return params
 
 #-----------------
 # BUILD
