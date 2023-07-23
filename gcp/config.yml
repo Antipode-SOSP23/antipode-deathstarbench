@@ -1,3 +1,2 @@
-gcp:
-  project_id: pluribus
-  default_ssh_user: jfloff
+project_id: pluribus
+default_ssh_user: jfloff

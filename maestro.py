@@ -11,16 +11,6 @@ import sys
 import stat
 
 #-----------------
-# Pre-requisites
-#
-# > sudo apt-get install libssl-dev libz-dev lua5.1 lua5.1-dev luarocks python3
-# > sudo luarocks install luasocket
-# > sudo luarocks install json-lua
-# > sudo luarocks install penlight
-# > pip install plumbum ansible
-#-----------------
-
-#-----------------
 # HELPER
 #-----------------
 def _load_yaml(path):
@@ -58,7 +48,7 @@ def _get_last(deploy_type,k):
 
 def _get_config(deploy_type, k):
   doc = _load_yaml(ROOT_PATH / deploy_type / 'config.yml')
-  return doc.get(deploy_type).get(k)
+  return doc.get(k)
 
 def _deploy_dir(args):
   return DEPLOY_PATH / args['deploy_type'] / args['app'] / args['tag']
