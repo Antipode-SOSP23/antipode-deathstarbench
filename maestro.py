@@ -74,7 +74,12 @@ WKLD_ENDPOINTS = {
     },
   },
 }
-
+SERVICE_PORTS = {
+  'jaeger': 16686,
+  'portainer': 9000,
+  'rabbitmq-eu': 15672,
+  'rabbitmq-us': 15673,
+}
 
 SOCIAL_NETWORK_DEFAULT_SERVICES = {
   'services': {
@@ -227,6 +232,20 @@ def _get_last(deploy_type,k):
 
 def _deploy_dir(args):
   return DEPLOY_PATH / args['deploy_type'] / args['app'] / args['tag']
+
+def _service_ip(deploy_type, service):
+  config = _load_yaml(_get_last(args['deploy_type'],'config'))
+
+  if deploy_type == 'local':
+    from plumbum.cmd import hostname
+    public_ip = hostname['-I']().split()[0]
+  elif deploy_type == 'gsd':
+    public_ip = GSD_AVAILABLE_NODES[config['services'][service]]
+  elif deploy_type == 'gcp':
+    inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'inventory.cfg')
+    public_ip = inventory[config['services']['jaeger']]['external_ip']
+  # return the ip with the common port
+  return f'http://{public_ip}:{SERVICE_PORTS[service]}'
 
 def _index_containing_substring(the_list, substring):
   for i, s in enumerate(the_list):
@@ -861,17 +880,12 @@ def deploy__socialNetwork__gcp(args):
 # INFO
 #-----------------
 def info(args):
-  getattr(sys.modules[__name__], f"info__{args['app']}__{args['deploy_type']}")(args)
-  print(f"[INFO] Shown {args['app']} @ {args['deploy_type']} information!")
+  print(f"[INFO] {args['app']} @ {args['deploy_type']} services:")
 
-def info__socialNetwork__local(args):
-  from plumbum.cmd import hostname
-
-  ip = hostname['-I']().split()[0]
-  print(f"Jaeger:\thttp://{ip}:16686")
-  print(f"Portainer:\thttp://{ip}:9000\t\t(admin / antipode)")
-  print(f"RabbitMQ-EU:\thttp://{ip}:15672\t\t(admin / admin)")
-  print(f"RabbitMQ-US:\thttp://{ip}:15673\t\t(admin / admin)")
+  print(f"Jaeger:\t\t{_service_ip(args['deploy_type'], 'jaeger')}")
+  print(f"Portainer:\t{_service_ip(args['deploy_type'], 'portainer')}\t\t(admin / antipode)")
+  print(f"RabbitMQ-EU:\t{_service_ip(args['deploy_type'], 'rabbitmq-eu')}\t\t(admin / admin)")
+  print(f"RabbitMQ-US:\t{_service_ip(args['deploy_type'], 'rabbitmq-us')}\t\t(admin / admin)")
 
 
 #-----------------
