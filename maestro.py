@@ -894,7 +894,8 @@ def info(args):
 def run(args):
   args['tag'] = _get_last(args['deploy_type'], 'tag')
   args['deploy_dir'] = _deploy_dir(args)
-  _put_last(args['deploy_type'], 'portainer', False)
+  _put_last(args['deploy_type'], 'antipode', args['antipode'])
+  _put_last(args['deploy_type'], 'portainer', args['portainer'])
 
   getattr(sys.modules[__name__], f"run__{args['app']}__{args['deploy_type']}")(args)
   print(f"[INFO] {args['app']} @ {args['deploy_type']} ran successfully!")
@@ -1116,6 +1117,8 @@ def wkld(args):
   args['tag'] = _get_last(args['deploy_type'], 'tag')
   args['deploy_dir'] = _deploy_dir(args)
   args['endpoint'] = WKLD_ENDPOINTS[args['app']][args['Endpoint']]
+  _put_last(args['deploy_type'], 'wkld_tag', f"{datetime.now().strftime('%Y%m%d%H%M')}")
+  _put_last(args['deploy_type'], 'wkld_rate', args['rate'])
 
   getattr(sys.modules[__name__], f"wkld__{args['deploy_type']}__run")(args)
   print(f"[INFO] {args['app']} @ {args['deploy_type']} workload ran successfully!")
