@@ -94,6 +94,9 @@ def _index_containing_substring(the_list, substring):
       return i
   return -1
 
+def _flat_list(l):
+  return [item for sublist in l for item in sublist]
+
 def _is_inside_docker():
   return os.path.isfile('/.dockerenv')
 
@@ -130,66 +133,64 @@ def _force_gcp_docker():
     subprocess.call(args)
     exit()
 
-def _gcp_create_instance(zone, name, machine_type, hostname, firewall_tags):
+def _gcp_vm_create(zone, config):
   import googleapiclient.discovery
+  import json
 
   compute = googleapiclient.discovery.build('compute', 'v1')
-  config = {
-    'name': name,
-    'machineType': f"zones/{zone}/machineTypes/{machine_type}",
-    'disks': [
-      {
-        'boot': True,
-        'autoDelete': True,
-        'initializeParams': {
-          'sourceImage': GCP_MACHINE_IMAGE_LINK,
-        }
-      }
-    ],
-    'hostname': hostname,
-    # Specify a network interface with NAT to access the public internet.
-    'networkInterfaces': [
-      {
-        'network': 'global/networks/default',
-        'accessConfigs': [
-          {'type': 'ONE_TO_ONE_NAT', 'name': 'External NAT'}
-        ]
-      }
-    ],
-    # tags for firewall rules
-    "tags": {
-      "items": firewall_tags,
-    },
-  }
   try:
-    ret = compute.instances().insert(
-        project=GCP_PROJECT_ID,
-        zone=zone,
-        body=config
-      ).execute()
-    return ret['status'] == 'RUNNING'
+    compute.instances().insert(project=GCP_PROJECT_ID, zone=zone, body=config).execute()
+    i = _gcp_vm_wait_for_status(zone, config['name'], 'RUNNING')
+    print(f"[INFO] Instance '{config['name']}' created")
+    return i
   except googleapiclient.errors.HttpError as e:
-    pp(e)
+    error_info = json.loads(e.args[1])['error']
+    if error_info['code'] == 409 and error_info['errors'][0]['reason'] == 'alreadyExists':
+      print(f"[WARN] Instance '{config['name']}' already exists")
+      # get the existing instance details
+      return _gcp_vm_get(zone=zone, name=config['name'])
+    else:
+      pp(error_info)
+      exit(-1)
 
-def _gcp_delete_instance(zone, name):
+# Status available:
+#   PROVISIONING, STAGING, RUNNING, STOPPING, SUSPENDING, SUSPENDED, REPAIRING, TERMINATED
+def _gcp_vm_wait_for_status(zone, name, status):
+  import googleapiclient.discovery
+  import json
+
+  while True:
+    try:
+      r = _gcp_vm_get(zone=zone, name=name)
+      if r['status'] == status.upper():
+        time.sleep(1)
+        return r
+    except googleapiclient.errors.HttpError as e:
+      error_info = json.loads(e.args[1])['error']
+      if error_info['code'] == 404:
+        time.sleep(1)
+      else:
+        raise e
+
+def _gcp_vm_get(zone, name):
   import googleapiclient.discovery
   compute = googleapiclient.discovery.build('compute', 'v1')
-
-  try:
-    ret = compute.instances().delete(
-        project=GCP_PROJECT_ID,
-        zone=zone,
-        instance=name
-      ).execute()
-    return ret['status'] == 'RUNNING'
-  except googleapiclient.errors.HttpError as e:
-    pp(e)
-
-def _gcp_get_instance(zone, name):
-  import googleapiclient.discovery
-  compute = googleapiclient.discovery.build('compute', 'v1')
-
   return compute.instances().get(project=GCP_PROJECT_ID, zone=zone, instance=name).execute()
+
+def _gcp_vm_start(zone, name):
+  import googleapiclient.discovery
+  import json
+
+  compute = googleapiclient.discovery.build('compute', 'v1')
+  while True:
+    try:
+      # start the vm if not running
+      compute.instances().start(project=GCP_PROJECT_ID, zone=zone, instance=name).execute()
+      # wait for start to be completed
+      return _gcp_vm_wait_for_status(zone, name, 'RUNNING')
+    except googleapiclient.errors.HttpError as e:
+      error_info = json.loads(e.args[1])['error']
+      raise(e)
 
 def _inventory_to_dict(filepath):
   from ansible.parsing.dataloader import DataLoader
@@ -332,10 +333,11 @@ def build__socialNetwork__gcp(args):
   _force_gcp_docker()
   import googleapiclient.discovery
   from plumbum.cmd import gcloud, ls, rm
-  from dotenv import dotenv_values
   import json
+  from jinja2 import Environment
+  import textwrap
 
-    # tag images built localy with GCP tag
+  # tag images built localy with GCP tag
   if not args['skip_images']:
     for image in CONTAINERS_BUILT:
       # These images are tag with gcp namespace but then are retagged when deploying
@@ -344,73 +346,147 @@ def build__socialNetwork__gcp(args):
       docker['push', gcp_image_name] & FG
       docker['rmi', gcp_image_name] & FG
 
+  # Create env file for base_vm script
+  with local.cwd(ROOT_PATH / 'gcp'):
+    template = """
+    NAMESPACE={{ namespace }}
+    """
+    env_file = Environment().from_string(template).render({
+      'namespace': GCP_DOCKER_IMAGE_NAMESPACE,
+    })
+    with open('base_vm_env', 'w') as f:
+      # remove empty lines and dedent for easier read
+      f.write(textwrap.dedent(env_file))
+    print(f"[SAVED] 'base_vm_env'")
 
-  # part of GCP build process is to also build `antipode` image
-  # which is a Debian based image with a preset of packages and docker pulls done
-  # here is the set of instructions to perform that
-  #
-  # 1) Start a simple VM and SSH into it using the web interface
-  # 2) Install Docker (https://docs.docker.com/engine/install/debian/):
-  #     - sudo apt-get update
-  #     - sudo apt-get install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
-  #     - curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
-  #     - sudo apt-key fingerprint 0EBFCD88
-  #     - sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
-  #     - sudo apt-get update
-  #     - sudo apt-get install -y docker-ce docker-ce-cli containerd.io
-  # 3) Install Docker Compose
-  #     - sudo curl -L "https://github.com/docker/compose/releases/download/1.27.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-  #     - sudo chmod +x /usr/local/bin/docker-compose
-  # 4) Install extras
-  #     - sudo apt-get install -y rsync less vim htop jq python3-pip
-  # 5) Pull public docker images:
-  #     - docker pull jaegertracing/all-in-one:latest
-  #     - docker pull jonathanmace/xtrace-server:latest
-  #     - docker pull memcached:latest
-  #     - docker pull mongo:latest
-  #     - docker pull mrvautin/adminmongo:latest
-  #     - docker pull rabbitmq:3.8
-  #     - docker pull rabbitmq:3.8-management
-  #     - docker pull redis:latest
-  #     - docker pull portainer/agent:latest
-  #     - docker pull portainer/portainer-ce:latest
-  #     - docker pull prom/pushgateway:latest
-  #     - docker pull prom/prometheus:latest
-  #     - docker pull yg397/media-frontend:xenial
-  # 6) Add alias for python
-  #     - sudo ln -s /usr/bin/python3 /usr/bin/python
-  #     - sudo ln -s /usr/bin/pip3 /usr/bin/pip
-  # 7) Clean cache
-  #     - sudo apt-get clean
-  #     - sudo apt-get autoclean
-  # 8) Create a copy of the JSON credentials file
-  #     - sudo vim /<PROJECT_ID>.json
-  #     - copy paste the local content
-  #     - authenticate with gcloud:
-  #       sudo gcloud auth activate-service-account --key-file=/pluribus.json
-  #       sudo gcloud auth configure-docker
-  # 9) Close the ssh session and start a local GCP container
-  #     - Start container with:
-  #     - In the GCP console, in the SSH context menu, copy the gcloud command, it will look something like:
-  #       gcloud beta compute ssh --zone "europe-west3-c" "antipode-dev" --project "pluribus"
-  #     - Just press enter on the steps until keys are generated and you are logged in
-  #     - Copy the files from the container to outside
+  # Create base VM
+  compute = googleapiclient.discovery.build('compute', 'v1')
+  image_response = compute.images().getFromFamily(project='debian-cloud', family='debian-10').execute()
+  source_disk_image = image_response['selfLink']
+  zone = 'us-east1-b'
+  config = {
+    'name': GCP_BUILD_IMAGE_NAME,
+    'machineType': f"zones/{zone}/machineTypes/f1-micro",
+    'disks': [
+      {
+        'boot': True,
+        'autoDelete': True,
+        'initializeParams': {
+          'sourceImage': source_disk_image,
+          'disk_size_gb': 50,
+        }
+      }
+    ],
+    'hostname': 'antipode-dev.dsb',
+    # Specify a network interface with NAT to access the public internet.
+    'networkInterfaces': [
+      {
+        'network': 'global/networks/default',
+        'accessConfigs': [
+          {'type': 'ONE_TO_ONE_NAT', 'name': 'External NAT'}
+        ]
+      }
+    ],
+    # tags for firewall rules
+    "tags": {
+      "items": [],
+    },
+  }
+  r = _gcp_vm_create(zone, config)
+  _gcp_vm_start(zone, r['id'])
+  time.sleep(10) # extra time to avoid ssh errors
+
+  # delete any old keys ssh keys from older deployments
+  with local.cwd(ROOT_PATH / 'gcp' / '.ssh'):
+    rm['-f', 'google_compute_engine', 'google_compute_engine.pub', 'google_compute_known_hosts', 'known_hosts', 'known_hosts.old'] & FG
+    # ls['-la'] & FG
+
+  # In order to get the .ssh folder via GCP instance
+  # 1) Start a local GCP container
+  # 2) Go the the GCP console, and in the SSH context menu, copy the gcloud command, it will look something like:
+  #    $ gcloud compute ssh --zone "europe-west3-c" "antipode-dev-tt" --project "pluribus"
+  # 3) Paste the above command in the container and let it run
+  # 4) Copy the files from the container to outside
   #       docker cp <CONTAINER ID>:/root/.ssh/google_compute_engine .
   #       docker cp <CONTAINER ID>:/root/.ssh/google_compute_engine.pub .
-  #     - Rename file to: <GCP_PROJECT_ID>_google_compute_engine*
-  # 10) Create firewall rules for the following tags:
-  #     - 'portainer'
-  #         IP Addresses: 0.0.0.0/0
-  #         TCP ports: 9000,8000,9090,9091,9100
-  #     - 'swarm':
-  #         IP Addresses: 0.0.0.0/0
-  #         TCP ports: 2376, 2377, 7946
-  #         UDP ports: 7946, 4789
-  #     - 'nodes':
-  #         IP Addresses: 0.0.0.0/0
-  #         TCP ports: 9001,16686,8080,8081,8082,1234,4080,5563,15672,5672,5778,14268,14250,9411,9100
-  #         UDP ports: 5775,6831,6832
-  #
+
+  # copy and execute base_vm script -- retry needed sometimes
+  while True:
+    try:
+      # first connection to create ssh keys
+      gcloud['compute', 'ssh', f"{GCP_DEFAULT_SSH_USER}@{GCP_BUILD_IMAGE_NAME}", '--command', 'echo "Connected!"'] & FG
+      # copy key and scripts
+      gcloud['compute', 'scp', 'gcp/.ssh/google_compute_engine.pub', 'gcp/base_vm_env', 'gcp/base_vm.sh', 'gcp/credentials.json', f"{GCP_DEFAULT_SSH_USER}@{GCP_BUILD_IMAGE_NAME}:/tmp/"] & FG
+      gcloud['compute', 'ssh', f"{GCP_DEFAULT_SSH_USER}@{GCP_BUILD_IMAGE_NAME}", '--command', 'bash /tmp/base_vm.sh'] & FG
+      # if got here everything worked and we break
+      break
+    except Exception as e:
+      # known Connection closed error
+      if '255' in str(e).split('\n')[0]:
+        # give a bit of time before retying
+        time.sleep(5)
+      else:
+        # not known exception we raise exception
+        raise e
+
+  # stop machine
+  compute.instances().stop(project=GCP_PROJECT_ID, zone=zone, instance=r['id']).execute()
+  _gcp_vm_wait_for_status(zone, r['id'], 'TERMINATED')
+
+  # built image based on the image of this machine
+  image_config = {
+    "kind": "compute#image",
+    "name": GCP_MACHINE_IMAGE_NAME,
+    "sourceDisk": f"projects/pluribus/zones/us-east1-b/disks/{GCP_BUILD_IMAGE_NAME}",
+    "storageLocations": [
+      "us"
+    ]
+  }
+
+  # check if there is already an image - delete if necessary
+  try:
+    compute.images().get(project=GCP_PROJECT_ID, image=image_config['name']).execute()
+    # if no exception delete the image
+    print("[INFO] Image already exists - deleting ...", flush=True)
+    compute.images().delete(project=GCP_PROJECT_ID, image=image_config['name']).execute()
+    # wait for image to be deleted
+    while True:
+      # 404 exceptions will result into going to except and pass - means we deleted the image sucessfully
+      compute.images().get(project=GCP_PROJECT_ID, image=image_config['name']).execute()
+  except googleapiclient.errors.HttpError as e:
+    error_info = json.loads(e.args[1])['error']
+    if error_info['code'] == 404:
+      # wait a bit more time after 404 error
+      time.sleep(5)
+      print("[INFO] Image deleted!")
+      pass
+    else:
+      raise(e)
+
+  # create the new image
+  compute.images().insert(project=GCP_PROJECT_ID, body=image_config).execute()
+  # wait for image to be ready
+  while True:
+    if compute.images().get(project=GCP_PROJECT_ID, image=image_config['name']).execute()['status'] == 'READY':
+      break
+
+  # find all used ports
+  firewall_rules = compute.firewalls().list(project=GCP_PROJECT_ID, filter=None).execute()['items']
+  for frule in firewall_rules:
+    if frule['name'] == 'portainer':
+      print("[INFO] Firewall rule for portainer found")
+    elif frule['name'] == 'swarm':
+      print("[INFO] Firewall rule for swarm found")
+    elif frule['name'] == 'nodes':
+      print("[INFO] Firewall rule for nodes found")
+      tcp_rule = [ e for e in frule['allowed'] if e['IPProtocol'] == 'tcp' ][0]
+      ports = [ str(e) for e in sorted(set([ int(r) for r in tcp_rule['ports'] ])) ]
+      # check ports
+      docker_compose_ports = [ e.split(':')[0] for e in _flat_list([ sinfo['ports'] for sname, sinfo in _load_yaml(DSB_PATH / args['app'] / 'docker-compose.yml')['services'].items() if 'ports' in sinfo]) ]
+      missing_ports = set(docker_compose_ports) - set(ports)
+      if (missing_ports):
+        print(f"[ERROR] Missing ports on firewall rule: {missing_ports}")
+        exit(-1)
 
 
 #-----------------
@@ -1629,6 +1705,8 @@ SERVICE_PORTS = {
 }
 # gcp
 GCP_DOCKER_IMAGE_NAME = 'gcp-manager:antipode'
+GCP_BUILD_IMAGE_NAME = 'antipode-dev-dsb'
+GCP_MACHINE_IMAGE_NAME = 'antipode-dev-dsb'
 GCP_CREDENTIALS_FILE = ROOT_PATH / 'gcp' / 'pluribus.json'
 GCP_PROJECT_ID = _get_config('gcp','project_id')
 GCP_DEFAULT_SSH_USER = _get_config('gcp','default_ssh_user')

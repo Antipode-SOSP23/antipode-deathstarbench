@@ -1,7 +1,11 @@
-antipode-296620.json
-credentials.json
-*google_compute_engine*
+# credentials
+credentials*.json
+# ssh keys
+.ssh
+
 # generated files
+base_vm_env
+
 clients_inventory.cfg
 clients_inventory_local.cfg
 inventory.cfg
