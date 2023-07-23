@@ -32,12 +32,13 @@
         use_ssh_args: yes
         mode: push
 
-    - name: Pull images from GCP registry
+    - name: Pull images from GCP registry and retag them
       shell: >
-        docker pull gcr.io/pluribus/{{item}} &&
-        docker tag gcr.io/pluribus/{{item}} {{item}}
+        docker pull {{namespace}}/{{item}} &&
+        docker tag {{namespace}}/{{item}} {{item}}
       with_items:
         - wrk2:antipode
+        - python-wkld:antipode
 
     - name: Start client
       shell: >

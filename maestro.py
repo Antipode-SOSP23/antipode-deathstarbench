@@ -333,6 +333,28 @@ def build__socialNetwork__gsd(args):
 def build__socialNetwork__gcp(args):
   from plumbum.cmd import docker
 
+  # build local images first
+  if not args['skip_images']:
+    if not _is_inside_docker():
+      build__socialNetwork__local(args)
+
+  # then force docker
+  _force_gcp_docker()
+  import googleapiclient.discovery
+  from plumbum.cmd import gcloud, ls, rm
+  from dotenv import dotenv_values
+  import json
+
+    # tag images built localy with GCP tag
+  if not args['skip_images']:
+    for image in CONTAINERS_BUILT:
+      # These images are tag with gcp namespace but then are retagged when deploying
+      gcp_image_name = f"{GCP_DOCKER_IMAGE_NAMESPACE}/{image}"
+      docker['tag', image, gcp_image_name] & FG
+      docker['push', gcp_image_name] & FG
+      docker['rmi', gcp_image_name] & FG
+
+
   # part of GCP build process is to also build `antipode` image
   # which is a Debian based image with a preset of packages and docker pulls done
   # here is the set of instructions to perform that
@@ -399,17 +421,6 @@ def build__socialNetwork__gcp(args):
   #         TCP ports: 9001,16686,8080,8081,8082,1234,4080,5563,15672,5672,5778,14268,14250,9411,9100
   #         UDP ports: 5775,6831,6832
   #
-
-  # locally build the images needed
-  if not _is_inside_docker(): build__socialNetwork__local(args)
-
-  # now we go into docker container and push everything to GCP
-  _force_docker()
-  for tag in CONTAINERS_BUILT:
-    gcp_tag = f"gcr.io/{GCP_PROJECT_ID}/{tag}"
-    docker['tag', tag, gcp_tag] & FG
-    docker['push', gcp_tag] & FG
-    docker['rmi', gcp_tag] & FG
 
 
 #-----------------
@@ -1631,6 +1642,8 @@ GCP_DOCKER_IMAGE_NAME = 'gcp-manager:antipode'
 GCP_CREDENTIALS_FILE = ROOT_PATH / 'gcp' / 'pluribus.json'
 GCP_PROJECT_ID = _get_config('gcp','project_id')
 GCP_DEFAULT_SSH_USER = _get_config('gcp','default_ssh_user')
+GCP_DOCKER_IMAGE_NAMESPACE = f"gcr.io/{GCP_PROJECT_ID}/dsb"
+GCP_DOCKER_IMAGE_TAG = 'antipode'
 
 SOCIAL_NETWORK_DEFAULT_SERVICES = {
   'services': {
@@ -1760,6 +1773,7 @@ if __name__ == "__main__":
   # build application
   build_parser = subparsers.add_parser('build', help='Build application')
   build_parser.add_argument('--no-cache', action='store_true', help="Rebuild all containers")
+  build_parser.add_argument('--skip-images', action='store_true', help="Skip building local images")
 
   # deploy application
   deploy_parser = subparsers.add_parser('deploy', help='Deploy application')

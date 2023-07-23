@@ -80,10 +80,10 @@
         recursive: true
         mode: push
 
-    - name: Pull images from GCP registry
+    - name: Pull images from GCP registry and retag them
       shell: >
-        docker pull gcr.io/pluribus/{{item}} &&
-        docker tag gcr.io/pluribus/{{item}} {{item}}
+        docker pull {{namespace}}/{{item}} &&
+        docker tag {{namespace}}/{{item}} {{item}}
       with_items:
         - mongodb-delayed:4.4.6
         - mongodb-setup:4.4.6

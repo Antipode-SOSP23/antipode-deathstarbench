@@ -1,0 +1,507 @@
+services:
+  antipode-oracle:
+    command: dockerize -wait tcp://jaeger:16686 -wait-retry-interval 10s -timeout
+      300s /usr/local/bin/AntipodeOracle
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node22
+    hostname: antipode-oracle
+    image: yg397/social-network-microservices:antipode
+    restart: always
+  compose-post-redis:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    hostname: compose-post-redis
+    image: redis
+    restart: 'no'
+  compose-post-service:
+    command: dockerize -wait tcp://write-home-timeline-rabbitmq-setup:8000 -wait tcp://write-home-timeline-service-eu:9090
+      -wait tcp://write-home-timeline-service-us:9090 -wait tcp://post-storage-service-eu:9090
+      -wait-retry-interval 10s -timeout 300s ComposePostService
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    environment:
+      ZONE: eu
+    hostname: compose-post-service
+    image: yg397/social-network-microservices:antipode
+    restart: 'no'
+  home-timeline-redis-eu:
+    command: redis-server --port 6379
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node02
+    hostname: home-timeline-redis-eu
+    image: redis
+    restart: 'no'
+  home-timeline-redis-us:
+    command: redis-server --slaveof home-timeline-redis-eu 6379 --replica-read-only
+      no
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node03
+    hostname: home-timeline-redis-us
+    image: redis
+    links:
+    - home-timeline-redis-eu
+    restart: 'no'
+  home-timeline-service:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node03
+    entrypoint: dockerize -wait tcp://home-timeline-redis-us:6379 -wait tcp://post-storage-service-us:9090
+      -timeout 300s HomeTimelineService
+    hostname: home-timeline-service
+    image: yg397/social-network-microservices:antipode
+    restart: 'no'
+  jaeger:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node25
+    environment:
+      COLLECTOR_ZIPKIN_HTTP_PORT: 9411
+    hostname: jaeger
+    image: jaegertracing/all-in-one:latest
+    ports:
+    - 16686:16686
+    restart: 'no'
+  media-frontend:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    hostname: media-frontend
+    image: yg397/media-frontend:xenial
+    ports:
+    - 8081:8080
+    restart: 'no'
+    volumes:
+    - ./media-frontend/lua-scripts:/usr/local/openresty/nginx/lua-scripts
+    - ./media-frontend/conf/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
+  media-memcached:
+    command: memcached -m 1024
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    hostname: media-memcached
+    image: memcached
+    restart: 'no'
+  media-mongodb:
+    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata --syncdelay
+      0 --journalCommitInterval 500 --wiredTigerCacheSizeGB 1"
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    hostname: media-mongodb
+    image: mongo
+    volumes:
+    - target: /ramdata
+      tmpfs:
+        size: 3000000000
+      type: tmpfs
+  media-service:
+    command: dockerize -wait tcp://compose-post-service:9090 -wait-retry-interval
+      10s -timeout 300s MediaService
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    hostname: media-service
+    image: yg397/social-network-microservices:antipode
+    restart: 'no'
+  mongodb-admin:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node25
+    environment:
+      HOST: 0.0.0.0
+    image: mrvautin/adminmongo
+    ports:
+    - 1234:1234
+    restart: 'no'
+  nginx-thrift:
+    command: dockerize -wait tcp://jaeger:16686 -wait-retry-interval 10s -timeout
+      300s bash -c "/usr/local/openresty/bin/openresty -g 'daemon off;'"
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node23
+    hostname: nginx-thrift
+    image: yg397/openresty-thrift:latest
+    ports:
+    - 8080:8080
+    restart: always
+    volumes:
+    - ./nginx-web-server/lua-scripts:/usr/local/openresty/nginx/lua-scripts
+    - ./nginx-web-server/pages:/usr/local/openresty/nginx/pages
+    - ./nginx-web-server/conf/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
+    - ./nginx-web-server/jaeger-config.json:/usr/local/openresty/nginx/jaeger-config.json
+    - ./gen-lua:/gen-lua
+  nginx-thrift-us:
+    command: dockerize -wait tcp://jaeger:16686 -wait-retry-interval 10s -timeout
+      300s bash -c "/usr/local/openresty/bin/openresty -g 'daemon off;'"
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node23
+    hostname: nginx-thrift
+    image: yg397/openresty-thrift:latest
+    ports:
+    - 8082:8080
+    restart: always
+    volumes:
+    - ./nginx-web-server/lua-scripts:/usr/local/openresty/nginx/lua-scripts
+    - ./nginx-web-server/pages:/usr/local/openresty/nginx/pages
+    - ./nginx-web-server/conf/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
+    - ./nginx-web-server/jaeger-config.json:/usr/local/openresty/nginx/jaeger-config.json
+    - ./gen-lua:/gen-lua
+  post-storage-memcached-eu:
+    command: memcached -m 1024
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node04
+    hostname: post-storage-memcached-eu
+    image: memcached
+    restart: 'no'
+  post-storage-memcached-us:
+    command: memcached -m 1024
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node06
+    hostname: post-storage-memcached-us
+    image: memcached
+    restart: 'no'
+  post-storage-mongodb-eu:
+    cap_add:
+    - NET_ADMIN
+    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata --syncdelay
+      0 --journalCommitInterval 500 --wiredTigerCacheSizeGB 1 --replSet rs0 --oplogSize
+      128"
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node04
+    hostname: post-storage-mongodb-eu
+    image: mongodb-delayed
+    volumes:
+    - target: /ramdata
+      tmpfs:
+        size: 3000000000
+      type: tmpfs
+  post-storage-mongodb-setup:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node25
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        max_attempts: 3
+    image: mongodb-setup
+    restart: always
+  post-storage-mongodb-us:
+    cap_add:
+    - NET_ADMIN
+    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata --syncdelay
+      0 --journalCommitInterval 500 --wiredTigerCacheSizeGB 1 --replSet rs0 --oplogSize
+      128"
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node06
+    hostname: post-storage-mongodb-us
+    image: mongodb-delayed
+    volumes:
+    - target: /ramdata
+      tmpfs:
+        size: 3000000000
+      type: tmpfs
+  post-storage-service-eu:
+    command: dockerize -wait tcp://post-storage-mongodb-setup:8000 -wait tcp://post-storage-mongodb-eu:27017
+      -wait-retry-interval 10s -timeout 300s PostStorageService
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node04
+    environment:
+      ANTIPODE: 0
+      MASTER: 1
+      ZONE: eu
+    hostname: post-storage-service-eu
+    image: yg397/social-network-microservices:antipode
+    restart: always
+  post-storage-service-us:
+    command: dockerize -wait tcp://post-storage-mongodb-setup:8000 -wait tcp://post-storage-mongodb-us:27017
+      -wait-retry-interval 10s -timeout 300s PostStorageService
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node06
+    environment:
+      ANTIPODE: 0
+      MASTER: 0
+      ZONE: us
+    hostname: post-storage-service-us
+    image: yg397/social-network-microservices:antipode
+    restart: always
+  social-graph-mongodb:
+    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata"
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node02
+    hostname: social-graph-mongodb
+    image: mongo
+    volumes:
+    - target: /ramdata
+      tmpfs:
+        size: 3000000000
+      type: tmpfs
+  social-graph-redis:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node02
+    hostname: social-graph-redis
+    image: redis
+    restart: 'no'
+  social-graph-service:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node02
+    entrypoint: SocialGraphService
+    hostname: social-graph-service
+    image: yg397/social-network-microservices:antipode
+    restart: always
+  text-service:
+    command: dockerize -wait tcp://url-shorten-service:9090 -wait tcp://user-mention-service:9090
+      -wait tcp://compose-post-service:9090 -wait-retry-interval 10s -timeout 300s
+      TextService
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    hostname: text-service
+    image: yg397/social-network-microservices:antipode
+    restart: 'no'
+  unique-id-service:
+    command: dockerize -wait tcp://compose-post-service:9090 -wait-retry-interval
+      10s -timeout 300s UniqueIdService
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    hostname: unique-id-service
+    image: yg397/social-network-microservices:antipode
+    restart: 'no'
+  url-shorten-memcached:
+    command: memcached -m 1024
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    hostname: url-shorten-memcached
+    image: memcached
+    restart: 'no'
+  url-shorten-mongodb:
+    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata --syncdelay
+      0 --journalCommitInterval 500 --wiredTigerCacheSizeGB 1"
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    hostname: url-shorten-mongodb
+    image: mongo
+    volumes:
+    - target: /ramdata
+      tmpfs:
+        size: 3000000000
+      type: tmpfs
+  url-shorten-service:
+    command: dockerize -wait tcp://compose-post-service:9090 -wait-retry-interval
+      10s -timeout 300s UrlShortenService
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    hostname: url-shorten-service
+    image: yg397/social-network-microservices:antipode
+    restart: always
+  user-memcached:
+    command: memcached -m 1024
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    hostname: user-memcached
+    image: memcached
+    restart: 'no'
+  user-mention-service:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    entrypoint: UserMentionService
+    hostname: user-mention-service
+    image: yg397/social-network-microservices:antipode
+    restart: always
+  user-mongodb:
+    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata --syncdelay
+      0 --journalCommitInterval 500 --wiredTigerCacheSizeGB 1"
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    hostname: user-mongodb
+    image: mongo
+    volumes:
+    - target: /ramdata
+      tmpfs:
+        size: 3000000000
+      type: tmpfs
+  user-service:
+    command: dockerize -wait tcp://compose-post-service:9090 -wait-retry-interval
+      10s -timeout 300s UserService
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    hostname: user-service
+    image: yg397/social-network-microservices:antipode
+    restart: 'no'
+  user-timeline-mongodb:
+    command: bash -c "mongod --bind_ip 0.0.0.0 --slowms 999999 --dbpath /ramdata  --syncdelay
+      0 --journalCommitInterval 500 --wiredTigerCacheSizeGB 1"
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    image: mongo
+    volumes:
+    - target: /ramdata
+      tmpfs:
+        size: 3000000000
+      type: tmpfs
+  user-timeline-redis:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    hostname: user-timeline-redis
+    image: redis
+    restart: 'no'
+  user-timeline-service:
+    command: dockerize -wait tcp://post-storage-service-eu:9090 -wait tcp://user-timeline-redis:6379
+      -wait tcp://write-home-timeline-rabbitmq-us:5672 -wait tcp://write-home-timeline-service-eu:9090
+      -wait tcp://write-home-timeline-service-us:9090 -wait tcp://post-storage-service-eu:9090
+      -wait-retry-interval 10s -timeout 300s UserTimelineService
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node11
+    hostname: user-timeline-service
+    image: yg397/social-network-microservices:antipode
+    restart: 'no'
+  write-home-timeline-rabbitmq-eu:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node02
+    environment:
+      RABBITMQ_DEFAULT_VHOST: /
+      RABBITMQ_ENABLED_PLUGINS_FILE: /etc/rabbitmq/enabled_plugins
+      RABBITMQ_ERLANG_COOKIE: WRITE-HOME-TIMELINE-RABBITMQ
+    hostname: write-home-timeline-rabbitmq-eu
+    image: rabbitmq:3.8-management
+    ports:
+    - 15672:15672
+    - 5672:5672
+    restart: 'no'
+    volumes:
+    - ./config/rabbitmq/write-home-timeline-rabbitmq-eu-definitions.json:/etc/rabbitmq/definitions.json:ro
+    - ./config/rabbitmq/write-home-timeline-rabbitmq-eu.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    - ./config/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins
+  write-home-timeline-rabbitmq-setup:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node25
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        max_attempts: 3
+    environment:
+      RABBITMQ_ERLANG_COOKIE: WRITE-HOME-TIMELINE-RABBITMQ
+    image: rabbitmq-setup
+    restart: 'no'
+  write-home-timeline-rabbitmq-us:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node02
+    environment:
+      RABBITMQ_DEFAULT_VHOST: /
+      RABBITMQ_ENABLED_PLUGINS_FILE: /etc/rabbitmq/enabled_plugins
+      RABBITMQ_ERLANG_COOKIE: WRITE-HOME-TIMELINE-RABBITMQ
+    hostname: write-home-timeline-rabbitmq-us
+    image: rabbitmq:3.8-management
+    ports:
+    - 15673:15672
+    - 5673:5672
+    restart: 'no'
+    volumes:
+    - ./config/rabbitmq/write-home-timeline-rabbitmq-us-definitions.json:/etc/rabbitmq/definitions.json:ro
+    - ./config/rabbitmq/write-home-timeline-rabbitmq-us.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    - ./config/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins
+  write-home-timeline-service-eu:
+    command: dockerize -wait tcp://write-home-timeline-rabbitmq-setup:8000 -wait tcp://write-home-timeline-rabbitmq-eu:5672
+      -wait-retry-interval 10s -timeout 300s WriteHomeTimelineService
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node02
+    environment:
+      ZONE: eu
+    hostname: write-home-timeline-service-eu
+    image: yg397/social-network-microservices:antipode
+    restart: 'no'
+  write-home-timeline-service-us:
+    command: dockerize -wait tcp://write-home-timeline-rabbitmq-setup:8000 -wait tcp://write-home-timeline-rabbitmq-us:5672
+      -wait-retry-interval 10s -timeout 300s WriteHomeTimelineService
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node02
+    environment:
+      ZONE: us
+    hostname: write-home-timeline-service-us
+    image: yg397/social-network-microservices:antipode
+    restart: 'no'
+  xtrace-server:
+    deploy:
+      placement:
+        constraints:
+        - node.hostname == node25
+    hostname: xtrace-server
+    image: jonathanmace/xtrace-server:latest
+    logging:
+      driver: none
+    ports:
+    - 4080:4080
+    - 5563:5563
+    restart: 'no'
+version: '3.7'
