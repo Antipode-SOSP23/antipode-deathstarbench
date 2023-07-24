@@ -1122,15 +1122,18 @@ def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms, jitt
 # WORKLOAD
 #-----------------
 def _wkld_docker_args(endpoint, args, hosts, app_wd):
+  docker_args = ['run',
+    '--rm', '-it',
+    '--name', WKLD_CONTAINER_NAME,
+    '--network=host',
+    '-w', '/scripts',
+  ]
   if endpoint['type'] == 'wrk2':
     wrk2_params = _wrk2_params(args, endpoint, hosts[MAIN_ZONE])
     # prepare docker env
-    docker_args = ['run',
-      '--rm', '-it',
-      '--network=host',
+    docker_args += [
       '-v', f"{app_wd}/wrk2/scripts:/scripts",
       '-v', f"{app_wd}/datasets:/scripts/datasets",
-      '-w', '/scripts',
     ]
     # add hosts env vars so the previous vars that were set are captured
     for k,v in hosts.items():
@@ -1144,12 +1147,9 @@ def _wkld_docker_args(endpoint, args, hosts, app_wd):
   elif endpoint['type'] == 'python':
     script_path = app_wd / endpoint['script_path']
     # prepare docker env
-    docker_args = ['run',
-      '--rm', '-it',
-      '--network=host',
+    docker_args += [
       '-v', f"{script_path.parent}:/scripts",
       '-v', f"{app_wd}/datasets:/scripts/datasets",
-      '-w', '/scripts',
     ]
     # add hosts env vars so the previous vars that were set are captured
     for k,v in hosts.items():
@@ -1858,6 +1858,7 @@ GCP_DOCKER_IMAGE_NAMESPACE = f"gcr.io/{GCP_PROJECT_ID}/dsb"
 GCP_DOCKER_IMAGE_TAG = 'antipode'
 GCP_MACHINE_IMAGE_LINK = f"https://www.googleapis.com/compute/v1/projects/{GCP_PROJECT_ID}/global/images/{GCP_MACHINE_IMAGE_NAME}"
 # gather
+WKLD_CONTAINER_NAME = 'dsb-wkld'
 PERCENTILES_TO_PRINT = [.25, .5, .75, .90, .99]
 
 
