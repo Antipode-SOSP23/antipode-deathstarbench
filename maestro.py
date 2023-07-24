@@ -564,9 +564,9 @@ def deploy__socialNetwork__gsd(args):
 
     # add network that is created on deploy playbook
     compose['networks'] = {
-      'deathstarbench_network': {
+      DOCKER_COMPOSE_NETWORK: {
         'external': {
-          'name': 'deathstarbench_network'
+          'name': DOCKER_COMPOSE_NETWORK
         }
       }
     }
@@ -576,7 +576,7 @@ def deploy__socialNetwork__gsd(args):
 
     for sid,hostname in conf['services'].items():
       # replaces existing networks with new one
-      compose['services'][sid]['networks'] = [ 'deathstarbench_network' ]
+      compose['services'][sid]['networks'] = [ DOCKER_COMPOSE_NETWORK ]
 
       # get all the constraints
       deploy_constraints = compose['services'][sid]['deploy']['placement']['constraints']
@@ -1707,6 +1707,18 @@ SERVICE_PORTS = {
   'rabbitmq-eu': 15672,
   'rabbitmq-us': 15673,
 }
+CONTAINERS_BUILT = [
+  'mongodb-delayed:4.4.6',
+  'mongodb-setup:4.4.6',
+  'rabbitmq-setup:3.8',
+  'yg397/openresty-thrift:latest',
+  'yg397/social-network-microservices:antipode',
+  'redis-im:antipode',
+  'wrk2:antipode',
+  'python-wkld:antipode',
+]
+# docker
+DOCKER_COMPOSE_NETWORK = 'deathstarbench_network'
 # gcp
 GCP_DOCKER_IMAGE_NAME = 'gcp-manager:antipode'
 GCP_BUILD_IMAGE_NAME = 'antipode-dev-dsb'
@@ -1716,7 +1728,10 @@ GCP_PROJECT_ID = _get_config('gcp','project_id')
 GCP_DEFAULT_SSH_USER = _get_config('gcp','default_ssh_user')
 GCP_DOCKER_IMAGE_NAMESPACE = f"gcr.io/{GCP_PROJECT_ID}/dsb"
 GCP_DOCKER_IMAGE_TAG = 'antipode'
-
+GCP_MACHINE_IMAGE_LINK = f"https://www.googleapis.com/compute/v1/projects/{GCP_PROJECT_ID}/global/images/{GCP_MACHINE_IMAGE_NAME}"
+# gather
+PERCENTILES_TO_PRINT = [.25, .5, .75, .90, .99]
+# gsd
 SOCIAL_NETWORK_DEFAULT_SERVICES = {
   'services': {
     'social-graph-service': 'HOSTNAME',
@@ -1769,17 +1784,6 @@ SOCIAL_NETWORK_DEFAULT_SERVICES = {
     }
   }
 }
-CONTAINERS_BUILT = [
-  'mongodb-delayed:4.4.6',
-  'mongodb-setup:4.4.6',
-  'rabbitmq-setup:3.8',
-  'yg397/openresty-thrift:latest',
-  'yg397/social-network-microservices:antipode',
-  'redis-im:antipode',
-  'wrk2:antipode',
-  'python-wkld:antipode',
-]
-# GSD Constants
 GSD_AVAILABLE_NODES = {
   'node01': '10.100.0.11',
   'node02': '10.100.0.12',
@@ -1818,12 +1822,6 @@ GSD_AVAILABLE_NODES = {
   'saturn2': '146.193.41.77',
 }
 GSD_SWARM_MANAGER_NODE = { 'node34': '10.100.0.44' }
-
-# GCP Constants
-GCP_MACHINE_IMAGE_LINK = f"https://www.googleapis.com/compute/v1/projects/{GCP_PROJECT_ID}/global/images/antipode"
-
-# GATHER variables
-PERCENTILES_TO_PRINT = [.25, .5, .75, .90, .99]
 
 
 #-----------------
