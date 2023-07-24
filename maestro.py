@@ -868,6 +868,9 @@ def deploy__socialNetwork__gcp(args):
   vars_yaml['docker_image_namespace'] = GCP_DOCKER_IMAGE_NAMESPACE
   vars_yaml['deploy_path'] = str(ROOT_PATH / 'gcp')
   vars_yaml['deploy_dir'] = str(args['deploy_dir'])
+  # used to sync deployment
+  vars_yaml['compose_post_service_instance'] = config['nodes'][config['services']['compose-post-service']]['hostname']
+  vars_yaml['num_services'] = NUM_SERVICES[args['app']]
   # dump
   _dump_yaml(vars_filepath, vars_yaml)
   print(f"[SAVED] '{vars_filepath}'")
@@ -1004,7 +1007,11 @@ def run__socialNetwork__gcp(args):
       print(f"[INFO] Prometheus link: {prometheus_url}")
 
   # start dsb services
-  ansible_playbook['start-dsb.yml', '-e', 'app=socialNetwork'] & FG
+  with local.cwd(ROOT_PATH / 'gcp'):
+    ansible_playbook['start-dsb.yml',
+      '-i', inventory_filepath,
+      '--extra-vars', f"@{vars_filepath}"
+    ] & FG
 
   # init social graph
   # ansible_playbook['init-social-graph.yml', '-e', 'app=socialNetwork', '-e', f"configuration={filepath}"] & FG

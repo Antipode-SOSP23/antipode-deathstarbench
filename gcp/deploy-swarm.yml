@@ -46,8 +46,6 @@
   any_errors_fatal: true
   become: no
   gather_facts: no
-  vars_files:
-    - vars.yaml
 
   tasks:
     - name: Add Workers to the Swarm
@@ -68,8 +66,6 @@
   any_errors_fatal: true
   gather_facts: no
   become: no
-  # vars_files:
-  #     - vars.yaml
 
   tasks:
     - name: Register swarm size
@@ -84,4 +80,6 @@
       shell: >
         docker node ls -q | wc -l
       register: swarm_status
-      failed_when: "not( swarm_size == swarm_status.stdout )"
+      retries: 15
+      delay: 45
+      until: (swarm_size == swarm_status.stdout)
