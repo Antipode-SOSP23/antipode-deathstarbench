@@ -15,7 +15,9 @@ import stat
 def _load_yaml(path):
   import ruamel.yaml
   with open(path, 'r') as f:
-    return ruamel.yaml.YAML().load(f)  or {}
+    yaml = ruamel.yaml.YAML()
+    yaml.preserve_quotes = True
+    return yaml.load(f)  or {}
 
 def _dump_yaml(path, d):
   from ruamel.yaml import YAML
@@ -717,7 +719,7 @@ def deploy__socialNetwork__gcp(args):
 
     # now write the compose into a new file
     _dump_yaml(local.cwd / 'docker-compose-swarm.yml', app_compose)
-    print(f"[SAVED] 'docker-compose-swarm.yml'")
+  print(f"[SAVED] 'docker-compose-swarm.yml'")
 
   # Keep track of all created vms
   vms = { 'swarm_manager': [], 'cluster': [], 'clients': [] }
