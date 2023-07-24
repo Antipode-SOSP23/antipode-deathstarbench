@@ -116,11 +116,10 @@ manager:
   zone: us-central1-a
   machine_type: e2-standard-2
 
+# 4 Clients
 clients:
-  - client01
-  - client02
-  - client03
-  - client04
+  zone: us-central1-a
+  machine_type: e2-standard-2
 
 nodes:
   social-graph:
@@ -179,23 +178,6 @@ nodes:
     hostname: admin-tracing.pluribus
     zone: us-central1-a
     machine_type: e2-standard-4
-  # clients
-  client01:
-    hostname: client01.pluribus
-    zone: us-central1-a
-    machine_type: e2-standard-2
-  client02:
-    hostname: client02.pluribus
-    zone: us-central1-a
-    machine_type: e2-standard-2
-  client03:
-    hostname: client03.pluribus
-    zone: us-central1-a
-    machine_type: e2-standard-2
-  client04:
-    hostname: client04.pluribus
-    zone: us-central1-a
-    machine_type: e2-standard-2
 
 ########
 #
