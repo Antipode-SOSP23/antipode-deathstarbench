@@ -82,7 +82,7 @@ def _service_ip(deploy_type, app, service):
   # return the ip with the common port
   return f'http://{public_ip}:{SERVICE_PORTS[app][service]}'
 
-def _wrk2_params(args, endpoint, hosts):
+def _wrk2_params(args, endpoint, main_host):
   import urllib.parse
 
   params = []
@@ -100,7 +100,7 @@ def _wrk2_params(args, endpoint, hosts):
   # we add the script -- relative to wrk2 folder
   params.extend(['--script', './' + endpoint['script_path'].split('wrk2/scripts/')[1]])
   # url host
-  params.append(urllib.parse.urljoin(hosts[MAIN_ZONE], endpoint['uri']))
+  params.append(urllib.parse.urljoin(main_host, endpoint['uri']))
   return params
 
 def _index_containing_substring(the_list, substring):
@@ -1124,6 +1124,50 @@ def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms, jitt
 #-----------------
 # WORKLOAD
 #-----------------
+def _wkld_docker_args(endpoint, args, hosts, app_wd):
+  if endpoint['type'] == 'wrk2':
+    wrk2_params = _wrk2_params(args, endpoint, hosts[MAIN_ZONE])
+    # prepare docker env
+    docker_args = ['run',
+      '--rm', '-it',
+      '--network=host',
+      '-v', f"{app_wd}/wrk2/scripts:/scripts",
+      '-v', f"{app_wd}/datasets:/scripts/datasets",
+      '-w', '/scripts',
+    ]
+    # add hosts env vars so the previous vars that were set are captured
+    for k,v in hosts.items():
+      docker_args += [ '-e', f"HOST_{k.upper()}"]
+    # add remaing args
+    docker_args += [
+      'wrk2:antipode',
+      '/wrk2/wrk'
+    ] + wrk2_params
+    # run docker
+  elif endpoint['type'] == 'python':
+    script_path = app_wd / endpoint['script_path']
+    # prepare docker env
+    docker_args = ['run',
+      '--rm', '-it',
+      '--network=host',
+      '-v', f"{script_path.parent}:/scripts",
+      '-v', f"{app_wd}/datasets:/scripts/datasets",
+      '-w', '/scripts',
+    ]
+    # add hosts env vars so the previous vars that were set are captured
+    for k,v in hosts.items():
+      docker_args += [ '-e', f"HOST_{k.upper()}"]
+    # add remaing args
+    docker_args += [
+      'python-wkld:antipode',
+      'python',
+      script_path.name,
+    ] + endpoint['args']
+  #
+  return docker_args
+
+#-----------------
+
 def wkld(args):
   args['tag'] = _get_last(args['deploy_type'], 'tag')
   args['deploy_dir'] = _deploy_dir(args)
@@ -1143,51 +1187,11 @@ def wkld__local__run(args):
     'eu': 'http://127.0.0.1:8080',
     'us': 'http://127.0.0.1:8082',
   }
-  endpoint = args['endpoint']
-
   # run workload in deploy dir
   with local.cwd(args['deploy_dir']):
     # run workload for hosts as env variables
     with local.env(**{ f"HOST_{k.upper()}":v for k,v in hosts.items() }):
-      if endpoint['type'] == 'wrk2':
-        wrk2_params = _wrk2_params(args, endpoint, hosts)
-        # prepare docker env
-        docker_args = ['run',
-          '--rm', '-it',
-          '--network=host',
-          '-v', f"{local.cwd}/wrk2/scripts:/scripts",
-          '-v', f"{local.cwd}/datasets:/scripts/datasets",
-          '-w', '/scripts',
-        ]
-        # add hosts env vars so the previous vars that were set are captured
-        for k,v in hosts.items():
-          docker_args += [ '-e', f"HOST_{k.upper()}"]
-        # add remaing args
-        docker_args += [
-          'wrk2:antipode',
-          '/wrk2/wrk'
-        ] + wrk2_params
-        # run docker
-      elif endpoint['type'] == 'python':
-        script_path = local.cwd / endpoint['script_path']
-        # prepare docker env
-        docker_args = ['run',
-          '--rm', '-it',
-          '--network=host',
-          '-v', f"{script_path.parent}:/scripts",
-          '-v', f"{local.cwd}/datasets:/scripts/datasets",
-          '-w', '/scripts',
-        ]
-        # add hosts env vars so the previous vars that were set are captured
-        for k,v in hosts.items():
-          docker_args += [ '-e', f"HOST_{k.upper()}"]
-        # add remaing args
-        docker_args += [
-          'python-wkld:antipode',
-          'python',
-          script_path.name,
-        ] + endpoint['args']
-      # run docker
+      docker_args = _wkld_docker_args(args['endpoint'], args, hosts, args['deploy_dir'])
       docker[docker_args] & FG
 
 #-----------------
