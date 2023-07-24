@@ -3,10 +3,6 @@
   gather_facts: no
   become: no
   any_errors_fatal: true
-  vars:
-    - stack: deathstarbench
-    - app: socialNetwork
-    - num_services: 40
 
   tasks:
     - name: Run DSB Stack

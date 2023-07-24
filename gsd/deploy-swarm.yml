@@ -3,11 +3,6 @@
   any_errors_fatal: true
   gather_facts: no
   become: no
-  vars:
-    - swarm_advertise_port: 2377
-    - swarm_overlay_network: "deathstarbench_network"
-  # vars_files:
-  #     - vars.yaml
 
   tasks:
     - name: Check if Swarm has already been Initialized
@@ -47,11 +42,6 @@
   any_errors_fatal: true
   become: no
   gather_facts: no
-  vars:
-    - swarm_advertise_port: 2377
-    - swarm_overlay_network: "deathstarbench_network"
-  # vars_files:
-  #     - vars.yaml
 
   tasks:
     - name: Add Workers to the Swarm
@@ -71,8 +61,6 @@
   any_errors_fatal: true
   gather_facts: no
   become: no
-  # vars_files:
-  #     - vars.yaml
 
   tasks:
     - name: compute the swarm size

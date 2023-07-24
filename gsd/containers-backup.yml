@@ -3,8 +3,6 @@
   gather_facts: no
   become: no
   any_errors_fatal: true
-  vars_files:
-      - vars.yml
   vars:
     - dest: "/home/jfloff/nas_inesc/antipode/antipode-deathstarbench/deploy/container-images"
       #- dest: "../container-images"
@@ -15,10 +13,9 @@
       shell:  docker image inspect {{item}}
       with_items:
         - "{{ apps[app]['containers']['to_pull'] | union(apps[app]['containers']['to_build']) }}"
-        
+
     - name: Backup container images
       shell: >
             docker save {{item}} | gzip >  {{dest}}/{{ item.replace(':','_').replace('/','_').replace('-','_') }}.tgz
       with_items:
         - "{{ apps[app]['containers']['to_pull'] | union(apps[app]['containers']['to_build']) }}"
-  

@@ -6,8 +6,6 @@
     vars:
       - app: socialNetwork
       - source: "/home/jfloff/nas_inesc/antipode/antipode-deathstarbench/deploy/container-images"
-    vars_files:
-      - vars.yml
 
     tasks:
       - name: Restore the container images

@@ -3,10 +3,8 @@
   gather_facts: no
   become: no
   any_errors_fatal: true
-  vars_files:
-    - vars.yml
   vars:
-    - source: "/home/jfloff/nas_inesc/antipode/antipode-deathstarbench/deploy/container-images"
+    - source: "/home/jfloff/nas_inesc/antipode/antipode-deathstarbench/container-images"
 
   tasks:
 

@@ -3,10 +3,6 @@
   gather_facts: no
   become: no
   any_errors_fatal: true
-  vars_files:
-    - vars.yml
-  # vars:
-  #   - app: socialNetwork
 
   tasks:
     # - name: Pull the images of containers used for DSB

@@ -2,10 +2,6 @@
   any_errors_fatal: true
   become: no
   gather_facts: no
-  vars:
-   - swarm_overlay_network: deathstarbench_network
-  # vars_files:
-  #     - vars.yaml
 
   tasks:
     - name: Undeploy deathstarbench service
@@ -18,8 +14,6 @@
   any_errors_fatal: true
   become: no
   gather_facts: no
-  # vars_files:
-  #     - vars.yaml
 
   tasks:
     - name: Make worker nodes leave the Swarm
@@ -35,8 +29,6 @@
   any_errors_fatal: true
   become: no
   gather_facts: no
-  #vars_files:
-  #    - vars.yaml
 
   tasks:
     - name: Make manager nodes leave the Swarm
