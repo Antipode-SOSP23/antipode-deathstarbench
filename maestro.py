@@ -262,8 +262,13 @@ def _load_inventory(filepath):
 
 def _wait_url_up(url):
   import urllib.request
-  while urllib.request.urlopen(url).getcode() != 200:
-    True
+  while True:
+    try:
+      return_code = urllib.request.urlopen(url).getcode()
+      if return_code == 200:
+        return
+    except urllib.error.URLError as e:
+      pass
 
 
 #-----------------
