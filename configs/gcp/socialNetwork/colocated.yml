@@ -110,6 +110,12 @@ services:
   post-storage-mongodb-setup: admin-tracing
   write-home-timeline-rabbitmq-setup: admin-tracing
 
+manager:
+  name: manager-dsb
+  hostname: manager.dsb
+  zone: us-central1-a
+  machine_type: e2-standard-2
+
 clients:
   - client01
   - client02
