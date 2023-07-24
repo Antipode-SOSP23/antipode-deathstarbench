@@ -70,6 +70,12 @@ sudo apt-get install -y --no-install-recommends \
 sudo apt-get clean
 sudo apt-get autoclean
 
+# Install pip packages
+sudo pip install plumbum
+sudo pip install requests
+sudo pip install ansible
+sudo pip install aiohttp
+
 # Allow ssh root login
 sudo sed -i 's/PermitRootLogin no/PermitRootLogin prohibit-password/g' /etc/ssh/sshd_config
 # add key to roots authorized_keys
