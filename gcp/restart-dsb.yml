@@ -3,9 +3,6 @@
   gather_facts: no
   become: yes
   any_errors_fatal: false
-  vars:
-    - stack: deathstarbench
-    - app: socialNetwork
 
   tasks:
     - name: Reboot clients
@@ -13,26 +10,21 @@
         reboot_command: sudo reboot
       ignore_unreachable: true # we skip unreachable because clients might not yet exist
 
-- hosts: compose-post.pluribus
+- hosts: "{{ compose_post_service_instance }}"
   gather_facts: no
   become: yes
   any_errors_fatal: true
-  vars:
-    - stack: deathstarbench
-    - app: socialNetwork
 
   tasks:
     - name: Remove dockerize.sync from container
       shell: >
-          docker exec $( docker ps -a --filter name='compose-post-service' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) rm -f /tmp/dockerize.sync
+        docker exec $( docker ps -a --filter name='compose-post-service' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) rm -f /tmp/dockerize.sync
       ignore_errors: True
 
 - hosts: swarm_manager
   any_errors_fatal: true
   gather_facts: no
   become: yes
-  vars:
-    - stack: deathstarbench
 
   tasks:
     - name: Scale DSB to 0
@@ -41,18 +33,15 @@
 
     - name: Scale DSB to 1
       shell: >
-          docker service scale $(CMD="" ; for SERVICE in $(docker stack services {{ stack }} --format {% raw %}'{{.Name}}'{% endraw %}) ; do CMD="$CMD $SERVICE=1"; done; echo $CMD)
+          docker service scale $(CMD="" ; for SERVICE in $(docker stack services {{ stack }} --format {% raw %}'{{.Name}}'{% endraw %}) ; do CMD="$CMD $SERVICE=1"; done; echo $CMD)
 
-- hosts: compose-post.pluribus
+- hosts: "{{ compose_post_service_instance }}"
   gather_facts: no
   become: yes
   any_errors_fatal: true
-  vars:
-    - stack: deathstarbench
-    - app: socialNetwork
 
   tasks:
     - name: Wait for compose-post-service to be ready for posts by creating dockerize.sync file
       shell: >
-          docker exec $( docker ps -a --filter name='compose-post-service' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) dockerize -wait file:///tmp/ -wait-retry-interval 10s -timeout 300s
+        docker exec $( docker ps -a --filter name='compose-post-service' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) dockerize -wait file:///tmp/ -wait-retry-interval 10s -timeout 300s
       ignore_errors: True

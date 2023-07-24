@@ -51,12 +51,24 @@ Set the following firewall rules on GCP [web console](https://console.cloud.goog
 
 Then run *maestro* to build and deploy the GCP instances:
 ```zsh
-./maestro --gcp build
-./maestro --gcp deploy -config CONFIG_FILE -clients NUM_CLIENTS
+./maestro --gcp socialNetwork build
+./maestro --gcp socialNetwork deploy -config CONFIG_FILE -clients NUM_CLIENTS
 ```
 You can either build your own deployment configuration file, or you one already existing.
-For instance, for SOSP'23 plots you should use the `configs/sosp23.yml` config and `1` as number of clients.
+For instance, for SOSP'23 plots you should use the `configs/gcp/socialNetwork/us-eu.yml` config.
 
+After deploy is done you can start the DeathStarBench services with:
+```zsh
+./maestro --gcp socialNetwork run -antipode
+```
+In order to run the original TrainTicket application remove the `-antipode` parameter.
+
+
+At the end, you can clean your experiment and destroy your GCP instance with:
+```zsh
+./maestro --gcp socialNetwork clean -strong
+```
+In order to keep your GCP instances and just undeploy undeploy DeathStarBench, remove the `-strong` parameter (you can also restart by passing the `-restart` parameter).
 
 ## Plots
 

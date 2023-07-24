@@ -1,0 +1,15 @@
+- hosts: swarm_manager
+  any_errors_fatal: true
+  become: no
+  gather_facts: no
+
+  tasks:
+    - name: Check that prometheus docker-compose exists
+      stat:
+        path: "/code/portainer/docker-compose.yml"
+      register: stat_result
+
+    - name: Tear down existing portainer services
+      shell: >
+        docker stack rm portainer
+      when: stat_result.stat.exists

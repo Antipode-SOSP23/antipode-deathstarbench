@@ -215,6 +215,24 @@ def _gcp_vm_wait_for_ip(zone, name):
     except KeyError:
       time.sleep(1)
 
+def _gcp_vm_delete(zone, name):
+  import googleapiclient.discovery
+  import json
+
+  compute = googleapiclient.discovery.build('compute', 'v1')
+  try:
+    compute.instances().delete(project=GCP_PROJECT_ID, zone=zone, instance=name).execute()
+    # wait for delete to be completed
+    while True:
+      _gcp_vm_get(zone, name)
+      time.sleep(1)
+  except googleapiclient.errors.HttpError as e:
+    error_info = json.loads(e.args[1])['error']
+    if error_info['code'] == 404:
+      print(f"[INFO] Instance '{name}' deleted")
+      return
+    else:
+      raise(e)
 
 def _reverse_dict(d):
   rev = {}
@@ -898,7 +916,7 @@ def info(args):
 
 def info__socialNetwork(args):
   print(f"Jaeger:\t\t{_service_ip(args['deploy_type'], args['app'], 'jaeger')}")
-  print(f"Portainer:\t{_service_ip(args['deploy_type'], args['app'], 'portainer')}\t\t(admin / antipode)")
+  print(f"Portainer:\t{_service_ip(args['deploy_type'], args['app'], 'portainer')}\t\t(admin / antipodeantipode)")
   print(f"Prometheus:\t{_service_ip(args['deploy_type'], args['app'], 'prometheus')}")
   print(f"RabbitMQ-EU:\t{_service_ip(args['deploy_type'], args['app'], 'rabbitmq-eu')}\t\t(admin / admin)")
   print(f"RabbitMQ-US:\t{_service_ip(args['deploy_type'], args['app'], 'rabbitmq-us')}\t\t(admin / admin)")
@@ -1722,25 +1740,46 @@ def clean__socialNetwork__gsd(args):
   print("[INFO] Clean Complete!")
 
 def clean__socialNetwork__gcp(args):
-  _force_docker()
+  _force_gcp_docker()
   from plumbum.cmd import ansible_playbook
 
-  # change path to playbooks folder
-  os.chdir(ROOT_PATH / 'deploy' / 'gcp')
-  inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'inventory.cfg')
-  client_inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'clients_inventory.cfg')
+  vars_filepath = args['deploy_dir'] / 'vars.yml'
+  inventory_filepath = args['deploy_dir'] / 'inventory.cfg'
+  inventory = _load_inventory(inventory_filepath)
 
-  # delete instances if strong enabled
   if args['strong']:
-    ansible_playbook['undeploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
-    for name,host in inventory.items():
-      _gcp_delete_instance(host['zone'], name)
-    for name,host in client_inventory.items():
-      _gcp_delete_instance(host['zone'], name)
+    print("[INFO] Removing GCP nodes ...")
+    _gcp_vm_delete('us-east1-b', GCP_BUILD_IMAGE_NAME)
+    for _, host in inventory.items():
+      _gcp_vm_delete(host['gcp_zone'], host['gcp_name'])
   elif args['restart']:
-    ansible_playbook['restart-dsb.yml', '-i', 'inventory.cfg', '-i', 'clients_inventory.cfg', '-e', 'app=socialNetwork'] & FG
+    with local.cwd(ROOT_PATH / 'gcp'):
+      ansible_playbook['restart-dsb.yml',
+        '-i', inventory_filepath,
+        '--extra-vars', f"@{vars_filepath}"
+      ] & FG
   else:
-    ansible_playbook['undeploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
+    if _get_last('gcp', 'prometheus'):
+      with local.cwd(ROOT_PATH / 'gcp'):
+        ansible_playbook['undeploy-prometheus.yml',
+          '-i', inventory_filepath,
+          '--extra-vars', f"@{vars_filepath}"
+        ] & FG
+        _put_last('gcp', 'prometheus', False) # already cleaned so we remove flag
+
+    if _get_last('gcp', 'portainer'):
+      with local.cwd(ROOT_PATH / 'gcp'):
+        ansible_playbook['undeploy-portainer.yml',
+          '-i', inventory_filepath,
+          '--extra-vars', f"@{vars_filepath}"
+        ] & FG
+        _put_last('gcp', 'portainer', False) # already cleaned so we remove flag
+
+    with local.cwd(ROOT_PATH / 'gcp'):
+      ansible_playbook['undeploy-swarm.yml',
+        '-i', inventory_filepath,
+        '--extra-vars', f"@{vars_filepath}"
+      ] & FG
 
   print("[INFO] Clean Complete!")
 
@@ -1993,8 +2032,8 @@ if __name__ == "__main__":
 
   # clean application
   clean_parser = subparsers.add_parser('clean', help='Clean application')
-  clean_parser.add_argument('-s', '--strong', action='store_true', help="delete images")
-  clean_parser.add_argument('-r', '--restart', action='store_true', help="clean deployment by restarting containers")
+  clean_parser.add_argument('-strong', action='store_true', help="delete images")
+  clean_parser.add_argument('-restart', action='store_true', help="clean deployment by restarting containers")
 
   ##
   args = vars(main_parser.parse_args())
