@@ -3,8 +3,6 @@
   gather_facts: no
   become: yes
   any_errors_fatal: true
-  vars:
-    - app: socialNetwork
 
   tasks:
     - name: Create '{{ app }}' folder

@@ -6,7 +6,6 @@
   vars:
     - dest: "/home/jfloff/nas_inesc/antipode/antipode-deathstarbench/deploy/container-images"
       #- dest: "../container-images"
-    - app: socialNetwork
 
   tasks:
     - name: validate that the images exists

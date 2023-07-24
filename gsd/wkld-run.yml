@@ -4,7 +4,6 @@
     become: no
     any_errors_fatal: true
     vars:
-      - app: socialNetwork
       - source: "/home/jfloff/nas_inesc/antipode/antipode-deathstarbench/deploy/container-images"
 
     tasks:

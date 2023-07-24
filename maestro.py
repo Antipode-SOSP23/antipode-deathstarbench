@@ -1078,9 +1078,6 @@ def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms, jitt
       gather_facts: no
       become: yes
       any_errors_fatal: true
-      vars:
-        - stack: deathstarbench
-        - app: socialNetwork
 
       tasks:
         - name: Delay container

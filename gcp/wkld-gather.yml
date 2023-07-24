@@ -5,8 +5,6 @@
   become: no
   serial: 1
   any_errors_fatal: true
-  vars:
-    - app: socialNetwork
 
   tasks:
     - name: Downloading data from remote node
