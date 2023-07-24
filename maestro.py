@@ -603,32 +603,6 @@ def deploy__socialNetwork__gsd(args):
   app_dir = DSB_PATH / args['app']
   os.chdir(ROOT_PATH / 'deploy')
 
-  # base path of configuration file
-  conf_base_path = Path(Path.cwd(), 'configurations')
-  if args['new']:
-    new_filename = f"socialNetwork-gsd-{time.strftime('%Y%m%d%H%M%S')}.yml"
-    filepath = conf_base_path / new_filename
-
-    # write default configuration to file
-    with open(filepath, 'w') as f_conf:
-      yaml.dump(SOCIAL_NETWORK_DEFAULT_SERVICES, f_conf)
-      print(f"[SAVED] '{filepath}'")
-      # wait for editor to close
-      print("[INFO] Waiting for editor to close new configuration file ...")
-      click.edit(filename=filepath)
-
-    # check if all nodes are known
-    with open(filepath, 'r') as f_conf:
-      conf = yaml.load(f_conf, Loader=yaml.FullLoader)
-      unknonwn_nodes = [ n for n in set(conf['services'].values()) if n not in GSD_AVAILABLE_NODES.keys() ]
-      if unknonwn_nodes:
-        print("[ERROR] Found unknown nodes in GSD cluster: " + ', '.join(unknonwn_nodes))
-        exit()
-  if args['latest']:
-    filepath = args['configuration_path']
-  if args['file']:
-    filepath = args['configuration_path']
-
   # Update docker-compose.yml
   deploy_nodes = {}
   with open(filepath, 'r') as f_conf, open(Path(app_dir, 'docker-compose.yml'), 'r') as f_compose:
@@ -1884,97 +1858,6 @@ GCP_DOCKER_IMAGE_TAG = 'antipode'
 GCP_MACHINE_IMAGE_LINK = f"https://www.googleapis.com/compute/v1/projects/{GCP_PROJECT_ID}/global/images/{GCP_MACHINE_IMAGE_NAME}"
 # gather
 PERCENTILES_TO_PRINT = [.25, .5, .75, .90, .99]
-# gsd
-SOCIAL_NETWORK_DEFAULT_SERVICES = {
-  'services': {
-    'social-graph-service': 'HOSTNAME',
-    'social-graph-mongodb': 'HOSTNAME',
-    'social-graph-redis': 'HOSTNAME',
-    'write-home-timeline-service-eu': 'HOSTNAME',
-    'write-home-timeline-service-us': 'HOSTNAME',
-    'write-home-timeline-rabbitmq-eu': 'HOSTNAME',
-    'write-home-timeline-rabbitmq-us': 'HOSTNAME',
-    'home-timeline-redis-eu': 'HOSTNAME',
-    'home-timeline-redis-us': 'HOSTNAME',
-    'home-timeline-service': 'HOSTNAME',
-    'post-storage-service': 'HOSTNAME',
-    'post-storage-memcached': 'HOSTNAME',
-    'post-storage-mongodb': 'HOSTNAME',
-    'post-storage-service-us': 'HOSTNAME',
-    'post-storage-memcached-us': 'HOSTNAME',
-    'post-storage-mongodb-us': 'HOSTNAME',
-    'user-timeline-service': 'HOSTNAME',
-    'user-timeline-redis': 'HOSTNAME',
-    'user-timeline-mongodb': 'HOSTNAME',
-    'compose-post-redis': 'HOSTNAME',
-    'compose-post-service': 'HOSTNAME',
-    'url-shorten-service': 'HOSTNAME',
-    'url-shorten-memcached': 'HOSTNAME',
-    'url-shorten-mongodb': 'HOSTNAME',
-    'user-service': 'HOSTNAME',
-    'user-memcached': 'HOSTNAME',
-    'user-mongodb': 'HOSTNAME',
-    'media-service': 'HOSTNAME',
-    'media-memcached': 'HOSTNAME',
-    'media-mongodb': 'HOSTNAME',
-    'media-frontend': 'HOSTNAME',
-    'text-service': 'HOSTNAME',
-    'unique-id-service': 'HOSTNAME',
-    'user-mention-service': 'HOSTNAME',
-    'antipode-oracle': 'HOSTNAME',
-    'nginx-thrift': 'HOSTNAME',
-    'nginx-thrift-us': 'HOSTNAME',
-    'jaeger': 'HOSTNAME',
-    'xtrace-server': 'HOSTNAME',
-    'mongodb-admin': 'HOSTNAME',
-    'post-storage-mongodb-setup': 'HOSTNAME',
-    'write-home-timeline-rabbitmq-setup': 'HOSTNAME',
-  },
-  'nodes': {
-    'HOSTNAME': {
-      'hostname': 'HOSTNAME',
-      'zone': 'europe-west3-c'
-    }
-  }
-}
-GSD_AVAILABLE_NODES = {
-  'node01': '10.100.0.11',
-  'node02': '10.100.0.12',
-  'node03': '10.100.0.13',
-  'node04': '10.100.0.14',
-  'node05': '10.100.0.15',
-  'node06': '10.100.0.16',
-  'node07': '10.100.0.17',
-  'node08': '10.100.0.18',
-  'node09': '10.100.0.19',
-  'node10': '10.100.0.20',
-  'node11': '10.100.0.21',
-  'node20': '10.100.0.30',
-  'node21': '10.100.0.31',
-  'node22': '10.100.0.32',
-  'node23': '10.100.0.33',
-  'node24': '10.100.0.34',
-  'node25': '10.100.0.35',
-  'node26': '10.100.0.36',
-  'node27': '10.100.0.37',
-  'node28': '10.100.0.38',
-  'node29': '10.100.0.39',
-  'node30': '10.100.0.40',
-  'node31': '10.100.0.41',
-  'node32': '10.100.0.42',
-  'node33': '10.100.0.43',
-  'node34': '10.100.0.44',
-  'node35': '10.100.0.45',
-  'angainor': '146.193.41.56',
-  'cosmos': '146.193.41.55',
-  'ngstorage': '146.193.41.54',
-  'intel14v1': '146.193.41.45',
-  'intel14v2': '146.193.41.51',
-  'nvram': '146.193.41.52',
-  'saturn1': '146.193.41.71',
-  'saturn2': '146.193.41.77',
-}
-GSD_SWARM_MANAGER_NODE = { 'node34': '10.100.0.44' }
 
 
 #-----------------
