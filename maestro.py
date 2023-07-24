@@ -75,6 +75,8 @@ def _service_ip(deploy_type, app, service):
       'rabbitmq-us': inventory[config['services']['write-home-timeline-rabbitmq-us']]['external_ip'],
       'portainer': inventory['manager-dsb']['external_ip'],
       'prometheus': inventory['manager-dsb']['external_ip'],
+      'frontend-eu': inventory[config['services']['nginx-thrift']]['external_ip'],
+      'frontend-us': inventory[config['services']['nginx-thrift-us']]['external_ip'],
     }
     public_ip = services_ips[service]
   # return the ip with the common port
@@ -1156,7 +1158,6 @@ def wkld(args):
 def wkld__local__run(args):
   from plumbum.cmd import docker, python
 
-
   hosts = {
     'eu': 'http://127.0.0.1:8080',
     'us': 'http://127.0.0.1:8082',
@@ -1845,6 +1846,8 @@ SERVICE_PORTS = {
     'prometheus': 9090,
     'rabbitmq-eu': 15672,
     'rabbitmq-us': 15673,
+    'frontend-eu': 8080,
+    'frontend-us': 8082,
   }
 }
 CONTAINERS_BUILT = [
