@@ -57,7 +57,7 @@ def _deploy_dir(args):
   return DEPLOY_PATH / args['deploy_type'] / args['app'] / args['tag']
 
 def _service_ip(deploy_type, app, service):
-  config = _load_yaml(_get_last(args['deploy_type'],'config'))
+  config = _load_yaml(ROOT_PATH / _get_last(args['deploy_type'],'config'))
   tag = _get_last(deploy_type, 'tag')
 
   if deploy_type == 'local':
