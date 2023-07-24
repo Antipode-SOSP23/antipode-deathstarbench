@@ -20,7 +20,8 @@
         dest: /code/prometheus/prometheus.yml
         mode: u=rwx,g=r,o=xr
 
-- hosts: cluster
+# deploy prometheus sensors
+- hosts: all
   any_errors_fatal: true
   become: no
   gather_facts: no
@@ -39,6 +40,11 @@
         src: "/tmp/node_exporter-1.1.1.linux-amd64.tar.gz"
         dest: "/tmp"
         remote_src: yes
+
+    - name: Remove zip file
+      file:
+        path: "/tmp/node_exporter-1.1.1.linux-amd64.tar.gz"
+        state: absent
 
     - name: Move nodeexporter to installation dir
       command: mv "/tmp/node_exporter-1.1.1.linux-amd64/node_exporter" "/code/prometheus/"

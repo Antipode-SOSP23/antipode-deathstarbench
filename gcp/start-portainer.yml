@@ -3,19 +3,10 @@
   gather_facts: no
   become: no
   any_errors_fatal: true
-  vars:
-    - stack: management
 
   tasks:
-    - name: Upload portainer compose
-      synchronize:
-        src: "./docker-compose-portainer.yml"
-        dest: "/code/deploy/gcp/"
-        use_ssh_args: yes
-        mode: push
-
     - name: Run Portainer
       shell: >
-            docker stack deploy --compose-file /code/deploy/gcp/docker-compose-portainer.yml {{ stack }};
+        docker stack deploy --compose-file /code/deploy/docker-compose-portainer.yml portainer ;
       register: out
       failed_when: "not(out.rc == 0) or 'fail' in out.stderr"

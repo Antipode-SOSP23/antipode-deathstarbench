@@ -1,2 +1,2 @@
-app: socialNetwork
 swarm_advertise_port: 2377
+stack: deathstarbench
