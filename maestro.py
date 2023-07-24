@@ -292,6 +292,11 @@ def _wait_url_up(url):
     except urllib.error.URLError as e:
       pass
 
+def _build_gather_tag():
+  config_name = Path(_get_last(args['deploy_type'], 'config')).stem
+  rate = _get_last(args['deploy_type'], 'wkld_rate')
+  antipode = '-antipode' if _get_last(args['deploy_type'], 'antipode') else ''
+  return f"{config_name}-{rate}{antipode}"
 
 #-----------------
 # BUILD
@@ -1149,8 +1154,10 @@ def wkld(args):
   args['tag'] = _get_last(args['deploy_type'], 'tag')
   args['deploy_dir'] = _deploy_dir(args)
   args['endpoint'] = WKLD_ENDPOINTS[args['app']][args['Endpoint']]
-  _put_last(args['deploy_type'], 'wkld_tag', f"{datetime.now().strftime('%Y%m%d%H%M')}")
+  args['wkld_tag'] = f"{datetime.now().strftime('%Y%m%d%H%M')}"
+  _put_last(args['deploy_type'], 'wkld_tag', args['wkld_tag'])
   _put_last(args['deploy_type'], 'wkld_rate', args['rate'])
+  _put_last(args['deploy_type'], 'wkld_endpoint', args['Endpoint'])
 
   getattr(sys.modules[__name__], f"wkld__{args['deploy_type']}__run")(args)
   print(f"[INFO] {args['app']} @ {args['deploy_type']} workload ran successfully!")
@@ -1589,6 +1596,7 @@ def gather(args):
 
   args['tag'] = _get_last(args['deploy_type'], 'tag')
   args['deploy_dir'] = _deploy_dir(args)
+  args['wkld_endpoint'] = _get_last(args['deploy_type'], 'wkld_endpoint')
 
   print("[INFO] Download client output ...")
   getattr(sys.modules[__name__], f"gather__{args['app']}__{args['deploy_type']}__download")(args)
@@ -1598,9 +1606,8 @@ def gather(args):
   jaeger_host = _service_ip(args['deploy_type'], args['app'], 'jaeger')
   # build gather path
   rqs = _get_last(args['deploy_type'], 'wkld_rate')
-  gather_tag = f"{Path(_get_last(args['deploy_type'], 'config')).stem}-{rqs}{'-antipode' if _get_last(args['deploy_type'], 'antipode') else ''}"
   wkld_tag =_get_last(args['deploy_type'], 'wkld_tag')
-  gather_path = GATHER_PATH / args['deploy_type'] / args['app'] / gather_tag / wkld_tag
+  gather_path = GATHER_PATH / args['deploy_type'] / args['app'] / args['wkld_endpoint'] / _build_gather_tag() / wkld_tag
   # create folder if needed
   os.makedirs(gather_path, exist_ok=True)
   # force chmod of that dir
