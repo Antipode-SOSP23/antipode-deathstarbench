@@ -1,66 +1,4 @@
 ---
-- hosts: swarm_manager
-  any_errors_fatal: true
-  gather_facts: no
-  become: no
-  vars:
-    - app: "socialNetwork"
-  # vars_files:
-  #     - vars.yaml
-
-  tasks:
-    - name: Create deploy folder
-      file:
-        path: "/code/deploy/gcp/"
-        state: directory
-
-    - name: Upload ansible inventory
-      synchronize:
-        src: "./inventory.cfg"
-        dest: "/code/deploy/gcp/"
-        use_ssh_args: yes
-        mode: push
-
-    - name: Upload configurations
-      synchronize:
-        src: "{{ configuration_filepath }}"
-        dest: "/code/deploy/configurations/"
-        use_ssh_args: yes
-        mode: push
-
-    - name: Upload maestro
-      synchronize:
-        src: "../../maestro.py"
-        dest: "/code/"
-        use_ssh_args: yes
-        mode: push
-
-    - name: Install pip packages
-      shell: >
-        pip install {{ item }}
-      with_items:
-        - plumbum
-        - requests
-        - pyyaml
-        - ansible
-        - aiohttp
-
-    # deploy prometheus
-    - name: Ensures network prometheus configuration dir exists
-      file: path=/code/prometheus state=directory
-
-    - name: Create prometheus docker-compose file
-      copy:
-        src: docker-compose-prometheus.yml
-        dest: /code/prometheus/docker-compose.yml
-        mode: u=rwx,g=r,o=xr
-
-    - name: Create prometheus configuration
-      template:
-        src: prometheus.yml.j2
-        dest: /code/prometheus/prometheus.yml
-        mode: u=rwx,g=r,o=xr
-
 - hosts: all
   any_errors_fatal: true
   become: no
@@ -69,21 +7,53 @@
   tasks:
     - name: Create '{{ app }}' folder
       file:
-        path: "/code/{{ app }}"
+        path: /code/app
         state: directory
 
-    - name: Upload application '{{ app }}' folder
+    - name: Upload application
       synchronize:
-        src: "../../{{ app }}/"
-        dest: "/code/{{ app }}"
+        src: "{{ deploy_dir }}/"
+        dest: /code/app
         use_ssh_args: yes
         recursive: true
         mode: push
 
+    - name: Create deploy folder
+      file:
+        path: /code/deploy/
+        state: directory
+
+    - name: Upload deploy folder
+      synchronize:
+        src: "{{ deploy_path }}/"
+        dest: /code/deploy
+        use_ssh_args: yes
+        mode: push
+
+- hosts: clients
+  any_errors_fatal: true
+  become: no
+  gather_facts: no
+
+  tasks:
     - name: Pull images from GCP registry and retag them
       shell: >
-        docker pull {{namespace}}/{{item}} &&
-        docker tag {{namespace}}/{{item}} {{item}}
+        docker pull {{docker_image_namespace}}/{{item}} &&
+        docker tag {{docker_image_namespace}}/{{item}} {{item}}
+      with_items:
+        - wrk2:antipode
+        - python-wkld:antipode
+
+- hosts: cluster
+  any_errors_fatal: true
+  become: no
+  gather_facts: no
+
+  tasks:
+    - name: Pull images from GCP registry and retag them
+      shell: >
+        docker pull {{docker_image_namespace}}/{{item}} &&
+        docker tag {{docker_image_namespace}}/{{item}} {{item}}
       with_items:
         - mongodb-delayed:4.4.6
         - mongodb-setup:4.4.6
@@ -91,27 +61,3 @@
         - yg397/openresty-thrift:latest
         - yg397/social-network-microservices:antipode
         - redis-im:antipode
-
-# deploy prometheus sensors
-- hosts: cluster
-  any_errors_fatal: true
-  become: no
-  gather_facts: no
-
-  tasks:
-    - name: Ensures network prometheus configuration dir exists
-      file: path=/code/prometheus state=directory
-
-    - name: Download Prometheus Nodeexporter version
-      get_url:
-        url: "https://github.com/prometheus/node_exporter/releases/download/v1.1.1/node_exporter-1.1.1.linux-amd64.tar.gz"
-        dest: "/tmp/node_exporter-1.1.1.linux-amd64.tar.gz"
-
-    - name: Deploy node exporter bundle and unpack it at the remote nodes
-      unarchive:
-        src: "/tmp/node_exporter-1.1.1.linux-amd64.tar.gz"
-        dest: "/tmp"
-        remote_src: yes
-
-    - name: Move nodeexporter to installation dir
-      command: mv "/tmp/node_exporter-1.1.1.linux-amd64/node_exporter" "/code/prometheus/"

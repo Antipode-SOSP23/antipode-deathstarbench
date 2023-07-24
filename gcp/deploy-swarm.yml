@@ -3,21 +3,17 @@
   any_errors_fatal: true
   gather_facts: no
   become: no
-  vars:
-    - swarm_advertise_port: 2377
-    - swarm_overlay_network: "deathstarbench_network"
-  # vars_files:
-  #     - vars.yaml
 
   tasks:
     - name: Check if Swarm has already been Initialized
-      shell: docker node ls
+      shell: >
+        docker node ls
       register: swarm_status
       failed_when: "not(swarm_status.rc == 0 or 'This node is not a swarm manager.' in swarm_status.stderr)"
 
     - name: Initialize Docker Swarm
       shell: >
-            docker swarm init --advertise-addr={{ hostvars[inventory_hostname]['gcp_host'] }}:{{ swarm_advertise_port }}
+        docker swarm init --advertise-addr={{ hostvars[inventory_hostname]['gcp_host'] }}:{{ swarm_advertise_port }}
       when: swarm_status.rc != 0
       run_once: true
 
@@ -26,7 +22,8 @@
       register: manager_token
 
     - name: Get the worker join-token
-      shell: docker swarm join-token --quiet worker
+      shell: >
+        docker swarm join-token --quiet worker
       register: worker_token
 
     - name: Save workers token
@@ -35,7 +32,7 @@
 
     - name: Initialize Docker Swarm Network
       shell: >
-            docker network create --attachable -d overlay {{ swarm_overlay_network }}
+        docker network create --attachable -d overlay {{ swarm_overlay_network }}
       when: swarm_status.rc != 0
       run_once: true
 
@@ -43,19 +40,19 @@
     #   debug:
     #     msg: "{{ hostvars }}"
 
-- hosts: cluster
+- hosts:
+    - cluster
+    - clients
   any_errors_fatal: true
   become: no
   gather_facts: no
-  vars:
-    - swarm_advertise_port: 2377
-    - swarm_overlay_network: "deathstarbench_network"
-  # vars_files:
-  #     - vars.yaml
+  vars_files:
+    - vars.yaml
 
   tasks:
     - name: Add Workers to the Swarm
-      shell: "docker swarm join --token {{ hostvars[hostvars[inventory_hostname]['groups']['swarm_manager'][0]]['worker_token'] }} {{ hostvars[hostvars[inventory_hostname]['groups']['swarm_manager'][0]]['gcp_host']  }}:{{ swarm_advertise_port }}"
+      shell: >
+        docker swarm join --token {{ hostvars[hostvars[inventory_hostname]['groups']['swarm_manager'][0]]['worker_token'] }} {{ hostvars[hostvars[inventory_hostname]['groups']['swarm_manager'][0]]['gcp_host']  }}:{{ swarm_advertise_port }}
       register: out
       failed_when: "not(out.rc == 0 or 'This node is already part of a swarm' in out.stderr)"
 
@@ -75,15 +72,16 @@
   #     - vars.yaml
 
   tasks:
-    - name: compute the swarm size
+    - name: Register swarm size
       set_fact:
-        swarm_size: "{{ hostvars[inventory_hostname]['groups']['swarm_manager'] | union(hostvars[inventory_hostname]['groups']['cluster']) | unique | length  }}"
+        swarm_size: "{{ hostvars[inventory_hostname]['groups']['swarm_manager'] | union(hostvars[inventory_hostname]['groups']['cluster']) | union(hostvars[inventory_hostname]['groups']['clients']) | unique | length  }}"
 
     - name: print swarm size
       debug:
         var: swarm_size
 
-    - name: Debug - check if all nodes are joined to the swarm
-      shell: docker node ls -q | wc -l
+    - name: Check if all nodes are joined to the swarm
+      shell: >
+        docker node ls -q | wc -l
       register: swarm_status
       failed_when: "not( swarm_size == swarm_status.stdout )"

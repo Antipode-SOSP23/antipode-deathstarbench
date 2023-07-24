@@ -56,8 +56,9 @@ def _get_config(deploy_type, k):
 def _deploy_dir(args):
   return DEPLOY_PATH / args['deploy_type'] / args['app'] / args['tag']
 
-def _service_ip(deploy_type, service):
+def _service_ip(deploy_type, app, service):
   config = _load_yaml(_get_last(args['deploy_type'],'config'))
+  tag = _get_last(deploy_type, 'tag')
 
   if deploy_type == 'local':
     from plumbum.cmd import hostname
@@ -65,10 +66,17 @@ def _service_ip(deploy_type, service):
   elif deploy_type == 'gsd':
     public_ip = GSD_AVAILABLE_NODES[config['services'][service]]
   elif deploy_type == 'gcp':
-    inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'inventory.cfg')
-    public_ip = inventory[config['services']['jaeger']]['external_ip']
+    inventory = _load_inventory(DEPLOY_PATH / 'gcp' / app / tag / 'inventory.cfg')
+    services_ips = {
+      'jaeger': inventory[config['services']['jaeger']]['external_ip'],
+      'rabbitmq-eu': inventory[config['services']['write-home-timeline-rabbitmq-eu']]['external_ip'],
+      'rabbitmq-us': inventory[config['services']['write-home-timeline-rabbitmq-us']]['external_ip'],
+      'portainer': inventory['manager-dsb']['external_ip'],
+      'prometheus': inventory['manager-dsb']['external_ip'],
+    }
+    public_ip = services_ips[service]
   # return the ip with the common port
-  return f'http://{public_ip}:{SERVICE_PORTS[service]}'
+  return f'http://{public_ip}:{SERVICE_PORTS[app][service]}'
 
 def _wrk2_params(args, endpoint, hosts):
   import urllib.parse
@@ -196,7 +204,30 @@ def _gcp_vm_start(zone, name):
       error_info = json.loads(e.args[1])['error']
       raise(e)
 
-def _inventory_to_dict(filepath):
+def _gcp_vm_wait_for_ip(zone, name):
+  while True:
+    metadata = _gcp_vm_get(zone, name)
+    try:
+      network_interface = metadata['networkInterfaces'][0]
+      return network_interface['accessConfigs'][0]['natIP'], network_interface['networkIP']
+    except KeyError:
+      time.sleep(1)
+
+
+def _reverse_dict(d):
+  rev = {}
+  for k,vs in d.items():
+    # if not a list, make it a list with a single entry
+    if not isinstance(vs, list):
+      vs = [vs]
+    # loop list of values
+    for v in vs:
+      if v not in rev:
+        rev[v] = []
+      rev[v].append(k)
+  return rev
+
+def _load_inventory(filepath):
   from ansible.parsing.dataloader import DataLoader
   from ansible.inventory.manager import InventoryManager
   from ansible.vars.manager import VariableManager
@@ -205,17 +236,27 @@ def _inventory_to_dict(filepath):
   inventory = InventoryManager(loader=loader, sources=str(filepath))
   variable_manager = VariableManager(loader=loader, inventory=inventory)
 
+  hostname_to_groups = _reverse_dict(inventory.get_groups_dict())
   # other methods:
   # - inventory.get_host('manager.antipode-296620').vars
 
   loaded_inventory = {}
-  for hostname,info in inventory.hosts.items():
-    loaded_inventory[info.vars['gcp_name']] = {
-      'external_ip': info.vars['ansible_host'],
-      'internal_ip': info.vars['gcp_host'],
-      'zone': info.vars['gcp_zone'],
-      'hostname': hostname,
-    }
+  for gcp_hostname,info in inventory.hosts.items():
+    # index by service name
+    e = {}
+    # load hostname manually since its the key for each host
+    e['gcp_hostname'] = gcp_hostname
+    e['groups'] = hostname_to_groups[gcp_hostname]
+    # load all remaining keys
+    for k,v in info.vars.items():
+      e[k] = v
+    # refactor some entries
+    e['external_ip'] = e['ansible_host']
+    e['internal_ip'] = e['gcp_host']
+    del e['ansible_host']
+    del e['gcp_host']
+    # assign new entry
+    loaded_inventory[info.vars['gcp_name']] = e
 
   return loaded_inventory
 
@@ -507,7 +548,7 @@ def deploy(args):
   _put_last(args['deploy_type'], 'config', args['config'])
 
   getattr(sys.modules[__name__], f"deploy__{args['app']}__{args['deploy_type']}")(args)
-  print(f"[INFO] {args['app']} @ {args['deploy_type']} deployed successfully!")
+  print(f"[INFO] {args['app']} @ {args['deploy_type']} deployed successfully with '{args['tag']}' tag!")
 
 def deploy__socialNetwork__local(args):
   import shutil
@@ -627,167 +668,215 @@ def deploy__socialNetwork__gsd(args):
   print("[INFO] Deploy Complete!")
 
 def deploy__socialNetwork__gcp(args):
-  _force_docker()
-  import click
+  _force_gcp_docker()
+  from plumbum.cmd import ansible_playbook, ls
+  import shutil
   from jinja2 import Environment
   import textwrap
-  from plumbum.cmd import ansible_playbook
 
+  config = _load_yaml(args['config'])
 
-  app_dir = DSB_PATH / args['app']
-  os.chdir(ROOT_PATH / 'deploy')
+  print(f"[INFO] Copying deploy files... ", flush=True)
+  os.makedirs(args['deploy_dir'], exist_ok=True)
+  shutil.copytree(DSB_PATH / args['app'], args['deploy_dir'], dirs_exist_ok=True)
+  shutil.copy(ROOT_PATH / 'gcp' / 'vars.yml', args['deploy_dir'])
 
-  # base path of configuration file
-  conf_base_path = ROOT_PATH / 'deploy' / 'configurations'
-  if args['new']:
-    filepath = conf_base_path / f"socialNetwork-gcp-{time.strftime('%Y%m%d%H%M%S')}.yml"
+  print(f"[INFO] Generating docker-compose-swarm.yml ... ", flush=True)
+  # replace hostname in docker_compose_swarm
+  with local.cwd(args['deploy_dir']):
+    app_compose = _load_yaml('docker-compose.yml')
 
-    # write default configuration to file
-    with open(filepath, 'w') as f_conf:
-      yaml.dump(SOCIAL_NETWORK_DEFAULT_SERVICES, f_conf)
-      print(f"[SAVED] '{filepath}'")
-      print("[INFO] Waiting for editor to close new configuration file ...")
-      click.edit(filename=filepath)
+    # add network that is created on deploy playbook
+    app_compose.setdefault('networks', {})[DOCKER_COMPOSE_NETWORK] = {
+      'external': {
+        'name': DOCKER_COMPOSE_NETWORK
+      }
+    }
 
-    print("[INFO] Appending GCP Project ID to node ids ...")
-    # open file and check if GCP_PROJECT_ID is appended to every node id
-    with open(filepath, 'r') as f_conf:
-      written_conf = yaml.load(f_conf, Loader=yaml.FullLoader)
-      for k,v in written_conf['nodes'].items():
-        # defaults hostname to id
-        if 'hostname' not in v:
-          v['hostname'] = k
-        # append the project id to hostname
-        if GCP_PROJECT_ID not in v['hostname']:
-          written_conf['nodes'][k]['hostname'] = f"{v['hostname']}.{GCP_PROJECT_ID}"
+    for service, node_id in config['services'].items():
+      compose_service = app_compose['services'][service]
 
-    with open(filepath, 'w') as f_conf:
-      yaml.dump(written_conf, f_conf)
-  if args['latest']:
-    filepath = args['configuration_path']
-  if args['file']:
-    filepath = args['configuration_path']
+      # replaces existing networks with new one
+      if 'networks' not in compose_service: compose_service['networks'] = []
+      compose_service['networks'].append(DOCKER_COMPOSE_NETWORK)
 
+      # replace the deploy constraints with new nodes
+      if 'deploy' not in compose_service: compose_service['deploy'] = {}
+      if 'placement' not in compose_service['deploy']: compose_service['deploy']['placement'] = {}
+      if 'constraints' not in compose_service['deploy']['placement']: compose_service['deploy']['placement']['constraints'] = []
+      deploy_constraints = compose_service['deploy']['placement']['constraints']
+      # get the id of constraint of the node hostname
+      node_constraint_index = _index_containing_substring(deploy_constraints, 'node.hostname')
+      # replace docker-compose with that constraint
+      deploy_constraints[node_constraint_index] = f"node.hostname == {node_id}"
 
-  with open(filepath, 'r') as f_conf:
-    conf = yaml.load(f_conf, Loader=yaml.FullLoader)
+    # now write the compose into a new file
+    _dump_yaml(local.cwd / 'docker-compose-swarm.yml', app_compose)
+    print(f"[SAVED] 'docker-compose-swarm.yml'")
 
-    # replace hostname in docker_compose_swarm
-    with open(app_dir / 'docker-compose.yml', 'r') as f_app_compose, open(app_dir / 'docker-compose-swarm.yml', 'w') as f_swarm_compose:
-      app_compose = yaml.load(f_app_compose, Loader=yaml.FullLoader)
+  # Keep track of all created vms
+  vms = { 'swarm_manager': [], 'cluster': [], 'clients': [] }
 
-      # add network that is created on deploy playbook
-      app_compose['networks'] = {
-        'deathstarbench_network': {
-          'external': {
-            'name': 'deathstarbench_network'
-          }
+  print(f"[INFO] Creating GCP instances ... ", flush=True)
+  # create the swarm manager node
+  manager_config = {
+    'name': config['manager']['name'],
+    'machineType': f"zones/{config['manager']['zone']}/machineTypes/{config['manager']['machine_type']}",
+    'disks': [
+      {
+        'boot': True,
+        'autoDelete': True,
+        'initializeParams': {
+          'sourceImage': GCP_MACHINE_IMAGE_LINK,
         }
       }
-
-      for service, node_id in conf['services'].items():
-        # replaces existing networks with new one
-        app_compose['services'][service]['networks'] = [ 'deathstarbench_network' ]
-
-        # replace the deploy constraints
-        deploy_constraints = app_compose['services'][service]['deploy']['placement']['constraints']
-        # get the id of constraint of the node hostname
-        node_constraint_index = _index_containing_substring(deploy_constraints, 'node.hostname')
-        # replace docker-compose with that constraint
-        deploy_constraints[node_constraint_index] = f"node.hostname == {node_id}"
-
-      # now write the compose into a new file
-      yaml.dump(app_compose, f_swarm_compose)
-      print(f"[SAVED] '{app_dir / 'docker-compose-swarm.yml'}'")
-
-    # Build inventory for ansible playbooks
-    inventory = {}
-    # create the swarm manager node
-    inventory['manager'] = {
-      'hostname': f"manager.{GCP_PROJECT_ID}",
-      'zone': 'us-central1-a',
-      'external_ip': None,
-      'internal_ip': None,
-    }
-    _gcp_create_instance(
-      name='manager',
-      machine_type='e2-standard-2',
-      zone=inventory['manager']['zone'],
-      hostname=inventory['manager']['hostname'],
-      firewall_tags=['portainer','swarm']
-    )
-
-    # get all the unique node ids to create in GCP
-    for node_key, node_info in conf['nodes'].items():
-      # skip client nodes
-      if node_key in conf['clients']:
-        continue
-
-      inventory[node_key] = {
-        'hostname': node_info['hostname'],
-        'zone': node_info['zone'],
-        'external_ip': None,
-        'internal_ip': None,
+    ],
+    'hostname': config['manager']['hostname'],
+    # Specify a network interface with NAT to access the public internet.
+    'networkInterfaces': [
+      {
+        'network': 'global/networks/default',
+        'accessConfigs': [
+          {'type': 'ONE_TO_ONE_NAT', 'name': 'External NAT'}
+        ]
       }
-      _gcp_create_instance(
-        zone=node_info['zone'],
-        name=node_key,
-        machine_type=node_info['machine_type'],
-        hostname=node_info['hostname'],
-        firewall_tags=['swarm','nodes']
-      )
+    ],
+    # tags for firewall rules
+    "tags": {
+      "items": ['swarm', 'portainer'],
+    },
+  }
+  vms['swarm_manager'].append(_gcp_vm_create(config['manager']['zone'], manager_config))
 
-    # wait for instances public ips
-    for node_key, node_info in inventory.items():
-      while inventory[node_key].get('external_ip', None) is None:
-        metadata = _gcp_get_instance(node_info['zone'], node_key)
-        try:
-          inventory[node_key]['external_ip'] = metadata['networkInterfaces'][0]['accessConfigs'][0]['natIP']
-          inventory[node_key]['internal_ip'] = metadata['networkInterfaces'][0]['networkIP']
-        except KeyError:
-          inventory[node_key]['external_ip'] = None
-          inventory[node_key]['internal_ip'] = None
+  # app nodes
+  for node_name, node_info in config['nodes'].items():
+    node_config = {
+      'name': node_name,
+      'machineType': f"zones/{node_info['zone']}/machineTypes/{node_info['machine_type']}",
+      'disks': [
+        {
+          'boot': True,
+          'autoDelete': True,
+          'initializeParams': {
+            'sourceImage': GCP_MACHINE_IMAGE_LINK,
+          }
+        }
+      ],
+      'hostname': node_info['hostname'],
+      # Specify a network interface with NAT to access the public internet.
+      'networkInterfaces': [
+        {
+          'network': 'global/networks/default',
+          'accessConfigs': [
+            {'type': 'ONE_TO_ONE_NAT', 'name': 'External NAT'}
+          ]
+        }
+      ],
+      # tags for firewall rules
+      "tags": {
+        "items": ['swarm', 'nodes'],
+      },
+    }
+    vms['cluster'].append(_gcp_vm_create(node_info['zone'], node_config))
 
-    # now build the inventory
-    # if you want to get a new google_compute_engine key:
-    #   1) go to https://console.cloud.google.com/compute/instances
-    #   2) choose one instance, click on SSH triangle for more options
-    #   3) 'View gcloud command'
-    #   4) Run that command and then copy the generated key
-    #
-    template = """
-      [swarm_manager]
-      {{ swarm_manager['hostname'] }} ansible_host={{ swarm_manager['external_ip'] }} gcp_zone={{ swarm_manager['zone'] }} gcp_name=manager gcp_host={{ swarm_manager['internal_ip'] }} ansible_user=root ansible_ssh_private_key_file=/code/deploy/gcp/{{ project_id }}_google_compute_engine
+  # client nodes
+  for i in range(args['clients']):
+    node_config = {
+      'name': f"client{i:02}",
+      'machineType': f"zones/{config['clients']['zone']}/machineTypes/{config['clients']['machine_type']}",
+      'disks': [
+        {
+          'boot': True,
+          'autoDelete': True,
+          'initializeParams': {
+            'sourceImage': GCP_MACHINE_IMAGE_LINK,
+          }
+        }
+      ],
+      'hostname': f"client{i:02}.dsb",
+      # Specify a network interface with NAT to access the public internet.
+      'networkInterfaces': [
+        {
+          'network': 'global/networks/default',
+          'accessConfigs': [
+            {'type': 'ONE_TO_ONE_NAT', 'name': 'External NAT'}
+          ]
+        }
+      ],
+      # tags for firewall rules
+      "tags": {
+        "items": ['swarm', 'nodes'],
+      },
+    }
+    vms['clients'].append(_gcp_vm_create(node_info['zone'], node_config))
 
+  # Build inventory for ansible playbooks
+  print(f"[INFO] Generating inventory... ", flush=True)
+  inventory = {}
+  for group_name, group_nodes in vms.items():
+    for vm in group_nodes:
+      zone = vm['zone'].rsplit('/', 1)[1]
+      external_ip, internal_ip = _gcp_vm_wait_for_ip(zone, vm['name'])
 
-      [cluster]
-      {% for node_name,node in deploy_nodes.items() %}
-      {{ node['hostname'] }} ansible_host={{ node['external_ip'] }} gcp_zone={{ node['zone'] }} gcp_name={{ node_name }} gcp_host={{ node['internal_ip'] }} ansible_user=root ansible_ssh_private_key_file=/code/deploy/gcp/{{ project_id }}_google_compute_engine
-      {% endfor %}
-    """
-    inventory = Environment().from_string(template).render({
-      'project_id': GCP_PROJECT_ID,
-      'swarm_manager': inventory['manager'],
-      'deploy_nodes': { node_name: inventory[node_name] for node_name in inventory if node_name != 'manager' },
-    })
+      if group_name not in inventory:
+        inventory[group_name] = []
+      inventory[group_name].append({
+        'name': vm['name'],
+        'hostname': vm['hostname'],
+        'zone': zone,
+        'external_ip': external_ip,
+        'internal_ip': internal_ip,
+      })
 
-    inventory_filepath = Path('gcp/inventory.cfg')
-    with open(inventory_filepath, 'w') as f:
-      # remove empty lines and dedent for easier read
-      f.write(textwrap.dedent(inventory))
+  template = """
+    [swarm_manager]
+    {{ swarm_manager['hostname'] }} ansible_host={{ swarm_manager['external_ip'] }} gcp_zone={{ swarm_manager['zone'] }} gcp_name={{ swarm_manager['name'] }} gcp_host={{ swarm_manager['internal_ip'] }} ansible_user=root ansible_ssh_private_key_file={{ private_key_path }}
 
-    print(f"[SAVED] '{inventory_filepath}'")
+    [cluster]
+    {% for node in cluster %}{{ node['hostname'] }} ansible_host={{ node['external_ip'] }} gcp_zone={{ node['zone'] }} gcp_name={{ node['name'] }} gcp_host={{ node['internal_ip'] }} ansible_user=root ansible_ssh_private_key_file={{ private_key_path }}
+    {% endfor %}
 
-  # sleep before
+    [clients]
+    {% for node in clients %}{{ node['hostname'] }} ansible_host={{ node['external_ip'] }} gcp_zone={{ node['zone'] }} gcp_name={{ node['name'] }} gcp_host={{ node['internal_ip'] }} ansible_user=root ansible_ssh_private_key_file={{ private_key_path }}
+    {% endfor %}
+  """
+  template_render = Environment().from_string(template).render({
+    'swarm_manager': inventory['swarm_manager'][0], # only one swarm manager
+    'cluster': inventory['cluster'],
+    'clients': inventory['clients'],
+    'private_key_path': str(ROOT_PATH / 'gcp' / '.ssh' / 'google_compute_engine'), # ROOT_PATH here will be the container path
+  })
+  inventory_filepath = args['deploy_dir'] / 'inventory.cfg'
+  with open(inventory_filepath, 'w') as f:
+    # remove empty lines and dedent for easier read
+    f.write(textwrap.dedent(template_render))
+  print(f"[SAVED] '{inventory_filepath}'")
+
+  print(f"[INFO] Replace vars.yml entries... ", flush=True)
+  vars_filepath = args['deploy_dir'] / 'vars.yml'
+  vars_yaml = _load_yaml(vars_filepath)
+  # new vars
+  vars_yaml['app'] = args['app']
+  vars_yaml['swarm_overlay_network'] = DOCKER_COMPOSE_NETWORK
+  vars_yaml['docker_image_namespace'] = GCP_DOCKER_IMAGE_NAMESPACE
+  vars_yaml['deploy_path'] = str(ROOT_PATH / 'gcp')
+  vars_yaml['deploy_dir'] = str(args['deploy_dir'])
+  # dump
+  _dump_yaml(vars_filepath, vars_yaml)
+  print(f"[SAVED] '{vars_filepath}'")
+
+  print(f"[INFO] Run deploy playbooks ... ", flush=True)
+  # sleep to give extra time for nodes to be ready to accept requests
   time.sleep(30)
-
-  # run playbooks
-  os.chdir(ROOT_PATH / 'deploy' / 'gcp')
-
-  # copy all the needed files to remote
-  ansible_playbook['deploy-setup.yml', '-e', 'app=socialNetwork', '-e', f"configuration_filepath={str(filepath)}"] & FG
-  # then deploy everywhere
-  ansible_playbook['deploy-swarm.yml', '-e', 'app=socialNetwork'] & FG
+  with local.cwd(ROOT_PATH / 'gcp'):
+    ansible_playbook['deploy-setup.yml',
+      '-i', inventory_filepath,
+      '--extra-vars', f"@{vars_filepath}"
+    ] & FG
+    ansible_playbook['deploy-swarm.yml',
+      '-i', inventory_filepath,
+      '--extra-vars', f"@{vars_filepath}"
+    ] & FG
 
 
 #-----------------
@@ -795,11 +884,14 @@ def deploy__socialNetwork__gcp(args):
 #-----------------
 def info(args):
   print(f"[INFO] {args['app']} @ {args['deploy_type']} services:")
+  getattr(sys.modules[__name__], f"info__{args['app']}")(args)
 
-  print(f"Jaeger:\t\t{_service_ip(args['deploy_type'], 'jaeger')}")
-  print(f"Portainer:\t{_service_ip(args['deploy_type'], 'portainer')}\t\t(admin / antipode)")
-  print(f"RabbitMQ-EU:\t{_service_ip(args['deploy_type'], 'rabbitmq-eu')}\t\t(admin / admin)")
-  print(f"RabbitMQ-US:\t{_service_ip(args['deploy_type'], 'rabbitmq-us')}\t\t(admin / admin)")
+def info__socialNetwork(args):
+  print(f"Jaeger:\t\t{_service_ip(args['deploy_type'], args['app'], 'jaeger')}")
+  print(f"Portainer:\t{_service_ip(args['deploy_type'], args['app'], 'portainer')}\t\t(admin / antipode)")
+  print(f"Prometheus:\t{_service_ip(args['deploy_type'], args['app'], 'prometheus')}")
+  print(f"RabbitMQ-EU:\t{_service_ip(args['deploy_type'], args['app'], 'rabbitmq-eu')}\t\t(admin / admin)")
+  print(f"RabbitMQ-US:\t{_service_ip(args['deploy_type'], args['app'], 'rabbitmq-us')}\t\t(admin / admin)")
 
 
 #-----------------
@@ -1478,7 +1570,7 @@ def gather(args):
 
   print("[INFO] Gather jaeger traces ...")
   # load jaeger host
-  jaeger_host = _service_ip(args['deploy_type'], 'jaeger')
+  jaeger_host = _service_ip(args['deploy_type'], args['app'], 'jaeger')
   # build gather path
   rqs = _get_last(args['deploy_type'], 'wkld_rate')
   gather_tag = f"{Path(_get_last(args['deploy_type'], 'config')).stem}-{rqs}{'-antipode' if _get_last(args['deploy_type'], 'antipode') else ''}"
@@ -1702,10 +1794,13 @@ WKLD_ENDPOINTS = {
   },
 }
 SERVICE_PORTS = {
-  'jaeger': 16686,
-  'portainer': 9000,
-  'rabbitmq-eu': 15672,
-  'rabbitmq-us': 15673,
+  'socialNetwork': {
+    'jaeger': 16686,
+    'portainer': 9000,
+    'prometheus': 9090,
+    'rabbitmq-eu': 15672,
+    'rabbitmq-us': 15673,
+  }
 }
 CONTAINERS_BUILT = [
   'mongodb-delayed:4.4.6',
@@ -1849,6 +1944,7 @@ if __name__ == "__main__":
   deploy_parser = subparsers.add_parser('deploy', help='Deploy application')
   deploy_parser.add_argument('-config', required=True, help="Deploy configuration")
   deploy_parser.add_argument('-tag', required=False, help="Deploy with already existing tag")
+  deploy_parser.add_argument('-clients', required=True, type=int, help="Number of clients to run on")
 
   # info application
   info_parser = subparsers.add_parser('info', help='Deployment info')
