@@ -3,8 +3,8 @@ plumbum
 python-dateutil
 pandas
 requests
-pyyaml
 jinja2
 MarkupSafe
 click
 textwrap3
+ruamel.yaml

@@ -56,11 +56,11 @@ RUN set -ex ;\
         google-api-python-client \
         plumbum \
         pandas \
-        pyyaml \
         jinja2 \
         click \
         ansible \
         python-dotenv \
+        ruamel.yaml \
         # error with mounting docker-compose bin as volume
         docker-compose \
         ;
