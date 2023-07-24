@@ -103,6 +103,7 @@ def _flat_list(l):
 def _is_inside_docker():
   return os.path.isfile('/.dockerenv')
 
+# Set env var REBUILD_GCP_DOCKER_IMAGE=1 to force rebuilt
 def _force_gcp_docker():
   if not _is_inside_docker():
     import platform
@@ -110,7 +111,7 @@ def _force_gcp_docker():
     from plumbum.cmd import docker
 
     # if image is not built, we do it
-    if docker['images', GCP_DOCKER_IMAGE_NAME, '--format', '"{{.ID}}"']().strip() == '':
+    if bool(int(os.environ.get('REBUILD_GCP_DOCKER_IMAGE',0))) or docker['images', GCP_DOCKER_IMAGE_NAME, '--format', '"{{.ID}}"']().strip() == '':
       with local.cwd(ROOT_PATH / 'gcp'):
         docker['build', '-t', GCP_DOCKER_IMAGE_NAME, '.'] & FG
 
