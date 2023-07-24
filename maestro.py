@@ -1191,6 +1191,76 @@ def wkld__local__run(args):
       docker_args = _wkld_docker_args(args['endpoint'], args, hosts, args['deploy_dir'])
       docker[docker_args] & FG
 
+def wkld__gcp__run(args):
+  _force_gcp_docker()
+  from plumbum.cmd import ansible_playbook, sudo
+  from jinja2 import Environment
+  import textwrap
+
+  vars_filepath = args['deploy_dir'] / 'vars.yml'
+  inventory_filepath = args['deploy_dir'] / 'inventory.cfg'
+  inventory = _load_inventory(inventory_filepath)
+  config = _load_yaml(ROOT_PATH / _get_last(args['deploy_type'], 'config'))
+  endpoint = args['endpoint']
+  hosts = {
+    'eu': _service_ip(args['deploy_type'], args['app'], 'frontend-eu'),
+    'us': _service_ip(args['deploy_type'], args['app'], 'frontend-us'),
+  }
+
+  # build remote and local gather paths
+  gather_path = Path('/tmp') / 'dsb' / args['app'] / args['Endpoint'] / _build_gather_tag() / args['wkld_tag']
+  _put_last(args['deploy_type'], 'remote_gather_path', str(gather_path))
+  local_gather_path = GATHER_PATH / args['deploy_type'] / args['app'] / args['Endpoint'] / _build_gather_tag() / args['wkld_tag']
+  _put_last(args['deploy_type'], 'local_gather_path', str(local_gather_path))
+  # create folder if needed
+  os.makedirs(local_gather_path, exist_ok=True)
+  # force chmod of that dir
+  sudo['chmod', 777, local_gather_path] & FG
+
+  # build docker args
+  app_wd = Path('/') / 'code' / 'app'
+  docker_args = _wkld_docker_args(args['endpoint'], args, hosts, app_wd)
+  # remove --rm tag so we can control when wkld finishes
+  docker_args.remove('--rm')
+
+  # Create script to run
+  template = """
+    #! /bin/bash
+
+    export HOST_EU={{ host_eu }}
+    export HOST_US={{ host_us }}
+    mkdir -p {{gather_path}}
+    docker {{docker_args}} | tee {{gather_path}}/$(hostname).out
+  """
+  script = Environment().from_string(template).render({
+    'host_eu': hosts['eu'],
+    'host_us': hosts['us'],
+    'docker_args': ' '.join([str(e) for e in docker_args]),
+    'gather_path': gather_path,
+  })
+  script_filepath = local_gather_path / 'wkld-run.sh'
+  with open(script_filepath, 'w') as f:
+    # remove empty lines and dedent for easier read
+    f.write(textwrap.dedent(script))
+  # add executable permissions
+  script_filepath.chmod(script_filepath.stat().st_mode | stat.S_IEXEC)
+  print(f"[SAVED] '{script_filepath}'")
+
+  # run workload remotely
+  with local.cwd(ROOT_PATH / 'gcp'):
+    retries = 15
+    delay = (args['duration'] + 60) / retries if args['duration'] else 45
+    # docker container ls --all --quiet --filter "name=web-server-10"
+    ansible_playbook['wkld-run.yml',
+      '-i', inventory_filepath,
+      '--extra-vars', f"@{vars_filepath}",
+      '-e', f"local_gather_path={local_gather_path}",
+      '-e', f"wkld_container_name={WKLD_CONTAINER_NAME}",
+      '-e', f"num_delay={delay}",
+      '-e', f"num_retries={retries}",
+    ] & FG
+
+
 #-----------------
 
 def wkld__socialNetwork__gsd__hosts(args):
@@ -1203,16 +1273,6 @@ def wkld__socialNetwork__gsd__hosts(args):
     return {
       'eu': f"http://{conf['services']['nginx-thrift']}:8080",
       'us': f"http://{conf['services']['nginx-thrift-us']}:8082",
-    }
-
-def wkld__socialNetwork__gcp__hosts(args):
-  filepath = args['configuration_path']
-  with open(filepath, 'r') as f_conf:
-    conf = yaml.load(f_conf, Loader=yaml.FullLoader)
-    inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'inventory.cfg')
-    return {
-      'eu': f"http://{inventory[conf['services']['nginx-thrift']]['external_ip']}:8080",
-      'us': f"http://{inventory[conf['services']['nginx-thrift-us']]['external_ip']}:8082",
     }
 
 def wkld__gsd__run(args, hosts, exe_path, exe_args):
@@ -1289,139 +1349,6 @@ def wkld__gsd__run(args, hosts, exe_path, exe_args):
     input("Press any key when done ...")
 
   ansible_playbook['wkld-gather.yml', '-i', 'clients_inventory.cfg', '-e', 'app=socialNetwork', '-e', f'conf_id={conf_id}' ] & FG
-
-def wkld__gcp__run(args, hosts, exe_path, exe_args):
-  from plumbum.cmd import ansible_playbook
-  from jinja2 import Environment
-  import textwrap
-
-  conf_filepath = args['configuration_path']
-
-  with open(conf_filepath, 'r') as f_conf:
-    conf = yaml.load(f_conf, Loader=yaml.FullLoader)
-
-    client_nodes = list(set(conf['clients']) & set(args['node']))
-    if not client_nodes:
-      print("[INFO] No nodes passed onto GCP deployment workload. Using current local node as client.")
-      wkld__socialNetwork__local__run(args, hosts, exe_path, exe_args)
-      return
-
-    # inventory = _inventory_to_dict(ROOT_PATH / 'deploy' / 'gcp' / 'inventory.cfg')
-    _force_docker()
-    os.chdir(ROOT_PATH / 'deploy')
-
-    # build inventory while creating instances
-    inventory = {}
-    for client_name in client_nodes:
-      client_info = conf['nodes'][client_name]
-
-      inventory[client_name] = {
-        'hostname': client_info['hostname'],
-        'zone': client_info['zone'],
-        'external_ip': None,
-        'internal_ip': None,
-      }
-      _gcp_create_instance(
-        zone=client_info['zone'],
-        name=client_name,
-        machine_type=client_info['machine_type'],
-        hostname=client_info['hostname'],
-        firewall_tags=[]
-      )
-
-    # wait for instances public ips
-    print("[INFO] Waiting for GCP nodes to have public IP addresses ...")
-    for node_key, node_info in inventory.items():
-      while inventory[node_key].get('external_ip', None) is None:
-        metadata = _gcp_get_instance(node_info['zone'], node_key)
-        try:
-          inventory[node_key]['external_ip'] = metadata['networkInterfaces'][0]['accessConfigs'][0]['natIP']
-          inventory[node_key]['internal_ip'] = metadata['networkInterfaces'][0]['networkIP']
-        except KeyError:
-          inventory[node_key]['external_ip'] = None
-          inventory[node_key]['internal_ip'] = None
-
-    # we faced some connections bugs from time to time, we sleep to wait a bit more for the machines to be ready
-    time.sleep(60)
-    print("[INFO] GCP Nodes ready!")
-
-    # now build the inventory
-    # if you want to get a new google_compute_engine key:
-    #   1) go to https://console.cloud.google.com/compute/instances
-    #   2) choose one instance, click on SSH triangle for more options
-    #   3) 'View gcloud command'
-    #   4) Run that command and then copy the generated key
-    #
-    template = """
-      [clients]
-      {% for node_name,node in client_nodes.items() %}
-      {{ node['hostname'] }} ansible_host={{ node['external_ip'] }} gcp_zone={{ node['zone'] }} gcp_name={{ node_name }} gcp_host={{ node['internal_ip'] }} ansible_user=root ansible_ssh_private_key_file={{ private_ssh_key_path }}
-      {% endfor %}
-    """
-
-    # save the docker version of the client_inventory
-    inventory_contents = Environment().from_string(template).render({
-      'project_id': GCP_PROJECT_ID,
-      'private_ssh_key_path': f"/code/deploy/gcp/{GCP_PROJECT_ID}_google_compute_engine",
-      'client_nodes': inventory,
-    })
-    inventory_filepath = ROOT_PATH / 'deploy' / 'gcp' / 'clients_inventory.cfg'
-    with open(inventory_filepath, 'w') as f:
-      # remove empty lines and dedent for easier read
-      f.write(textwrap.dedent(inventory_contents))
-    print(f"[SAVED] '{inventory_filepath}'")
-
-    # save the local version of the client_inventory
-    inventory_contents = Environment().from_string(template).render({
-      'project_id': GCP_PROJECT_ID,
-      'private_ssh_key_path': f"{ os.environ.get('HOST_ROOT_PATH') }/deploy/gcp/{ GCP_PROJECT_ID }_google_compute_engine",
-      'client_nodes': inventory,
-    })
-    inventory_filepath = ROOT_PATH / 'deploy' / 'gcp' / 'clients_inventory_local.cfg'
-    with open(inventory_filepath, 'w') as f:
-      # remove empty lines and dedent for easier read
-      f.write(textwrap.dedent(inventory_contents))
-    print(f"[SAVED] '{inventory_filepath}'")
-
-    # Create script to run
-    wkld_filename = f"$(hostname).out"
-    conf_path = f"{conf_filepath.stem}/{datetime.now().strftime('%Y%m%d%H%M%S')}"
-    wkld_folderpath = f"/tmp/dsb-wkld-data/{conf_path}/"
-    template = """
-      #! /bin/bash
-
-      export HOST_EU={{ host_eu }}
-      export HOST_US={{ host_us }}
-      mkdir -p {{wkld_folderpath}}
-      {{exe_path}} {{exe_args}} | tee {{wkld_folderpath}}/{{wkld_filename}}
-    """
-    script = Environment().from_string(template).render({
-      'host_eu': hosts['eu'],
-      'host_us': hosts['us'],
-      'exe_path': exe_path,
-      'exe_args': ' '.join([str(e) for e in exe_args]),
-      'wkld_folderpath': wkld_folderpath,
-      'wkld_filename': wkld_filename,
-    })
-    script_filepath = ROOT_PATH / 'deploy' / 'gcp' / 'wkld-run.sh'
-    with open(script_filepath, 'w') as f:
-      # remove empty lines and dedent for easier read
-      f.write(textwrap.dedent(script))
-    # add executable permissions
-    script_filepath.chmod(script_filepath.stat().st_mode | stat.S_IEXEC)
-
-  # change path to playbooks folder
-  os.chdir(ROOT_PATH / 'deploy' / 'gcp')
-  ansible_playbook['wkld-run.yml', '-i', 'clients_inventory.cfg', '-e', 'app=socialNetwork'] & FG
-
-  # sleep before gather
-  if args['duration'] is not None:
-    sleep_for = args['duration'] + 30
-    print(f"[INFO] Waiting {sleep_for} seconds for workload to be ready ...")
-    time.sleep(sleep_for)
-  else:
-    input("Press any key when workload is done ...")
-
 
 #-----------------
 # GATHER

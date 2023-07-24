@@ -5,42 +5,36 @@
   any_errors_fatal: true
 
   tasks:
-    - name: Create '{{ app }}' folder
-      file:
-        path: "/code/{{ app }}"
-        state: directory
-
-    - name: Upload application '{{ app }}' folder
-      synchronize:
-        src: "../../{{ app }}/"
-        dest: "/code/{{ app }}"
-        use_ssh_args: yes
-        recursive: true
-        mode: push
-
-    - name: Create deploy folder
-      file:
-        path: "/code/deploy/gcp/"
-        state: directory
+    - name: Remove '{{ wkld_container_name }}' container before running
+      shell: >
+        docker stop {{ wkld_container_name }} ;
+        docker rm {{ wkld_container_name }}
+      ignore_errors: True
 
     - name: Copy wkld-run script
       synchronize:
-        src: "./wkld-run.sh"
+        src: "{{ local_gather_path }}/wkld-run.sh"
         dest: "/code/deploy/gcp/"
         use_ssh_args: yes
         mode: push
 
-    - name: Pull images from GCP registry and retag them
-      shell: >
-        docker pull {{namespace}}/{{item}} &&
-        docker tag {{namespace}}/{{item}} {{item}}
-      with_items:
-        - wrk2:antipode
-        - python-wkld:antipode
-
     - name: Start client
       shell: >
-        cd /code/deploy/gcp/ ;
         tmux new-session -d -s client_init "./wkld-run.sh && exit";
       args:
         executable: /bin/bash
+        chdir: '/code/deploy/gcp'
+
+    - name: Wait for '{{ wkld_container_name }}' container to exit
+      shell: >
+        docker ps -a --filter 'name={{ wkld_container_name }}' --format {% raw %}'{{.Status}}'{% endraw %}
+      register: container_status
+      retries: "{{ num_retries | int }}"
+      delay: "{{ num_delay | int }}"
+      until: ('Exited' in container_status.stdout)
+
+    - name: Remove '{{ wkld_container_name }}' container before running
+      shell: >
+        docker stop {{ wkld_container_name }} ;
+        docker rm {{ wkld_container_name }}
+      ignore_errors: True
