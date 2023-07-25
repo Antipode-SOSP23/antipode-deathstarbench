@@ -390,13 +390,18 @@ def build__socialNetwork__local(args):
     docker_compose['build'] & FG
 
 def build__socialNetwork__gsd(args):
-  from plumbum.cmd import ansible_playbook
+  from plumbum.cmd import docker
 
-  # change path to playbooks folder
-  os.chdir(ROOT_PATH / 'gsd')
+  # build local images and do its backup
+  if not args['skip_images']:
+    build__socialNetwork__local(args)
 
-  ansible_playbook['containers-build.yml', '-e', 'app=socialNetwork'] & FG
-  ansible_playbook['containers-backup.yml', '-e', 'app=socialNetwork'] & FG
+    print("[INFO] Saving built container images ...", flush=True)
+    with local.cwd(CONTAINER_IMAGES_PATH):
+      for image in CONTAINERS_BUILT:
+        # replace some characters from docker images that are not file friendly
+        tar_name = image.replace(':','_').replace('/','_').replace('-','_')
+        docker['save', '--output', f"{tar_name}.tar", image] & FG
 
 def build__socialNetwork__gcp(args):
   from plumbum.cmd import docker
@@ -1699,6 +1704,7 @@ ROOT_PATH = Path(os.path.abspath(os.path.dirname(sys.argv[0])))
 DSB_PATH = ROOT_PATH / 'DeathStarBench'
 DEPLOY_PATH = ROOT_PATH / 'deploy'
 GATHER_PATH = ROOT_PATH / 'gather'
+CONTAINER_IMAGES_PATH = ROOT_PATH / 'container-images'
 # available deploys
 DEPLOY_TYPES = {
   'local': { 'name': 'Localhost' },
@@ -1805,8 +1811,8 @@ if __name__ == "__main__":
 
   # build application
   build_parser = subparsers.add_parser('build', help='Build application')
-  build_parser.add_argument('--no-cache', action='store_true', help="Rebuild all containers")
-  build_parser.add_argument('--skip-images', action='store_true', help="Skip building local images")
+  build_parser.add_argument('-no-cache', action='store_true', help="Rebuild all containers")
+  build_parser.add_argument('-skip-images', action='store_true', help="Skip building local images")
 
   # deploy application
   deploy_parser = subparsers.add_parser('deploy', help='Deploy application')
