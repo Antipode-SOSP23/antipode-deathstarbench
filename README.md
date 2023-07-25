@@ -63,12 +63,17 @@ After deploy is done you can start the DeathStarBench services with:
 ```
 In order to run the original TrainTicket application remove the `-antipode` parameter.
 
-You feed the application the initial social graph with users and followers with:
+You feed the application the initial social graph with users and their followers with:
 ```zsh
 ./maestro --gcp socialNetwork wkld -E init-social-graph -r 1
 ```
-In order to run the original TrainTicket application remove the `-antipode` parameter.
 
+And after you can run the `compose-post` workloads to evaluate inconsistencies and gather its results:
+```zsh
+./maestro --gcp socialNetwork wkld -E compose-post -r RATE -d DURATION
+./maestro --gcp gather
+```
+For instance, we can the workload for 300 seconds (`300`), and with a rate of `100` requests per second.
 
 At the end, you can clean your experiment and destroy your GCP instance with:
 ```zsh
@@ -76,18 +81,23 @@ At the end, you can clean your experiment and destroy your GCP instance with:
 ```
 In order to keep your GCP instances and just undeploy undeploy DeathStarBench, remove the `-strong` parameter (you can also restart by passing the `-restart` parameter).
 
+There are other commands available (for details do `-h`), namely:
+- `./maestro --gcp socialNetwork delay` adds artificial delay to the replication between `post-storage` mongo instances.
+- `./maestro --gcp info` that has multiple options from links to admin panels, logs and others
+
+
 ## Plots
 
 
 
 ## Paper References
 
-João Loff, Daniel Porto, João Garcia, Jonathan Mace, Rodrigo Rodrigues
-Antipode: Enforcing Cross-Service Causal Consistency in Distributed Applications
-To appear.
+João Loff, Daniel Porto, João Garcia, Jonathan Mace, Rodrigo Rodrigues\
+Antipode: Enforcing Cross-Service Causal Consistency in Distributed Applications\
+To appear.\
 [Download]()
 
-Gan et al.
-An Open-Source Benchmark Suite for Microservices and Their Hardware-Software Implications for Cloud and Edge Systems
-ASPLOS 2019
+Gan et al\
+An Open-Source Benchmark Suite for Microservices and Their Hardware-Software Implications for Cloud and Edge Systems\
+ASPLOS 2019\
 [Download](http://www.csl.cornell.edu/~delimitrou/papers/2019.asplos.microservices.pdf)
