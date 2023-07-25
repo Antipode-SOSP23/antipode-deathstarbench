@@ -4,109 +4,109 @@ services:
   # Write notifications at EU replica
   #----------------------------------------------------------
   # 4 cores
-  social-graph-service: saturn1
-  social-graph-redis: saturn1
+  social-graph-service: farinheira
+  social-graph-redis: farinheira
   #
   # 1 / 2 cores
-  social-graph-mongodb: saturn1
+  social-graph-mongodb: farinheira
   #
   #
   # 5 cores
-  write-home-timeline-service-eu: saturn1
-  write-home-timeline-service-us: saturn1
-  write-home-timeline-rabbitmq-eu: saturn1
-  write-home-timeline-rabbitmq-us: saturn1
-  home-timeline-redis-eu: saturn1
+  write-home-timeline-service-eu: farinheira
+  write-home-timeline-service-us: farinheira
+  write-home-timeline-rabbitmq-eu: farinheira
+  write-home-timeline-rabbitmq-us: farinheira
+  home-timeline-redis-eu: farinheira
 
   #----------------------------------------------------------
   # read notifications at US replica
   #----------------------------------------------------------
   # 4 cores
-  home-timeline-redis-us: saturn1
-  home-timeline-service: saturn1
+  home-timeline-redis-us: farinheira
+  home-timeline-service: farinheira
 
   #----------------------------------------------------------
   # write post at replica EU
   #----------------------------------------------------------
   # 4 cores
-  post-storage-service-eu: saturn1
-  post-storage-memcached-eu: saturn1
+  post-storage-service-eu: farinheira
+  post-storage-memcached-eu: farinheira
   #
   # 1 / 2 cores
-  post-storage-mongodb-eu: saturn1
+  post-storage-mongodb-eu: farinheira
 
   #----------------------------------------------------------
   # read post at US replica
   #----------------------------------------------------------
   # 4 cores
-  post-storage-service-us: saturn1
-  post-storage-memcached-us: saturn1
+  post-storage-service-us: farinheira
+  post-storage-memcached-us: farinheira
   #
   # 1 / 2 cores
-  post-storage-mongodb-us: saturn1
+  post-storage-mongodb-us: farinheira
 
   #----------------------------------------------------------
   # compose posts EU
   #----------------------------------------------------------
   # 5 cores
-  compose-post-redis: saturn1
-  compose-post-service: saturn1
-  unique-id-service: saturn1
-  text-service: saturn1
+  compose-post-redis: farinheira
+  compose-post-service: farinheira
+  unique-id-service: farinheira
+  text-service: farinheira
   #
   #
   # 5 cores
-  user-timeline-service: saturn1
-  user-timeline-redis: saturn1
-  user-timeline-mongodb: saturn1
+  user-timeline-service: farinheira
+  user-timeline-redis: farinheira
+  user-timeline-mongodb: farinheira
   #
   #
   # 5 cores
-  url-shorten-service: saturn1
-  url-shorten-memcached: saturn1
-  url-shorten-mongodb: saturn1
-  user-mention-service: saturn1
+  url-shorten-service: farinheira
+  url-shorten-memcached: farinheira
+  url-shorten-mongodb: farinheira
+  user-mention-service: farinheira
   #
   #
   # 1 / 2 cores
-  user-service: saturn1
-  user-memcached: saturn1
-  user-mongodb: saturn1
+  user-service: farinheira
+  user-memcached: farinheira
+  user-mongodb: farinheira
   #
   #
   # 1 core
-  media-service: saturn1
-  media-memcached: saturn1
-  media-mongodb: saturn1
-  media-frontend: saturn1
+  media-service: farinheira
+  media-memcached: farinheira
+  media-mongodb: farinheira
+  media-frontend: farinheira
 
   #----------------------------------------------------------
   # Coordinator
   #----------------------------------------------------------
   # 1 / 2 cores
-  antipode-oracle: saturn1
+  antipode-oracle: farinheira
 
   #----------------------------------------------------------
   # Frontend EU
   #----------------------------------------------------------
   # 1 / 2 cores
-  nginx-thrift: saturn1
+  nginx-thrift: farinheira
 
   #----------------------------------------------------------
   # Frontend US
   #----------------------------------------------------------
   # 1 / 2 cores
-  nginx-thrift-us: saturn1
+  nginx-thrift-us: farinheira
 
   #----------------------------------------------------------
   # Admin tasks
   #----------------------------------------------------------
   # 1 / 2 cores
-  jaeger: saturn1
-  xtrace-server: saturn1
-  mongodb-admin: saturn1
-  post-storage-mongodb-setup: saturn1
-  write-home-timeline-rabbitmq-setup: saturn1
+  jaeger: farinheira
+  xtrace-server: farinheira
+  mongodb-admin: farinheira
+  post-storage-mongodb-setup: farinheira
+  write-home-timeline-rabbitmq-setup: farinheira
 
 ########
 #
