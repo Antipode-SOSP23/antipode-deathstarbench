@@ -1,0 +1,44 @@
+---
+- hosts: swarm_manager
+  gather_facts: no
+  become: no
+  any_errors_fatal: true
+
+  tasks:
+    - name: Create '{{ app }}' folder
+      file:
+        path: "{{ deploy_nas_path }}/app"
+        state: directory
+
+    - name: Upload application
+      synchronize:
+        src: "{{ deploy_dir }}/"
+        dest: "{{ deploy_nas_path }}/app"
+        use_ssh_args: yes
+        recursive: true
+        mode: push
+
+    - name: Create deploy folder
+      file:
+        path: "{{ deploy_nas_path }}/deploy"
+        state: directory
+
+    - name: Upload deploy folder
+      synchronize:
+        src: "{{ deploy_path }}/"
+        dest: "{{ deploy_nas_path }}/deploy"
+        use_ssh_args: yes
+        mode: push
+
+---
+- hosts: all
+  gather_facts: no
+  become: no
+  any_errors_fatal: true
+
+  tasks:
+    - name: Install key packages
+      become: yes
+      apt:
+        pkg:
+          - iproute2

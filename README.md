@@ -26,14 +26,32 @@ All the deployment is controlled by our `./maestro` script. Type `./maestro -h` 
 ### Local Deployment
 
 ### Cluster Deployment
+For this deployment we are using INESC-ID DPSS cluster, although it should be easy to adapt to other clusters. We are making the following assumptions:
+- `maestro` is ran from a machine within the cluster -- not necessarly one you will be using for your deployment
+- You have cluster hosts information available at `~/.ssh/config`
+- You have a centralized datastore available across all your cluster (e.g. NAS).
+
+These configuration can be found in `gsd/config.yml`:
+```yml
+ssh_config_filepath: ~/.ssh/config
+default_ssh_user: jfloff
+nas_path: /mnt/nas/inesc/jfloff
+```
+
+Run `maestro` to build and deploy the GCP instances:
+```zsh
+./maestro --gcp socialNetwork build
+./maestro --gcp socialNetwork deploy -config CONFIG_FILE -clients NUM_CLIENTS
+```
+You can either build your own deployment configuration file, or you one already existing.
+For instance, for SOSP'23 plots you should use the `configs/gcp/socialNetwork/us-eu.yml` config.
 
 ### GCP Deploymnet
 Make sure you have created a Google Cloud Platform (GCP) account and have setup a new project.
-Go to the `config.yml` file and add your GCP project and user information, for example:
+Go to `gcp/config.yml` file and add your GCP project and user information, for example:
 ```yml
-gcp:
-  project_id: antipode
-  default_ssh_user: jfloff
+project_id: antipode
+default_ssh_user: jfloff
 ```
 
 Set the following firewall rules on GCP [web console](https://console.cloud.google.com/networking/firewalls/list) (`maestro` will warn you of any missing keys):
@@ -49,7 +67,7 @@ Set the following firewall rules on GCP [web console](https://console.cloud.goog
       - TCP ports: 9001,16686,8080,8081,8082,1234,4080,5563,15672,5672,5778,14268,14250,9411,9100,15673,5673
       - UDP ports: 5775,6831,6832
 
-Then run *maestro* to build and deploy the GCP instances:
+Run `maestro` to build and deploy the GCP instances:
 ```zsh
 ./maestro --gcp socialNetwork build
 ./maestro --gcp socialNetwork deploy -config CONFIG_FILE -clients NUM_CLIENTS
