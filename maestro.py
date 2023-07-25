@@ -1012,9 +1012,6 @@ def run__socialNetwork__gcp(args):
       '--extra-vars', f"@{vars_filepath}"
     ] & FG
 
-  # init social graph
-  # ansible_playbook['init-social-graph.yml', '-e', 'app=socialNetwork', '-e', f"configuration={filepath}"] & FG
-
   print("[INFO] Run Complete!")
 
 
@@ -1248,16 +1245,12 @@ def wkld__gcp__run(args):
 
   # run workload remotely
   with local.cwd(ROOT_PATH / 'gcp'):
-    retries = 15
-    delay = (args['duration'] + 60) / retries if args['duration'] else 45
     # docker container ls --all --quiet --filter "name=web-server-10"
     ansible_playbook['wkld-run.yml',
       '-i', inventory_filepath,
       '--extra-vars', f"@{vars_filepath}",
       '-e', f"local_gather_path={args['local_gather_path']}",
       '-e', f"wkld_container_name={WKLD_CONTAINER_NAME}",
-      '-e', f"num_delay={delay}",
-      '-e', f"num_retries={retries}",
     ] & FG
 
 

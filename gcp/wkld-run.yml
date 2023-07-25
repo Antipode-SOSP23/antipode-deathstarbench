@@ -5,8 +5,9 @@
   any_errors_fatal: true
 
   tasks:
-    - name: Remove '{{ wkld_container_name }}' container before running
+    - name: Kill tmux session and remove '{{ wkld_container_name }}' container before running
       shell: >
+        tmux kill-session -t client_init ;
         docker stop {{ wkld_container_name }} ;
         docker rm {{ wkld_container_name }}
       ignore_errors: True
@@ -29,12 +30,13 @@
       shell: >
         docker ps -a --filter 'name={{ wkld_container_name }}' --format {% raw %}'{{.Status}}'{% endraw %}
       register: container_status
-      retries: "{{ num_retries | int }}"
-      delay: "{{ num_delay | int }}"
+      retries: 15
+      delay: 60
       until: ('Exited' in container_status.stdout)
 
-    - name: Remove '{{ wkld_container_name }}' container before running
+    - name: Kill tmux session and remove '{{ wkld_container_name }}' container after running
       shell: >
+        tmux kill-session -t client_init ;
         docker stop {{ wkld_container_name }} ;
         docker rm {{ wkld_container_name }}
       ignore_errors: True

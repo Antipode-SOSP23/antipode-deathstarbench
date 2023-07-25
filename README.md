@@ -63,6 +63,12 @@ After deploy is done you can start the DeathStarBench services with:
 ```
 In order to run the original TrainTicket application remove the `-antipode` parameter.
 
+You feed the application the initial social graph with users and followers with:
+```zsh
+./maestro --gcp socialNetwork wkld -E init-social-graph -r 1
+```
+In order to run the original TrainTicket application remove the `-antipode` parameter.
+
 
 At the end, you can clean your experiment and destroy your GCP instance with:
 ```zsh
