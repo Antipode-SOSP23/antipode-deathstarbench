@@ -432,7 +432,7 @@ def build__socialNetwork__gcp(args):
       docker['rmi', gcp_image_name] & FG
 
   # Create env file for base_vm script
-  with local.cwd(ROOT_PATH / 'gcp'):
+  with local.cwd(ROOT_PATH / args['deploy_type']):
     template = """
     NAMESPACE={{ namespace }}
     """
@@ -482,7 +482,7 @@ def build__socialNetwork__gcp(args):
   time.sleep(10) # extra time to avoid ssh errors
 
   # delete any old keys ssh keys from older deployments
-  with local.cwd(ROOT_PATH / 'gcp' / '.ssh'):
+  with local.cwd(ROOT_PATH / args['deploy_type'] / '.ssh'):
     rm['-f', 'google_compute_engine', 'google_compute_engine.pub', 'google_compute_known_hosts', 'known_hosts', 'known_hosts.old'] & FG
     # ls['-la'] & FG
 
@@ -717,7 +717,7 @@ def deploy__socialNetwork__gcp(args):
   print(f"[INFO] Copying deploy files... ", flush=True)
   os.makedirs(args['deploy_dir'], exist_ok=True)
   shutil.copytree(DSB_PATH / args['app'], args['deploy_dir'], dirs_exist_ok=True)
-  shutil.copy(ROOT_PATH / 'gcp' / 'vars.yml', args['deploy_dir'])
+  shutil.copy(ROOT_PATH / args['deploy_type'] / 'vars.yml', args['deploy_dir'])
 
   print(f"[INFO] Generating docker-compose-swarm.yml ... ", flush=True)
   # replace hostname in docker_compose_swarm
@@ -882,7 +882,7 @@ def deploy__socialNetwork__gcp(args):
     'swarm_manager': inventory['swarm_manager'][0], # only one swarm manager
     'cluster': inventory['cluster'],
     'clients': inventory['clients'],
-    'private_key_path': str(ROOT_PATH / 'gcp' / '.ssh' / 'google_compute_engine'), # ROOT_PATH here will be the container path
+    'private_key_path': str(ROOT_PATH / args['deploy_type'] / '.ssh' / 'google_compute_engine'), # ROOT_PATH here will be the container path
   })
   inventory_filepath = args['deploy_dir'] / 'inventory.cfg'
   with open(inventory_filepath, 'w') as f:
@@ -909,7 +909,7 @@ def deploy__socialNetwork__gcp(args):
   print(f"[INFO] Run deploy playbooks ... ", flush=True)
   # sleep to give extra time for nodes to be ready to accept requests
   time.sleep(30)
-  with local.cwd(ROOT_PATH / 'gcp'):
+  with local.cwd(ROOT_PATH / args['deploy_type']):
     ansible_playbook['dsb-deploy.yml',
       '-i', inventory_filepath,
       '--extra-vars', f"@{vars_filepath}"
@@ -975,7 +975,7 @@ def run__socialNetwork__local(args):
       ] & FG
 
   if args['portainer']:
-    with local.cwd(ROOT_PATH / 'local'):
+    with local.cwd(ROOT_PATH / args['deploy_type']):
       docker_compose[
         '-f', 'docker-compose-portainer.yml',
         'up',
@@ -1013,7 +1013,7 @@ def run__socialNetwork__gcp(args):
 
   if args['portainer']:
     _put_last('gcp', 'portainer', True)
-    with local.cwd(ROOT_PATH / 'gcp'):
+    with local.cwd(ROOT_PATH / args['deploy_type']):
       ansible_playbook['portainer-start.yml',
         '-i', inventory_filepath,
         '--extra-vars', f"@{vars_filepath}"
@@ -1024,7 +1024,7 @@ def run__socialNetwork__gcp(args):
 
   if args['prometheus']:
     _put_last('gcp', 'prometheus', True)
-    with local.cwd(ROOT_PATH / 'gcp'):
+    with local.cwd(ROOT_PATH / args['deploy_type']):
       ansible_playbook['prometheus-deploy.yml',
         '-i', inventory_filepath,
         '--extra-vars', f"@{vars_filepath}"
@@ -1038,7 +1038,7 @@ def run__socialNetwork__gcp(args):
       print(f"[INFO] Prometheus link: {prometheus_url}")
 
   # start dsb services
-  with local.cwd(ROOT_PATH / 'gcp'):
+  with local.cwd(ROOT_PATH / args['deploy_type']):
     ansible_playbook['dsb-start.yml',
       '-i', inventory_filepath,
       '--extra-vars', f"@{vars_filepath}"
@@ -1139,7 +1139,7 @@ def delay__socialNetwork__gcp(args):
     print(f"[SAVED] '{playbook_filepath}'")
 
   print("[INFO] Running delay playbook ...")
-  with local.cwd(ROOT_PATH / 'gcp'):
+  with local.cwd(ROOT_PATH / args['deploy_type']):
     ansible_playbook[f"{playbook_filepath}",
       '-i', inventory_filepath,
       '--extra-vars', f"@{vars_filepath}",
@@ -1275,7 +1275,7 @@ def wkld__gcp__run(args):
   print(f"[SAVED] '{script_filepath}'")
 
   # run workload remotely
-  with local.cwd(ROOT_PATH / 'gcp'):
+  with local.cwd(ROOT_PATH / args['deploy_type']):
     ansible_playbook['wkld-run.yml',
       '-i', inventory_filepath,
       '--extra-vars', f"@{vars_filepath}",
@@ -1619,7 +1619,7 @@ def gather__socialNetwork__gcp__download(args):
 
   # run workload remotely
   print("[INFO] Download client output ...")
-  with local.cwd(ROOT_PATH / 'gcp'):
+  with local.cwd(ROOT_PATH / args['deploy_type']):
     ansible_playbook['wkld-gather.yml',
       '-i', inventory_filepath,
       '--extra-vars', f"@{vars_filepath}",
@@ -1654,7 +1654,7 @@ def clean__socialNetwork__local(args):
 
   if _get_last(args['deploy_type'], 'portainer'):
     _put_last('gcp', 'portainer', False)
-    with local.cwd(ROOT_PATH / 'local'):
+    with local.cwd(ROOT_PATH / args['deploy_type']):
       if args['strong']:
         docker_compose[
           '-f', 'docker-compose-portainer.yml',
@@ -1693,14 +1693,14 @@ def clean__socialNetwork__gcp(args):
     for _, host in inventory.items():
       _gcp_vm_delete(host['gcp_zone'], host['gcp_name'])
   elif args['restart']:
-    with local.cwd(ROOT_PATH / 'gcp'):
+    with local.cwd(ROOT_PATH / args['deploy_type']):
       ansible_playbook['dsb-restart.yml',
         '-i', inventory_filepath,
         '--extra-vars', f"@{vars_filepath}"
       ] & FG
   else:
     if _get_last('gcp', 'prometheus'):
-      with local.cwd(ROOT_PATH / 'gcp'):
+      with local.cwd(ROOT_PATH / args['deploy_type']):
         ansible_playbook['prometheus-undeploy.yml',
           '-i', inventory_filepath,
           '--extra-vars', f"@{vars_filepath}"
@@ -1708,14 +1708,14 @@ def clean__socialNetwork__gcp(args):
         _put_last('gcp', 'prometheus', False) # already cleaned so we remove flag
 
     if _get_last('gcp', 'portainer'):
-      with local.cwd(ROOT_PATH / 'gcp'):
+      with local.cwd(ROOT_PATH / args['deploy_type']):
         ansible_playbook['portainer-undeploy.yml',
           '-i', inventory_filepath,
           '--extra-vars', f"@{vars_filepath}"
         ] & FG
         _put_last('gcp', 'portainer', False) # already cleaned so we remove flag
 
-    with local.cwd(ROOT_PATH / 'gcp'):
+    with local.cwd(ROOT_PATH / args['deploy_type']):
       ansible_playbook['swarm-undeploy.yml',
         '-i', inventory_filepath,
         '--extra-vars', f"@{vars_filepath}"
