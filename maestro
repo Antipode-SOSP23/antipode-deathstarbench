@@ -298,6 +298,9 @@ def _build_gather_tag():
   antipode = '-antipode' if _get_last(args['deploy_type'], 'antipode') else ''
   return f"{config_name}-{rate}{antipode}"
 
+def _docker_image_tag_to_tar(image_name):
+  return image_name.replace(':','_').replace('/','_').replace('-','_')
+
 #-----------------
 # BUILD
 #-----------------
@@ -398,9 +401,9 @@ def build__socialNetwork__gsd(args):
 
     print("[INFO] Saving built container images ...", flush=True)
     with local.cwd(CONTAINER_IMAGES_PATH):
-      for image in CONTAINERS_BUILT:
+      for image in SERVICES_CONTAINERS_BUILT + CLIENTS_CONTAINERS_BUILT:
         # replace some characters from docker images that are not file friendly
-        tar_name = image.replace(':','_').replace('/','_').replace('-','_')
+        tar_name = _docker_image_tag_to_tar(image)
         docker['save', '--output', f"{tar_name}.tar", image] & FG
 
 def build__socialNetwork__gcp(args):
@@ -421,7 +424,7 @@ def build__socialNetwork__gcp(args):
 
   # tag images built localy with GCP tag
   if not args['skip_images']:
-    for image in CONTAINERS_BUILT:
+    for image in SERVICES_CONTAINERS_BUILT + CLIENTS_CONTAINERS_BUILT:
       # These images are tag with gcp namespace but then are retagged when deploying
       gcp_image_name = f"{GCP_DOCKER_IMAGE_NAMESPACE}/{image}"
       docker['tag', image, gcp_image_name] & FG
@@ -870,7 +873,7 @@ def deploy__socialNetwork__gcp(args):
   vars_yaml['app'] = args['app']
   vars_yaml['swarm_overlay_network'] = DOCKER_COMPOSE_NETWORK
   vars_yaml['docker_image_namespace'] = GCP_DOCKER_IMAGE_NAMESPACE
-  vars_yaml['deploy_path'] = str(ROOT_PATH / 'gcp')
+  vars_yaml['deploy_path'] = str(ROOT_PATH / args['deploy_type'])
   vars_yaml['deploy_dir'] = str(args['deploy_dir'])
   # used to sync deployment
   vars_yaml['compose_post_service_instance'] = config['nodes'][config['services']['compose-post-service']]['hostname']
@@ -1763,13 +1766,15 @@ SERVICE_PORTS = {
     'frontend-us': 8082,
   }
 }
-CONTAINERS_BUILT = [
+SERVICES_CONTAINERS_BUILT = [
   'mongodb-delayed:4.4.6',
   'mongodb-setup:4.4.6',
   'rabbitmq-setup:3.8',
   'yg397/openresty-thrift:latest',
   'yg397/social-network-microservices:antipode',
   'redis-im:antipode',
+]
+CLIENTS_CONTAINERS_BUILT = [
   'wrk2:antipode',
   'python-wkld:antipode',
 ]
