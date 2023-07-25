@@ -1170,9 +1170,11 @@ def wkld(args):
   args['deploy_dir'] = _deploy_dir(args)
   args['endpoint'] = WKLD_ENDPOINTS[args['app']][args['Endpoint']]
   args['wkld_tag'] = f"{datetime.now().strftime('%Y%m%d%H%M')}"
+  args['local_gather_path'] = GATHER_PATH / args['deploy_type'] / args['app'] / args['Endpoint'] / _build_gather_tag() / args['wkld_tag']
   _put_last(args['deploy_type'], 'wkld_tag', args['wkld_tag'])
   _put_last(args['deploy_type'], 'wkld_rate', args['rate'])
   _put_last(args['deploy_type'], 'wkld_endpoint', args['Endpoint'])
+  _put_last(args['deploy_type'], 'local_gather_path', str(args['local_gather_path']))
 
   getattr(sys.modules[__name__], f"wkld__{args['deploy_type']}__run")(args)
   print(f"[INFO] {args['app']} @ {args['deploy_type']} workload ran successfully!")
@@ -1210,12 +1212,10 @@ def wkld__gcp__run(args):
   # build remote and local gather paths
   gather_path = Path('/tmp') / 'dsb' / args['app'] / args['Endpoint'] / _build_gather_tag() / args['wkld_tag']
   _put_last(args['deploy_type'], 'remote_gather_path', str(gather_path))
-  local_gather_path = GATHER_PATH / args['deploy_type'] / args['app'] / args['Endpoint'] / _build_gather_tag() / args['wkld_tag']
-  _put_last(args['deploy_type'], 'local_gather_path', str(local_gather_path))
   # create folder if needed
-  os.makedirs(local_gather_path, exist_ok=True)
+  os.makedirs(args['local_gather_path'], exist_ok=True)
   # force chmod of that dir
-  sudo['chmod', 777, local_gather_path] & FG
+  sudo['chmod', 777, args['local_gather_path']] & FG
 
   # build docker args
   app_wd = Path('/') / 'code' / 'app'
@@ -1238,7 +1238,7 @@ def wkld__gcp__run(args):
     'docker_args': ' '.join([str(e) for e in docker_args]),
     'gather_path': gather_path,
   })
-  script_filepath = local_gather_path / 'wkld-run.sh'
+  script_filepath = args['local_gather_path'] / 'wkld-run.sh'
   with open(script_filepath, 'w') as f:
     # remove empty lines and dedent for easier read
     f.write(textwrap.dedent(script))
@@ -1254,7 +1254,7 @@ def wkld__gcp__run(args):
     ansible_playbook['wkld-run.yml',
       '-i', inventory_filepath,
       '--extra-vars', f"@{vars_filepath}",
-      '-e', f"local_gather_path={local_gather_path}",
+      '-e', f"local_gather_path={args['local_gather_path']}",
       '-e', f"wkld_container_name={WKLD_CONTAINER_NAME}",
       '-e', f"num_delay={delay}",
       '-e', f"num_retries={retries}",
@@ -1499,8 +1499,8 @@ def gather(args):
   args['tag'] = _get_last(args['deploy_type'], 'tag')
   args['deploy_dir'] = _deploy_dir(args)
   args['wkld_endpoint'] = _get_last(args['deploy_type'], 'wkld_endpoint')
+  args['local_gather_path'] = Path(_get_last(args['deploy_type'], 'local_gather_path'))
 
-  print("[INFO] Download client output ...")
   getattr(sys.modules[__name__], f"gather__{args['app']}__{args['deploy_type']}__download")(args)
 
   print("[INFO] Gather jaeger traces ...")
@@ -1508,12 +1508,10 @@ def gather(args):
   jaeger_host = _service_ip(args['deploy_type'], args['app'], 'jaeger')
   # build gather path
   rqs = _get_last(args['deploy_type'], 'wkld_rate')
-  wkld_tag =_get_last(args['deploy_type'], 'wkld_tag')
-  gather_path = GATHER_PATH / args['deploy_type'] / args['app'] / args['wkld_endpoint'] / _build_gather_tag() / wkld_tag
   # create folder if needed
-  os.makedirs(gather_path, exist_ok=True)
+  os.makedirs(args['local_gather_path'], exist_ok=True)
   # force chmod of that dir
-  sudo['chmod', 777, gather_path] & FG
+  sudo['chmod', 777, args['local_gather_path']] & FG
 
   # set number of requests to gather from jaeger
   limit = args['num_requests']
@@ -1535,7 +1533,7 @@ def gather(args):
   del df['wht_start_worker_ts']
 
   print(f"[INFO] Save '{local.cwd}/traces.csv'")
-  with local.cwd(gather_path):
+  with local.cwd(args['local_gather_path']):
     # save to csv so we can plot a timeline later
     df.to_csv('traces.csv', sep=';', mode='w')
 
@@ -1545,7 +1543,7 @@ def gather(args):
   inconsistent_count = len(inconsistent_df)
   consistent_count = len(consistent_df)
 
-  with local.cwd(gather_path):
+  with local.cwd(args['local_gather_path']):
     # save datatraces to info
     print(f"[INFO] Save '{local.cwd}/traces.info'\n")
     with open('traces.info', 'w') as f:
