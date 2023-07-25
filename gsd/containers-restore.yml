@@ -52,6 +52,26 @@
     #   with_items:
     #     - "{{ services_containers_images }}"
 
+    - name: Pre-pull public docker images
+      shell: >
+        sudo docker pull {{ item }}
+      args:
+        chdir: "{{ deploy_nas_path }}/app"
+      with_items:
+        - jaegertracing/all-in-one:latest
+        - jonathanmace/xtrace-server:latest
+        - memcached:latest
+        - mongo:4.4.6
+        - mrvautin/adminmongo:latest
+        - rabbitmq:3.8
+        - rabbitmq:3.8-management
+        - redis:latest
+        - portainer/agent:latest
+        - portainer/portainer-ce:latest
+        - prom/pushgateway:latest
+        - prom/prometheus:latest
+        - yg397/media-frontend:xenial
+
 - hosts: clients
   gather_facts: no
   become: no
