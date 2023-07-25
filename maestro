@@ -249,7 +249,7 @@ def _reverse_dict(d):
       rev[v].append(k)
   return rev
 
-def _load_inventory(filepath):
+def _load_gcp_inventory(filepath):
   from ansible.parsing.dataloader import DataLoader
   from ansible.inventory.manager import InventoryManager
   from ansible.vars.manager import VariableManager
@@ -1018,10 +1018,10 @@ def run__socialNetwork__gcp(args):
 
   vars_filepath = args['deploy_dir'] / 'vars.yml'
   inventory_filepath = args['deploy_dir'] / 'inventory.cfg'
-  inventory = _load_inventory(inventory_filepath)
+  inventory = _load_gcp_inventory(inventory_filepath)
 
   if args['portainer']:
-    _put_last('gcp', 'portainer', True)
+    _put_last(args['deploy_type'], 'portainer', True)
     with local.cwd(ROOT_PATH / args['deploy_type']):
       ansible_playbook['portainer-start.yml',
         '-i', inventory_filepath,
@@ -1032,7 +1032,7 @@ def run__socialNetwork__gcp(args):
       print(f"[INFO] Portainer link (u/pwd: admin/antipode): {portainer_url}")
 
   if args['prometheus']:
-    _put_last('gcp', 'prometheus', True)
+    _put_last(args['deploy_type'], 'prometheus', True)
     with local.cwd(ROOT_PATH / args['deploy_type']):
       ansible_playbook['prometheus-deploy.yml',
         '-i', inventory_filepath,
@@ -1238,7 +1238,7 @@ def wkld__gcp__run(args):
 
   vars_filepath = args['deploy_dir'] / 'vars.yml'
   inventory_filepath = args['deploy_dir'] / 'inventory.cfg'
-  inventory = _load_inventory(inventory_filepath)
+  inventory = _load_gcp_inventory(inventory_filepath)
   config = _load_yaml(ROOT_PATH / _get_last(args['deploy_type'], 'config'))
   endpoint = args['endpoint']
   hosts = {
@@ -1662,7 +1662,7 @@ def clean__socialNetwork__local(args):
       docker_compose['down'] & FG
 
   if _get_last(args['deploy_type'], 'portainer'):
-    _put_last('gcp', 'portainer', False)
+    _put_last(args['deploy_type'], 'portainer', False)
     with local.cwd(ROOT_PATH / args['deploy_type']):
       if args['strong']:
         docker_compose[
@@ -1694,7 +1694,7 @@ def clean__socialNetwork__gcp(args):
 
   vars_filepath = args['deploy_dir'] / 'vars.yml'
   inventory_filepath = args['deploy_dir'] / 'inventory.cfg'
-  inventory = _load_inventory(inventory_filepath)
+  inventory = _load_gcp_inventory(inventory_filepath)
 
   if args['strong']:
     print("[INFO] Removing GCP nodes ...")
@@ -1708,21 +1708,21 @@ def clean__socialNetwork__gcp(args):
         '--extra-vars', f"@{vars_filepath}"
       ] & FG
   else:
-    if _get_last('gcp', 'prometheus'):
+    if _get_last(args['deploy_type'], 'prometheus'):
       with local.cwd(ROOT_PATH / args['deploy_type']):
         ansible_playbook['prometheus-undeploy.yml',
           '-i', inventory_filepath,
           '--extra-vars', f"@{vars_filepath}"
         ] & FG
-        _put_last('gcp', 'prometheus', False) # already cleaned so we remove flag
+        _put_last(args['deploy_type'], 'prometheus', False) # already cleaned so we remove flag
 
-    if _get_last('gcp', 'portainer'):
+    if _get_last(args['deploy_type'], 'portainer'):
       with local.cwd(ROOT_PATH / args['deploy_type']):
         ansible_playbook['portainer-undeploy.yml',
           '-i', inventory_filepath,
           '--extra-vars', f"@{vars_filepath}"
         ] & FG
-        _put_last('gcp', 'portainer', False) # already cleaned so we remove flag
+        _put_last(args['deploy_type'], 'portainer', False) # already cleaned so we remove flag
 
     with local.cwd(ROOT_PATH / args['deploy_type']):
       ansible_playbook['swarm-undeploy.yml',
