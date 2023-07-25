@@ -289,7 +289,7 @@ def _wait_url_up(url):
       return_code = urllib.request.urlopen(url).getcode()
       if return_code == 200:
         return
-    except urllib.error.URLError as e:
+    except (urllib.error.URLError, ConnectionResetError) as e:
       pass
 
 def _build_gather_tag():
