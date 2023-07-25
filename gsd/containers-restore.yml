@@ -3,19 +3,73 @@
   gather_facts: no
   become: no
   any_errors_fatal: true
-  vars:
-    - source: "/home/jfloff/nas_inesc/antipode/antipode-deathstarbench/container-images"
 
   tasks:
+    - name: Check if Docker is installed
+      command: sudo docker --version
+      register: docker_valid
+      ignore_errors: yes
 
+- hosts: swarm_manager
+  gather_facts: no
+  become: no
+  any_errors_fatal: true
+
+  tasks:
+    - name: Create containers folder
+      file:
+        path: "{{ nas_containers_path }}"
+        state: directory
+
+    - name: Uploading containers tars to NAS
+      synchronize:
+        src: "{{ local_containers_path }}/"
+        dest: "{{ nas_containers_path }}"
+        # use_ssh_args: yes
+        mode: push
+        rsync_opts:
+          - '--delete'
+
+- hosts: cluster
+  gather_facts: no
+  become: no
+  any_errors_fatal: true
+
+  tasks:
     - name: Restore the container images
       shell: >
-            gzip -d -c  {{source}}/{{ item.replace(':','_').replace('/','_').replace('-','_') }}.tgz | docker load
+        sudo docker load --input {{ item }}.tar
+      args:
+        chdir: "{{ nas_containers_path }}"
       with_items:
-        - "{{ apps[app]['containers']['to_pull'] | union(apps[app]['containers']['to_build']) }}"
+        - "{{ services_containers_tars }}"
 
+    # - name: validate that the images exists
+    #   shell: >
+    #     sudo docker image inspect {{ item }}
+    #   args:
+    #     chdir: "{{ nas_containers_path }}"
+    #   with_items:
+    #     - "{{ services_containers_images }}"
 
-    - name: validate that the images exists
-      shell:  docker image inspect {{item}}
+- hosts: clients
+  gather_facts: no
+  become: no
+  any_errors_fatal: true
+
+  tasks:
+    - name: Restore the container images
+      shell: >
+        sudo docker load --input {{ item }}.tar
+      args:
+        chdir: "{{ nas_containers_path }}"
       with_items:
-        - "{{ apps[app]['containers']['to_pull'] | union(apps[app]['containers']['to_build']) }}"
+        - "{{ clients_containers_tars }}"
+
+    # - name: validate that the images exists
+    #   shell: >
+    #     sudo docker image inspect {{ item }}
+    #   args:
+    #     chdir: "{{ nas_containers_path }}"
+    #   with_items:
+    #     - "{{ clients_containers_images }}"

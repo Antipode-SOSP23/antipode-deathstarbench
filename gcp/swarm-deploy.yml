@@ -72,9 +72,9 @@
       set_fact:
         swarm_size: "{{ hostvars[inventory_hostname]['groups']['swarm_manager'] | union(hostvars[inventory_hostname]['groups']['cluster']) | union(hostvars[inventory_hostname]['groups']['clients']) | unique | length  }}"
 
-    - name: print swarm size
-      debug:
-        var: swarm_size
+    # - name: print swarm size
+    #   debug:
+    #     var: swarm_size
 
     - name: Check if all nodes are joined to the swarm
       shell: >

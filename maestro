@@ -604,80 +604,104 @@ def deploy__socialNetwork__local(args):
 def deploy__socialNetwork__gsd(args):
   from plumbum.cmd import ansible_playbook
   from jinja2 import Environment
-  import click
   import textwrap
-  from shutil import copyfile
+  import shutil
+  from paramiko import SSHConfig
 
-  app_dir = DSB_PATH / args['app']
-  os.chdir(ROOT_PATH / 'deploy')
+  config = _load_yaml(args['config'])
 
-  # Update docker-compose.yml
-  deploy_nodes = {}
-  with open(filepath, 'r') as f_conf, open(Path(app_dir, 'docker-compose.yml'), 'r') as f_compose:
-    conf = yaml.load(f_conf, Loader=yaml.FullLoader)
-    compose = yaml.load(f_compose, Loader=yaml.FullLoader)
+  print(f"[INFO] Copying deploy files... ", flush=True)
+  os.makedirs(args['deploy_dir'], exist_ok=True)
+  shutil.copytree(DSB_PATH / args['app'], args['deploy_dir'], dirs_exist_ok=True)
+  shutil.copy(ROOT_PATH / args['deploy_type'] / 'vars.yml', args['deploy_dir'])
 
+  print(f"[INFO] Generating docker-compose-swarm.yml ... ", flush=True)
+  with local.cwd(args['deploy_dir']):
+    app_compose = _load_yaml('docker-compose.yml')
     # add network that is created on deploy playbook
-    compose['networks'] = {
-      DOCKER_COMPOSE_NETWORK: {
-        'external': {
-          'name': DOCKER_COMPOSE_NETWORK
-        }
+    app_compose.setdefault('networks', {})[DOCKER_COMPOSE_NETWORK] = {
+      'external': {
+        'name': DOCKER_COMPOSE_NETWORK
       }
     }
+    # replace hostname in docker_compose_swarm
+    for service, node_id in config['services'].items():
+      compose_service = app_compose['services'][service]
 
-    # get all the nodes that will be used in deploy
-    deploy_nodes = { n:GSD_AVAILABLE_NODES[n] for n in set(conf['services'].values()) }
-
-    for sid,hostname in conf['services'].items():
       # replaces existing networks with new one
-      compose['services'][sid]['networks'] = [ DOCKER_COMPOSE_NETWORK ]
+      if 'networks' not in compose_service: compose_service['networks'] = []
+      compose_service['networks'].append(DOCKER_COMPOSE_NETWORK)
 
-      # get all the constraints
-      deploy_constraints = compose['services'][sid]['deploy']['placement']['constraints']
-      # get he id of constraint of the node hostname
+      # replace the deploy constraints with new nodes
+      if 'deploy' not in compose_service: compose_service['deploy'] = {}
+      if 'placement' not in compose_service['deploy']: compose_service['deploy']['placement'] = {}
+      if 'constraints' not in compose_service['deploy']['placement']: compose_service['deploy']['placement']['constraints'] = []
+      deploy_constraints = compose_service['deploy']['placement']['constraints']
+      # get the id of constraint of the node hostname
       node_constraint_index = _index_containing_substring(deploy_constraints, 'node.hostname')
       # replace docker-compose with that constraint
-      deploy_constraints[node_constraint_index] = f'node.hostname == {hostname}'
+      deploy_constraints[node_constraint_index] = f"node.hostname == {node_id}"
 
-  # create new docker compose
-  new_compose_filepath = ROOT_PATH / 'deploy' / 'gsd' / 'docker-compose-swarm.yml'
-  with open(new_compose_filepath, 'w') as f_compose:
-    yaml.dump(compose, f_compose)
-  print(f"[SAVED] '{new_compose_filepath}'")
+    # now write the compose into a new file
+    _dump_yaml(local.cwd / 'docker-compose-swarm.yml', app_compose)
+    print(f"[SAVED] '{local.cwd / 'docker-compose-swarm.yml'}'")
 
-  # copy file to socialNetwork folder
-  end_docker_compose_swarm = Path(app_dir, 'docker-compose-swarm.yml').resolve()
-  copyfile(new_compose_filepath.resolve(), end_docker_compose_swarm)
-  print(f"[INFO] Copied '{str(new_compose_filepath.resolve()).split('antipode-deathstarbench/')[1]}' to '{str(end_docker_compose_swarm).split('antipode-deathstarbench/')[1]}'")
+  # load ssh config file to read host info
+  ssh_config = SSHConfig()
+  ssh_config.parse(open(GSD_SSH_CONFIG_PATH))
 
+  print(f"[INFO] Generating inventory... ", flush=True)
   template = """
     [swarm_manager]
-    {% for k,v in swarm_manager.items() %}{{k}} ansible_host={{v}} ansible_user=jfloff ansible_ssh_private_key_file=~/.ssh/id_rsa_inesc_cluster_jfloff
+    {% for name,host in swarm_manager.items() %}{{name}} ansible_host={{ host['hostname'] }} ansible_user={{ host['user'] }} ansible_ssh_private_key_file={{ host['identityfile'][0] }}
     {% endfor %}
 
     [cluster]
-    {% for k,v in deploy_nodes.items() %}{{k}} ansible_host={{v}} ansible_user=jfloff ansible_ssh_private_key_file=~/.ssh/id_rsa_inesc_cluster_jfloff
+    {% for name,host in cluster.items() %}{{name}} ansible_host={{ host['hostname'] }} ansible_user={{ host['user'] }} ansible_ssh_private_key_file={{ host['identityfile'][0] }}
+    {% endfor %}
+
+    [clients]
+    {% for name,host in clients.items() %}{{name}} ansible_host={{ host['hostname'] }} ansible_user={{ host['user'] }} ansible_ssh_private_key_file={{ host['identityfile'][0] }}
     {% endfor %}
   """
   inventory = Environment().from_string(template).render({
-    'swarm_manager': GSD_SWARM_MANAGER_NODE,
-    'deploy_nodes': dict(sorted(deploy_nodes.items())),
+    'swarm_manager': { config['manager'] : ssh_config.lookup(config['manager']) },
+    'cluster': { n : ssh_config.lookup(n) for n in set(config['services'].values()) },
+    'clients': { n : ssh_config.lookup(n) for n in set(config['clients']) },
   })
-
-  inventory_filepath = Path('gsd/inventory.cfg')
+  inventory_filepath = args['deploy_dir'] / 'inventory.cfg'
   with open(inventory_filepath, 'w') as f:
     # remove empty lines and dedent for easier read
     f.write(textwrap.dedent(inventory))
+  print(f"[SAVED] '{inventory_filepath}'")
 
-  print(f"[SAVED] '{inventory_filepath.resolve()}'")
+  print(f"[INFO] Replace vars.yml entries... ", flush=True)
+  vars_filepath = args['deploy_dir'] / 'vars.yml'
+  vars_yaml = _load_yaml(vars_filepath)
+  # new vars
+  vars_yaml['app'] = args['app']
+  vars_yaml['swarm_overlay_network'] = DOCKER_COMPOSE_NETWORK
+  vars_yaml['deploy_path'] = str(ROOT_PATH / args['deploy_type'])
+  vars_yaml['deploy_dir'] = str(args['deploy_dir'])
+  vars_yaml['deploy_nas_path'] = str(GSD_DSB_NAS_PATH)
+  # used to sync deployment
+  vars_yaml['compose_post_service_instance'] = config['services']['compose-post-service']
+  vars_yaml['num_services'] = NUM_SERVICES[args['app']]
+  # dump
+  _dump_yaml(vars_filepath, vars_yaml)
+  print(f"[SAVED] '{vars_filepath}'")
 
-  # run playbooks
-  os.chdir(ROOT_PATH / 'deploy' / 'gsd')
-  # first restore all images to everyone
-  ansible_playbook['containers-restore.yml', '-e', 'app=socialNetwork'] & FG
-  # then deploy everywhere
-  ansible_playbook['swarm-deploy.yml', '-e', 'app=socialNetwork'] & FG
+  print(f"[INFO] Restoring saved docker images... ", flush=True)
+  with local.cwd(ROOT_PATH / args['deploy_type']):
+    # first restore all images to everyone
+    ansible_playbook['containers-restore.yml',
+      '-i', inventory_filepath,
+      '--extra-vars', f"@{vars_filepath}",
+      '-e', f"local_containers_path={CONTAINER_IMAGES_PATH}",
+      '-e', f"nas_containers_path={GSD_DSB_NAS_PATH / 'container-images'}",
+      '-e', { 'services_containers_tars' : [ _docker_image_tag_to_tar(i) for i in SERVICES_CONTAINERS_BUILT ] },
+      '-e', { 'clients_containers_tars' : [ _docker_image_tag_to_tar(i) for i in CLIENTS_CONTAINERS_BUILT ] },
+    ] & FG
 
   print("[INFO] Deploy Complete!")
 
@@ -1793,6 +1817,11 @@ GCP_DEFAULT_SSH_USER = _get_config('gcp','default_ssh_user')
 GCP_DOCKER_IMAGE_NAMESPACE = f"gcr.io/{GCP_PROJECT_ID}/dsb"
 GCP_DOCKER_IMAGE_TAG = 'antipode'
 GCP_MACHINE_IMAGE_LINK = f"https://www.googleapis.com/compute/v1/projects/{GCP_PROJECT_ID}/global/images/{GCP_MACHINE_IMAGE_NAME}"
+# gsd
+GSD_SSH_CONFIG_PATH = Path(_get_config('gsd', 'ssh_config_filepath'))
+GSD_NAS_PATH = Path(_get_config('gsd','nas_path'))
+GSD_DSB_NAS_PATH = Path(_get_config('gsd','nas_path')) / 'antipode-dsb-deploy'
+GSP_DEFAULT_SSH_USER = _get_config('gsd','default_ssh_user')
 # gather
 WKLD_CONTAINER_NAME = 'dsb-wkld'
 PERCENTILES_TO_PRINT = [.25, .5, .75, .90, .99]

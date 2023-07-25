@@ -5,6 +5,6 @@ pandas
 requests
 jinja2
 MarkupSafe
-click
 textwrap3
 ruamel.yaml
+paramiko

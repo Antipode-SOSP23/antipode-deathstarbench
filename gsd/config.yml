@@ -1,0 +1,3 @@
+ssh_config_filepath: /home/jfloff/.ssh/config
+default_ssh_user: jfloff
+nas_path: /mnt/nas/inesc/jfloff

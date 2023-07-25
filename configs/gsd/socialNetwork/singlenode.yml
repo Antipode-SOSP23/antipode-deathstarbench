@@ -108,6 +108,12 @@ services:
   post-storage-mongodb-setup: farinheira
   write-home-timeline-rabbitmq-setup: farinheira
 
+# 4 clients used
+clients:
+  - morcela
+
+manager: morcela
+
 ########
 #
 # total DSB cores: 54
