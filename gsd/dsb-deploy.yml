@@ -30,7 +30,6 @@
         use_ssh_args: yes
         mode: push
 
----
 - hosts: all
   gather_facts: no
   become: no
