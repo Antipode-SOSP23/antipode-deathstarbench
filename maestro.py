@@ -1052,23 +1052,21 @@ def delay__socialNetwork__local(args):
       args['distribution']
     ] & FG
 
-def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms, jitter_ms, correlation_per, distribution):
-  _force_docker()
+def delay__socialNetwork__gcp(args):
+  _force_gcp_docker()
   from plumbum.cmd import ansible_playbook
   from jinja2 import Environment
   import textwrap
 
-  filepath = args['configuration_path']
-  with open(filepath, 'r') as f_conf:
-    conf = yaml.load(f_conf, Loader=yaml.FullLoader)
-
-  # change path to playbooks folder
-  os.chdir(ROOT_PATH / 'deploy' / 'gcp')
+  vars_filepath = args['deploy_dir'] / 'vars.yml'
+  inventory_filepath = args['deploy_dir'] / 'inventory.cfg'
+  config = _load_yaml(ROOT_PATH / _get_last(args['deploy_type'], 'config'))
 
   # checks the configuration for the hostname of the delayed container
-  src_gcp_container_hostname = conf['nodes'][conf['services'][src_container]]['hostname']
-  dst_gcp_container_hostname = conf['nodes'][conf['services'][dst_container]]['hostname']
+  src_gcp_container_hostname = config['nodes'][config['services'][args['src_container']]]['hostname']
 
+  # run workload remotely
+  print("[INFO] Generating delay playbook ...")
   template = """
     ---
     - hosts: {{ src_gcp_container_hostname }}
@@ -1079,12 +1077,12 @@ def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms, jitt
       tasks:
         - name: Delay container
           shell: >
-              docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) /home/delay.sh {{ dst_container }} {{ delay_ms }} {{ jitter_ms }} {{ correlation_per }} {{ distribution }}
+            docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) /home/delay.sh {{ dst_container }} {{ delay }} {{ jitter }} {{ correlation }} {{ distribution }}
           ignore_errors: True
 
         - name: Spam ping to kickstart delay
           shell: >
-              docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) bash -c "for IP in \$(dig +short post-storage-mongodb-us); do ping -c 200 -f \$IP 2>&1 | tail -1; done"
+            docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) bash -c "for IP in \$(dig +short {{ dst_container }}); do ping -c 200 -f \$IP 2>&1 | tail -1; done"
           register: ping_out
 
         - name: Check delay
@@ -1094,25 +1092,26 @@ def delay__socialNetwork__gcp(args, src_container, dst_container, delay_ms, jitt
   """
   playbook = Environment().from_string(template).render({
     'src_gcp_container_hostname': src_gcp_container_hostname,
-    'dst_gcp_container_hostname': dst_gcp_container_hostname,
-    'src_container': src_container,
-    'dst_container': dst_container,
-    'delay_ms': delay_ms,
-    'jitter_ms': jitter_ms,
-    'correlation_per': correlation_per,
-    'distribution': distribution,
+    'src_container': args['src_container'],
+    'dst_container': args['dst_container'],
+    'delay': args['delay'],
+    'jitter': args['jitter'],
+    'correlation': args['correlation'],
+    'distribution': args['distribution'],
   })
 
-  playbook_filepath = ROOT_PATH / 'deploy' / 'gcp' / 'delay-container.yml'
+  playbook_filepath = args['deploy_dir'] / 'delay-container.yml'
   with open(playbook_filepath, 'w') as f:
     # remove empty lines and dedent for easier read
     f.write(textwrap.dedent(playbook))
     print(f"[SAVED] '{playbook_filepath}'")
 
-  ansible_playbook['delay-container.yml',
-    '-e', 'app=socialNetwork',
-  ] & FG
-  print("[INFO] Delay Complete!")
+  print("[INFO] Running delay playbook ...")
+  with local.cwd(ROOT_PATH / 'gcp'):
+    ansible_playbook[f"{playbook_filepath}",
+      '-i', inventory_filepath,
+      '--extra-vars', f"@{vars_filepath}",
+    ] & FG
 
 
 #-----------------
@@ -1245,7 +1244,6 @@ def wkld__gcp__run(args):
 
   # run workload remotely
   with local.cwd(ROOT_PATH / 'gcp'):
-    # docker container ls --all --quiet --filter "name=web-server-10"
     ansible_playbook['wkld-run.yml',
       '-i', inventory_filepath,
       '--extra-vars', f"@{vars_filepath}",
@@ -1590,7 +1588,6 @@ def gather__socialNetwork__gcp__download(args):
   # run workload remotely
   print("[INFO] Download client output ...")
   with local.cwd(ROOT_PATH / 'gcp'):
-    # docker container ls --all --quiet --filter "name=web-server-10"
     ansible_playbook['wkld-gather.yml',
       '-i', inventory_filepath,
       '--extra-vars', f"@{vars_filepath}",
