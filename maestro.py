@@ -1587,13 +1587,23 @@ def gather__socialNetwork__gsd__download(args):
   return None
 
 def gather__socialNetwork__gcp__download(args):
+  _force_gcp_docker()
   from plumbum.cmd import ansible_playbook
 
-  filepath = args['configuration_path']
-  conf_path = f"{filepath.stem}"
+  vars_filepath = args['deploy_dir'] / 'vars.yml'
+  inventory_filepath = args['deploy_dir'] / 'inventory.cfg'
+  remote_gather_path = _get_last(args['deploy_type'], 'remote_gather_path')
 
-  os.chdir(ROOT_PATH / 'deploy' / 'gcp')
-  ansible_playbook['wkld-gather.yml', '-i', 'clients_inventory_local.cfg', '-e', 'app=socialNetwork', '-e', f'conf_path={conf_path}' ] & FG
+  # run workload remotely
+  print("[INFO] Download client output ...")
+  with local.cwd(ROOT_PATH / 'gcp'):
+    # docker container ls --all --quiet --filter "name=web-server-10"
+    ansible_playbook['wkld-gather.yml',
+      '-i', inventory_filepath,
+      '--extra-vars', f"@{vars_filepath}",
+      '-e', f"remote_gather_path={remote_gather_path}",
+      '-e', f"local_gather_path={args['local_gather_path']}",
+    ] & FG
 
 
 #-----------------
