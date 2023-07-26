@@ -1559,6 +1559,7 @@ def gather(args):
   args['local_gather_path'] = Path(_get_last(args['deploy_type'], 'local_gather_path'))
 
   getattr(sys.modules[__name__], f"gather__{args['app']}__{args['deploy_type']}__download")(args)
+  print(f"[INFO] Output saved to '{args['local_gather_path']}' ...")
 
   print("[INFO] Gather jaeger traces ...")
   # load jaeger host
@@ -1641,7 +1642,21 @@ def gather__socialNetwork__local__download(args):
   return None
 
 def gather__socialNetwork__gsd__download(args):
-  return None
+  from plumbum.cmd import ansible_playbook
+
+  vars_filepath = args['deploy_dir'] / 'vars.yml'
+  inventory_filepath = args['deploy_dir'] / 'inventory.cfg'
+  remote_gather_path = _get_last(args['deploy_type'], 'remote_gather_path')
+
+  # run workload remotely
+  print("[INFO] Download client output ...")
+  with local.cwd(ROOT_PATH / args['deploy_type']):
+    ansible_playbook['wkld-gather.yml',
+      '-i', inventory_filepath,
+      '--extra-vars', f"@{vars_filepath}",
+      '-e', f"remote_gather_path={remote_gather_path}",
+      '-e', f"local_gather_path={args['local_gather_path']}",
+    ] & FG
 
 def gather__socialNetwork__gcp__download(args):
   _force_gcp_docker()

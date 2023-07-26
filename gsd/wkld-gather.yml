@@ -1,14 +1,23 @@
 ---
-  - name: Gather wkld output files
-    hosts: clients
-    gather_facts: no
-    serial: 1
-    any_errors_fatal: true
+- name: Gather wkld output files
+  hosts: clients
+  gather_facts: no
+  become: no
+  serial: 1
+  any_errors_fatal: true
 
-    tasks:
-      - name: Downloading data from remote node
-        synchronize:
-          src: "/tmp/dsb-wkld-data/{{ conf_id }}"
-          dest: "../wkld-data"
-          use_ssh_args: yes
-          mode: pull
+  tasks:
+    - name: Check that output file exists
+      stat:
+        path: "{{ remote_gather_path }}/{{ inventory_hostname }}.out"
+      register: file_status
+      failed_when: not file_status.stat.exists
+
+    - name: Downloading data from remote node
+      synchronize:
+        src: "{{ remote_gather_path }}/"
+        dest: "{{ local_gather_path }}"
+        use_ssh_args: yes
+        mode: pull
+        rsync_opts:
+          - "--chmod=0777"

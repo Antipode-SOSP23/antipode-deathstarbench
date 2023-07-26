@@ -44,7 +44,24 @@ Run `maestro` to build and deploy the GCP instances:
 ./maestro --gcp socialNetwork deploy -config CONFIG_FILE -clients NUM_CLIENTS
 ```
 You can either build your own deployment configuration file, or you one already existing.
-For instance, for SOSP'23 plots you should use the `configs/gcp/socialNetwork/us-eu.yml` config.
+
+After deploy is done you can start the DeathStarBench services with:
+```zsh
+./maestro --gcp socialNetwork run -antipode
+```
+In order to run the original TrainTicket application remove the `-antipode` parameter.
+
+Then you can run the `compose-post` workloads to evaluate inconsistencies and gather its results:
+```zsh
+./maestro --gcp socialNetwork wkld -E compose-post -r RATE -d DURATION
+./maestro --gcp gather
+```
+For instance, we can the workload for 300 seconds (`300`), and with a rate of `100` requests per second.
+
+At the end, you can clean your experiment:
+```zsh
+./maestro --gcp socialNetwork clean
+```
 
 ### GCP Deploymnet
 Make sure you have created a Google Cloud Platform (GCP) account and have setup a new project.
@@ -81,12 +98,7 @@ After deploy is done you can start the DeathStarBench services with:
 ```
 In order to run the original TrainTicket application remove the `-antipode` parameter.
 
-You feed the application the initial social graph with users and their followers with:
-```zsh
-./maestro --gcp socialNetwork wkld -E init-social-graph -r 1
-```
-
-And after you can run the `compose-post` workloads to evaluate inconsistencies and gather its results:
+Then you can run the `compose-post` workloads to evaluate inconsistencies and gather its results:
 ```zsh
 ./maestro --gcp socialNetwork wkld -E compose-post -r RATE -d DURATION
 ./maestro --gcp gather

@@ -29,11 +29,11 @@
   tasks:
     - name: Scale DSB to 0
       shell: >
-          docker service scale $(CMD="" ; for SERVICE in $(docker stack services {{ stack }} --format {% raw %}'{{.Name}}'{% endraw %}) ; do CMD="$CMD $SERVICE=0"; done; echo $CMD)
+        docker service scale $(CMD="" ; for SERVICE in $(docker stack services {{ stack }} --format {% raw %}'{{.Name}}'{% endraw %}) ; do CMD="$CMD $SERVICE=0"; done; echo $CMD)
 
     - name: Scale DSB to 1
       shell: >
-          docker service scale $(CMD="" ; for SERVICE in $(docker stack services {{ stack }} --format {% raw %}'{{.Name}}'{% endraw %}) ; do CMD="$CMD $SERVICE=1"; done; echo $CMD)
+        docker service scale $(CMD="" ; for SERVICE in $(docker stack services {{ stack }} --format {% raw %}'{{.Name}}'{% endraw %}) ; do CMD="$CMD $SERVICE=1"; done; echo $CMD)
 
 - hosts: "{{ compose_post_service_instance }}"
   gather_facts: no
