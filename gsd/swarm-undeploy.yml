@@ -1,16 +1,7 @@
-- hosts: swarm_manager
-  any_errors_fatal: true
-  become: no
-  gather_facts: no
-
-  tasks:
-    - name: Undeploy deathstarbench service
-      shell: >
-        docker stack rm deathstarbench
-      ignore_errors: yes
-
-
-- hosts: cluster
+---
+- hosts:
+    - cluster
+    - clients
   any_errors_fatal: true
   become: no
   gather_facts: no
@@ -19,7 +10,10 @@
     - name: Make worker nodes leave the Swarm
       shell: docker swarm leave -f
       register: out
-      failed_when: "not(out.rc == 0 or 'This node is not part of a swarm' in out.stderr)"
+      retries: 15
+      delay: 45
+      until: (out.rc == 0 or 'This node is not part of a swarm' in out.stderr)
+      ignore_errors: True
 
     - name: Prune docker system
       shell: docker system prune --volumes -f
@@ -34,4 +28,12 @@
     - name: Make manager nodes leave the Swarm
       shell: docker swarm leave -f
       register: out
-      failed_when: "not(out.rc == 0 or 'This node is not part of a swarm' in out.stderr)"
+      retries: 15
+      delay: 45
+      until: (out.rc == 0 or 'This node is not part of a swarm' in out.stderr)
+      ignore_errors: True
+
+    - name: Undeploy deathstarbench service
+      shell: >
+        docker stack rm {{ stack }}
+      ignore_errors: yes

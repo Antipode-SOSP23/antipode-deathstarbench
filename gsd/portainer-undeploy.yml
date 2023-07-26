@@ -8,4 +8,4 @@
       shell: >
         docker stack rm portainer
       args:
-        chdir: /code/deploy
+        chdir: "{{ deploy_nas_path }}/deploy"

@@ -1706,13 +1706,12 @@ def clean__socialNetwork__gsd(args):
   inventory_filepath = args['deploy_dir'] / 'inventory.cfg'
   inventory = _load_inventory(args['deploy_type'], inventory_filepath)
 
-  # Ignore strong option there is nothing to do in cluster
-
   if args['restart']:
     with local.cwd(ROOT_PATH / args['deploy_type']):
       ansible_playbook['dsb-restart.yml',
         '-i', inventory_filepath,
-        '--extra-vars', f"@{vars_filepath}"
+        '--extra-vars', f"@{vars_filepath}",
+        '-e', f"wkld_container_name={WKLD_CONTAINER_NAME}",
       ] & FG
   else:
     if _get_last(args['deploy_type'], 'prometheus'):
