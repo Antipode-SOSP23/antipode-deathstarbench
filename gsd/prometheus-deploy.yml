@@ -1,0 +1,55 @@
+---
+- hosts: swarm_manager
+  any_errors_fatal: true
+  gather_facts: no
+  become: no
+
+  tasks:
+    - name: Ensures network prometheus configuration dir exists
+      file:
+        path: "{{ deploy_nas_path }}/prometheus"
+        state: directory
+
+    - name: Create prometheus docker-compose file
+      copy:
+        src: docker-compose-prometheus.yml
+        dest: "{{ deploy_nas_path }}/prometheus/docker-compose.yml"
+        mode: u=rwx,g=r,o=xr
+
+    - name: Create prometheus configuration
+      template:
+        src: prometheus.yml.j2
+        dest: "{{ deploy_nas_path }}/prometheus/prometheus.yml"
+        mode: u=rwx,g=r,o=xr
+
+# deploy prometheus sensors
+- hosts: all
+  any_errors_fatal: true
+  become: no
+  gather_facts: no
+
+  tasks:
+    - name: Ensures network prometheus configuration dir exists
+      file:
+        path: "{{ deploy_nas_path }}/prometheus"
+        state: directory
+
+
+    - name: Download Prometheus Nodeexporter version
+      get_url:
+        url: "https://github.com/prometheus/node_exporter/releases/download/v1.1.1/node_exporter-1.1.1.linux-amd64.tar.gz"
+        dest: "/tmp/node_exporter-1.1.1.linux-amd64.tar.gz"
+
+    - name: Deploy node exporter bundle and unpack it at the remote nodes
+      unarchive:
+        src: "/tmp/node_exporter-1.1.1.linux-amd64.tar.gz"
+        dest: "/tmp"
+        remote_src: yes
+
+    - name: Remove zip file
+      file:
+        path: "/tmp/node_exporter-1.1.1.linux-amd64.tar.gz"
+        state: absent
+
+    - name: Move nodeexporter to installation dir
+      command: mv "/tmp/node_exporter-1.1.1.linux-amd64/node_exporter" "{{ deploy_nas_path }}/prometheus/"

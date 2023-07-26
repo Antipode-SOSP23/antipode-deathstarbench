@@ -1,0 +1,18 @@
+- hosts: swarm_manager
+  any_errors_fatal: true
+  become: no
+  gather_facts: no
+
+  tasks:
+    - name: Check that prometheus docker-compose exists
+      stat:
+        path: "{{ deploy_nas_path }}/prometheus/docker-compose.yml"
+      register: stat_result
+
+    - name: Tear down existing prometheus services
+      shell: >
+            docker-compose -f docker-compose.yml down --remove-orphans;
+      args:
+        chdir: '{{ deploy_nas_path }}/prometheus'
+        executable: /bin/bash
+      when: stat_result.stat.exists

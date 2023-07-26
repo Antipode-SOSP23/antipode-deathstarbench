@@ -1,0 +1,54 @@
+---
+- hosts: all
+  gather_facts: no
+  become: no
+  any_errors_fatal: true
+
+  tasks:
+    - name: Initialize Node Exporter
+      shell:
+        killall node_exporter ;
+        tmux kill-session -t prometheus_nodeexporter ;
+        tmux new-session -d -s prometheus_nodeexporter "./prometheus/node_exporter"
+      args:
+        chdir: "{{ deploy_nas_path }}/prometheus"
+        executable: /bin/bash
+
+- hosts: swarm_manager
+  gather_facts: no
+  become: no
+  any_errors_fatal: true
+
+  tasks:
+    - name: Initialize Prometheus
+      shell: >
+        docker-compose -f docker-compose.yml up -d;
+      args:
+        chdir: "{{ deploy_nas_path }}/prometheus"
+        executable: /bin/bash
+
+
+# https://mike42.me/blog/2018-08-monitoring-network-throughput
+# network donwload (matches with ipef)
+# rate(node_network_receive_bytes_total{device="enp0s25"}[10s])*8/1024/1024
+# rate(node_network_receive_bytes_total{device=~"eno1|enp10s0|enp8s0"}[10s])*8/1024/1024
+# also choose resolution to 1s
+
+# network upload
+# rate(node_network_transmit_bytes_total{device="enp0s25"}[10s])*8/1024/1024
+# rate(node_network_transmit_bytes_total{device=~"eno1|enp10s0|enp8s0"}[10s])*8/1024/1024
+
+# prometheus cpu usage:
+# https://www.robustperception.io/understanding-machine-cpu-usage
+# 100 - (avg by (instance) (irate(node_cpu_seconds_total{job="nodeexporter",mode="idle"}[5m])) * 100)
+
+
+# memory usage
+# (node_memory_MemTotal_bytes - node_memory_MemFree_bytes)/node_memory_MemTotal_bytes *100
+
+# disk usage
+# (node_filesystem_size_bytes{mountpoint="/home"} - node_filesystem_free_bytes{mountpoint="/home"})/node_filesystem_size_bytes{mountpoint="/home"} *100
+
+
+# https://www.robustperception.io/temperature-and-hardware-monitoring-metrics-from-the-node-exporter
+# https://www.robustperception.io/adding-tls-to-prometheus-with-caddy

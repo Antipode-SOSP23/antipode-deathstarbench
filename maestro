@@ -66,9 +66,20 @@ def _service_ip(deploy_type, app, service):
     from plumbum.cmd import hostname
     public_ip = hostname['-I']().split()[0]
   elif deploy_type == 'gsd':
-    public_ip = GSD_AVAILABLE_NODES[config['services'][service]]
+    from paramiko import SSHConfig
+    inventory = _load_gsd_inventory(DEPLOY_PATH / 'gsd' / app / tag / 'inventory.cfg')
+    services_ips = {
+      'jaeger': inventory[config['services']['jaeger']]['ansible_host'],
+      'rabbitmq-eu': inventory[config['services']['write-home-timeline-rabbitmq-eu']]['ansible_host'],
+      'rabbitmq-us': inventory[config['services']['write-home-timeline-rabbitmq-us']]['ansible_host'],
+      'portainer': inventory[config['manager']]['ansible_host'],
+      'prometheus': inventory[config['manager']]['ansible_host'],
+      'frontend-eu': inventory[config['services']['nginx-thrift']]['ansible_host'],
+      'frontend-us': inventory[config['services']['nginx-thrift-us']]['ansible_host'],
+    }
+    public_ip = services_ips[service]
   elif deploy_type == 'gcp':
-    inventory = _load_inventory(DEPLOY_PATH / 'gcp' / app / tag / 'inventory.cfg')
+    inventory = _load_gcp_inventory(DEPLOY_PATH / 'gcp' / app / tag / 'inventory.cfg')
     services_ips = {
       'jaeger': inventory[config['services']['jaeger']]['external_ip'],
       'rabbitmq-eu': inventory[config['services']['write-home-timeline-rabbitmq-eu']]['external_ip'],
@@ -280,6 +291,32 @@ def _load_gcp_inventory(filepath):
     # assign new entry
     loaded_inventory[info.vars['gcp_name']] = e
 
+  return loaded_inventory
+
+def _load_gsd_inventory(filepath):
+  from ansible.parsing.dataloader import DataLoader
+  from ansible.inventory.manager import InventoryManager
+  from ansible.vars.manager import VariableManager
+
+  loader = DataLoader()
+  inventory = InventoryManager(loader=loader, sources=str(filepath))
+  variable_manager = VariableManager(loader=loader, inventory=inventory)
+
+  hostname_to_groups = _reverse_dict(inventory.get_groups_dict())
+  # other methods:
+  # - inventory.get_host('manager.antipode-296620').vars
+
+  loaded_inventory = {}
+  for hostname,info in inventory.hosts.items():
+    # index by service name
+    e = {}
+    # load hostname manually since its the key for each host
+    e['groups'] = hostname_to_groups[hostname]
+    # load all remaining keys
+    for k,v in info.vars.items():
+      e[k] = v
+    # assign new entry
+    loaded_inventory[hostname] = e
   return loaded_inventory
 
 def _wait_url_up(url):
@@ -993,13 +1030,36 @@ def run__socialNetwork__local(args):
 def run__socialNetwork__gsd(args):
   from plumbum.cmd import ansible_playbook
 
-  filepath = args['configuration_path']
-  if filepath is None:
-    print('[ERROR] Deploy file is required')
-    exit(-1)
+  vars_filepath = args['deploy_dir'] / 'vars.yml'
+  inventory_filepath = args['deploy_dir'] / 'inventory.cfg'
+  inventory = _load_gsd_inventory(inventory_filepath)
 
-  # change path to playbooks folder
-  os.chdir(ROOT_PATH / 'deploy' / 'gsd')
+  if args['portainer']:
+    _put_last(args['deploy_type'], 'portainer', True)
+    with local.cwd(ROOT_PATH / args['deploy_type']):
+      ansible_playbook['portainer-start.yml',
+        '-i', inventory_filepath,
+        '--extra-vars', f"@{vars_filepath}"
+      ] & FG
+      portainer_url = _service_ip(args['deploy_type'], args['app'], 'portainer')
+      _wait_url_up(portainer_url)
+      print(f"[INFO] Portainer link (u/pwd: admin/antipode): {portainer_url}")
+
+  if args['prometheus']:
+    _put_last(args['deploy_type'], 'prometheus', True)
+    with local.cwd(ROOT_PATH / args['deploy_type']):
+      ansible_playbook['prometheus-deploy.yml',
+        '-i', inventory_filepath,
+        '--extra-vars', f"@{vars_filepath}"
+      ] & FG
+      ansible_playbook['prometheus-start.yml',
+        '-i', inventory_filepath,
+        '--extra-vars', f"@{vars_filepath}"
+      ] & FG
+      prometheus_url = _service_ip(args['deploy_type'], args['app'], 'prometheus')
+      _wait_url_up(prometheus_url)
+      print(f"[INFO] Prometheus link: {prometheus_url}")
+
 
   ansible_playbook['portainer-start.yml'] & FG
   portainer_ip = GSD_AVAILABLE_NODES[next(iter(GSD_SWARM_MANAGER_NODE))]
