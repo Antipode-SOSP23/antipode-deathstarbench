@@ -20,19 +20,40 @@ import argparse
 #-----------
 # HELPERS
 #-----------
+def _load_yaml(path):
+  import ruamel.yaml
+  with open(path, 'r') as f:
+    yaml = ruamel.yaml.YAML()
+    yaml.preserve_quotes = True
+    return yaml.load(f) or {}
+
+def _dump_yaml(path, d):
+  from ruamel.yaml import YAML
+  yaml=YAML()
+  path.parent.mkdir(exist_ok=True, parents=True)
+  with open(path, 'w+') as f:
+    yaml.default_flow_style = False
+    yaml.dump(d, f)
+
 def _fetch_span_tag(tags, tag_to_search):
   return next(item for item in tags if item['key'] == tag_to_search)['value']
 
-def _fetch_gather_tag(exp_dir):
-  # get the tag of this experiment
+def _convert_old_info(exp_dir):
+  info = {}
+  # find out if baseline or antipode
+  info['type'] = 'antipode' if 'antipode' in exp_dir.parent.stem else 'baseline'
+  # find zone pair and rps from gather tag
   with open(ROOT_PATH / exp_dir / 'traces.info') as f:
     lines = f.readlines()
     for line in lines:
       if line.startswith('GATHER TAG: '):
-        tag, tag_round = line.rstrip().split('GATHER TAG: ')[1].split(' --- round')
-        # default tag_round to 1
-        tag_round = tag_round.replace(' ', '') or 1
-        return tag, int(tag_round)
+        parts = line.rstrip().split('GATHER TAG: ')[1].split(' --- round')[0].split(' - ')
+        info['zone_pair'] = parts[1]
+        # turn rps into number
+        info['rps'] = int(parts[0].split('qps')[0].split('rps')[0].split('ms')[0])
+
+  _dump_yaml(exp_dir / 'info.yml', info)
+  print(f"[INFO] Generated new info file: {exp_dir / 'info.yml'}")
 
 def _get(list, index, default):
   try:
@@ -90,8 +111,9 @@ def plot__per_inconsistencies(args):
 
   data = []
   for d in gather_paths:
-    tag, tag_round = _fetch_gather_tag(d)
-    tag = tag.split(' - ')[1].replace('->',r'$\rightarrow$')
+    info = _load_yaml(d / 'info.yml')
+
+    tag = info['zone_pair'].replace('->',r'$\rightarrow$')
     df = pd.read_csv(ROOT_PATH / d / 'traces.csv', sep=';', index_col='ts')
 
     # compute extra info to output in info file
@@ -140,8 +162,7 @@ def plot__per_inconsistencies(args):
 def plot__throughput_latency(args):
   parsed_data = []
   for d in gather_paths:
-    tag, tag_round = _fetch_gather_tag(d)
-    info_tags = tag.split(' - ')
+    info = _load_yaml(d / 'info.yml')
 
     latency_90 = None
     throughput = None
@@ -171,10 +192,9 @@ def plot__throughput_latency(args):
 
     # insert at the position of the round
     parsed_data.append({
-      'rps': int(info_tags[0].split('qps')[0].split('rps')[0]),
-      'zone_pair': info_tags[1],
-      'type': _get(info_tags, 2, 'baseline'),
-      'round': tag_round,
+      'rps': info['rps'],
+      'zone_pair': info['zone_pair'],
+      'type': info['type'],
       'latency_90': latency_90,
       'throughput': throughput,
     })
@@ -308,8 +328,7 @@ def plot__throughput_latency(args):
 def plot__throughput_visibility_latency(gather_paths):
   parsed_data = []
   for d in gather_paths:
-    tag, tag_round = _fetch_gather_tag(d)
-    info_tags = tag.split(' - ')
+    info = _load_yaml(d / 'info.yml')
 
     throughput = None
     with open(ROOT_PATH / d / 'client01.out') as f:
@@ -325,10 +344,9 @@ def plot__throughput_visibility_latency(gather_paths):
 
     # insert at the position of the round
     parsed_data.append({
-      'rps': int(info_tags[0].split('qps')[0].split('rps')[0]),
-      'zone_pair': info_tags[1],
-      'type': _get(info_tags, 2, 'baseline'),
-      'round': tag_round,
+      'rps': info['rps'],
+      'zone_pair': info['zone_pair'],
+      'type': info['type'],
       'latency_90': latency_90,
       'throughput': throughput,
     })
@@ -407,8 +425,7 @@ def plot__throughput_visibility_latency(gather_paths):
 def plot__visibility_latency_overhead(gather_paths):
   parsed_data = []
   for d in gather_paths:
-    tag, tag_round = _fetch_gather_tag(d)
-    info_tags = tag.split(' - ')
+    info = _load_yaml(d / 'info.yml')
 
     throughput = None
     with open(ROOT_PATH / d / 'client01.out') as f:
@@ -424,10 +441,9 @@ def plot__visibility_latency_overhead(gather_paths):
 
     # insert at the position of the round
     parsed_data.append({
-      'rps': int(info_tags[0].split('qps')[0].split('rps')[0]),
-      'zone_pair': info_tags[1],
-      'type': _get(info_tags, 2, 'baseline'),
-      'round': tag_round,
+      'rps': info['rps'],
+      'zone_pair': info['zone_pair'],
+      'type': info['type'],
       'latency_90': latency_90,
       'throughput': throughput,
     })
@@ -502,8 +518,7 @@ def plot__visibility_latency_overhead(gather_paths):
 def plot__throughput_latency_with_consistency_window(args):
   parsed_data = []
   for d in gather_paths:
-    tag, tag_round = _fetch_gather_tag(d)
-    info_tags = tag.split(' - ')
+    info = _load_yaml(d / 'info.yml')
 
     latency_90 = None
     throughput = None
@@ -537,10 +552,9 @@ def plot__throughput_latency_with_consistency_window(args):
 
     # insert at the position of the round
     parsed_data.append({
-      'rps': int(info_tags[0].split('qps')[0].split('rps')[0]),
-      'zone_pair': info_tags[1],
-      'type': _get(info_tags, 2, 'baseline'),
-      'round': tag_round,
+      'rps': info['rps'],
+      'zone_pair': info['zone_pair'],
+      'type': info['type'],
       'latency_90': latency_90,
       'consistency_window_90': consistency_window_90,
       'throughput': throughput,
@@ -698,8 +712,7 @@ def plot__throughput_latency_with_consistency_window(args):
 # CONSTANTS
 #-----------
 ROOT_PATH = Path(os.path.abspath(os.path.dirname(sys.argv[0])))
-WKLD_DATA_PATH = ROOT_PATH / 'deploy' / 'wkld-data'
-PLOTS_PATH = ROOT_PATH / 'deploy' / 'plots'
+PLOTS_PATH = ROOT_PATH / 'plots'
 PERCENTILES_TO_PRINT = [.25, .5, .75, .90, .99]
 # plot names have to be AFTER the method definitions
 PLOT_NAMES = [ m.split('plot__')[1] for m in dir(sys.modules[__name__]) if m.startswith('plot__') ]
@@ -716,9 +729,16 @@ if __name__ == '__main__':
 
   # parse args
   args = vars(main_parser.parse_args())
+
   # load yaml
   args['config'] = (yaml.safe_load(args['config']) or {})
 
   for plot_name in set(args['config'].keys()) & set(args['plots']):
-    gather_paths = args['config'][plot_name]
+    gather_paths = [ Path(p) for p in args['config'][plot_name] ]
+
+    # Temporary fix for migrating from tags to info.yml file
+    for p in gather_paths:
+      if not Path(p / 'info.yml').is_file():
+        _convert_old_info(p)
+
     getattr(sys.modules[__name__], f"plot__{plot_name}")(gather_paths)
