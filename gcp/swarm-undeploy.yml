@@ -36,3 +36,6 @@
       shell: >
         docker stack rm {{ stack }}
       ignore_errors: yes
+
+    - name: Prune docker system
+      shell: docker system prune --volumes -f

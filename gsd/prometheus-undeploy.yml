@@ -11,7 +11,7 @@
 
     - name: Tear down existing prometheus services
       shell: >
-            docker-compose -f docker-compose.yml down --remove-orphans;
+            sudo docker-compose -f docker-compose.yml down --remove-orphans;
       args:
         chdir: '{{ deploy_nas_path }}/prometheus'
         executable: /bin/bash

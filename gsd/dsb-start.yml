@@ -7,7 +7,7 @@
   tasks:
     - name: Run DSB Stack
       shell: >
-        docker stack deploy --with-registry-auth --compose-file ./docker-compose-swarm.yml {{ stack }}
+        sudo docker stack deploy --with-registry-auth --compose-file ./docker-compose-swarm.yml {{ stack }}
       register: out
       failed_when: "not(out.rc == 0) or 'fail' in out.stderr"
       args:
@@ -17,7 +17,7 @@
     - name: Check number of services running
       # mongodb-setup has to run before DSB stack is deployed
       shell: >
-        docker stack services {{ stack }} --format {% raw %}'{{.Name}};{{.Replicas}}'{%endraw%} | grep -v 'post-storage-mongodb-setup' | grep -v 'write-home-timeline-rabbitmq-setup' | grep '1/1' | wc -l
+        sudo docker stack services {{ stack }} --format {% raw %}'{{.Name}};{{.Replicas}}'{%endraw%} | grep -v 'post-storage-mongodb-setup' | grep -v 'write-home-timeline-rabbitmq-setup' | grep '1/1' | wc -l
       register: num_deployed_services
       retries: 15
       delay: 45
@@ -31,6 +31,6 @@
   tasks:
     - name: Wait for compose-post-service to be ready for posts by creating dockerize.sync file
       shell: >
-        sudo docker exec $( docker ps -a --filter name='compose-post-service' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) dockerize -wait file:///tmp/dockerize.sync -wait-retry-interval 10s -timeout 60s
+        sudo docker exec $( sudo docker ps -a --filter name='compose-post-service' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) dockerize -wait file:///tmp/dockerize.sync -wait-retry-interval 10s -timeout 60s
       retries: 5
       delay: 30

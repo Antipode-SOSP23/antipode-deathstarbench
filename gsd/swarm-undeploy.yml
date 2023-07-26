@@ -8,7 +8,7 @@
 
   tasks:
     - name: Make worker nodes leave the Swarm
-      shell: docker swarm leave -f
+      shell: sudo docker swarm leave -f
       register: out
       retries: 15
       delay: 45
@@ -16,7 +16,7 @@
       ignore_errors: True
 
     - name: Prune docker system
-      shell: docker system prune --volumes -f
+      shell: sudo docker system prune --volumes -f
 
 
 - hosts: swarm_manager
@@ -26,7 +26,7 @@
 
   tasks:
     - name: Make manager nodes leave the Swarm
-      shell: docker swarm leave -f
+      shell: sudo docker swarm leave -f
       register: out
       retries: 15
       delay: 45
@@ -35,5 +35,8 @@
 
     - name: Undeploy deathstarbench service
       shell: >
-        docker stack rm {{ stack }}
+        sudo docker stack rm {{ stack }}
       ignore_errors: yes
+
+     - name: Prune docker system
+      shell: sudo docker system prune --volumes -f

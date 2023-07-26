@@ -6,6 +6,6 @@
   tasks:
     - name: Tear down existing portainer services
       shell: >
-        docker stack rm portainer
+        sudo docker stack rm portainer
       args:
         chdir: "{{ deploy_nas_path }}/deploy"

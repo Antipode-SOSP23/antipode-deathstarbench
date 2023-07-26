@@ -22,7 +22,7 @@
   tasks:
     - name: Initialize Prometheus
       shell: >
-        docker-compose -f docker-compose.yml up -d;
+        sudo docker-compose -f docker-compose.yml up -d;
       args:
         chdir: "{{ deploy_nas_path }}/prometheus"
         executable: /bin/bash

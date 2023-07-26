@@ -1,15 +1,15 @@
 ---
 - hosts: clients
   gather_facts: no
-  become: yes
+  become: no
   any_errors_fatal: true
 
   tasks:
     - name: Kill tmux session and remove '{{ wkld_container_name }}' container before running
       shell: >
         tmux kill-session -t client_init ;
-        docker stop {{ wkld_container_name }} ;
-        docker rm {{ wkld_container_name }}
+        sudo docker stop {{ wkld_container_name }} ;
+        sudo docker rm {{ wkld_container_name }}
       ignore_errors: True
 
     - name: Copy wkld-run script
@@ -28,7 +28,7 @@
 
     - name: Wait for '{{ wkld_container_name }}' container to exit
       shell: >
-        docker ps -a --filter 'name={{ wkld_container_name }}' --format {% raw %}'{{.Status}}'{% endraw %}
+        sudo docker ps -a --filter 'name={{ wkld_container_name }}' --format {% raw %}'{{.Status}}'{% endraw %}
       register: container_status
       retries: 15
       delay: 60
