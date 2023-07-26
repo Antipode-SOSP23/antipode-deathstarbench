@@ -5,6 +5,11 @@
   any_errors_fatal: true
 
   tasks:
+    - name: Create deploy folder at '{{ deploy_nas_path }}'
+      file:
+        path: "{{ deploy_nas_path }}"
+        state: directory
+
     - name: Create '{{ app }}' folder
       file:
         path: "{{ deploy_nas_path }}/app"
