@@ -991,29 +991,18 @@ def run(args):
 
 def run__socialNetwork__local(args):
   from plumbum import FG
-  from plumbum.cmd import docker_compose, ls
-  from jinja2 import Environment
-  import textwrap
+  from plumbum.cmd import docker_compose, rm
 
-  print(f"[INFO] Generating .env ...", flush=True)
+  print(f"[INFO] Setting env vars in docker images ...", flush=True)
   with local.cwd(args['deploy_dir']):
-    template = """
-    ANTIPODE={{ antipode }}
-    """
-    template_render = Environment().from_string(template).render({
-      'antipode': int(args['antipode']),
-    })
-    with open('.env', 'w') as f:
-      # remove empty lines and dedent for easier read
-      f.write(textwrap.dedent(template_render))
-    print(f"[SAVED] '.env'")
+    app_compose = _load_yaml('docker-compose.yml')
 
-    # Fixes error: "WARNING: Connection pool is full, discarding connection: localhost"
-    # ref: https://github.com/docker/compose/issues/6638#issuecomment-576743595
-    with local.env(COMPOSE_PARALLEL_LIMIT=99):
-      docker_compose['up',
-        '-d' if args['detached'] else None, # run containers in detached mode
-      ] & FG
+    for s in ANTIPODE_TARGET_SERVICES:
+      # Changing the docker-compose file to set ANTIPODE env var
+      app_compose['services'][s]['environment']['ANTIPODE'] = int(args['antipode'])
+
+    # now write the new compose into a new file
+    _dump_yaml(local.cwd / 'docker-compose.yml', app_compose)
 
   if args['portainer']:
     with local.cwd(ROOT_PATH / args['deploy_type']):
@@ -1022,6 +1011,26 @@ def run__socialNetwork__local(args):
         'up',
         '-d' # portainer always runs detached
       ] & FG
+
+  print(f"[INFO] Running start playbook ...", flush=True)
+  with local.cwd(args['deploy_dir']):
+    # Fixes error: "WARNING: Connection pool is full, discarding connection: localhost"
+    # ref: https://github.com/docker/compose/issues/6638#issuecomment-576743595
+    with local.env(COMPOSE_PARALLEL_LIMIT=99):
+      docker_compose['up',
+        '-d' if not args['attached'] else None, # run containers in detached mode
+      ] & FG
+
+    if not args['attached']:
+      print(f"[INFO] Waiting for compose-post-service to be ready ...", flush=True)
+      docker_compose['exec', 'compose-post-service',
+        'dockerize',
+        '-wait', 'file:///tmp/dockerize.sync',
+        '-wait-retry-interval', '10s',
+        '-timeout', '60s'
+      ] & FG
+      # remove file after the check completes
+      rm['-rf', '/tmp/dockerize.sync'] & FG
 
 def run__socialNetwork__gsd(args):
   from plumbum.cmd import ansible_playbook
@@ -1958,6 +1967,12 @@ CLIENTS_CONTAINERS_BUILT = [
 NUM_SERVICES = {
   'socialNetwork': 40,
 }
+ANTIPODE_TARGET_SERVICES = [
+  'write-home-timeline-service-eu',
+  'write-home-timeline-service-us',
+  'post-storage-service-eu',
+  'post-storage-service-us',
+]
 # docker
 DOCKER_COMPOSE_NETWORK = 'deathstarbench_network'
 # gcp
@@ -2014,7 +2029,7 @@ if __name__ == "__main__":
   run_parser = subparsers.add_parser('run', help='Run application')
   run_parser.add_argument('-prometheus', action='store_true', help="Run with prometheus enabled")
   run_parser.add_argument('-portainer', action='store_true', help="Run with portainer enabled")
-  run_parser.add_argument('-detached', action='store_true', help="detached")
+  run_parser.add_argument('-attached', action='store_true', help="attached")
   run_parser.add_argument('-antipode', action='store_true', default=False, help="enable antipode")
 
   # delay application
