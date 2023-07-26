@@ -17,7 +17,7 @@ def _load_yaml(path):
   with open(path, 'r') as f:
     yaml = ruamel.yaml.YAML()
     yaml.preserve_quotes = True
-    return yaml.load(f)  or {}
+    return yaml.load(f) or {}
 
 def _dump_yaml(path, d):
   from ruamel.yaml import YAML
@@ -1110,7 +1110,7 @@ def run__socialNetwork__gcp(args):
 #-----------------
 def delay(args):
   if args['jitter'] == 0 and args['distribution'] in [ 'normal', 'pareto', 'paretonormal']:
-      raise argparse.ArgumentTypeError(f"{args['distribution']} does not allow for 0ms jitter")
+    raise argparse.ArgumentTypeError(f"{args['distribution']} does not allow for 0ms jitter")
 
   args['tag'] = _get_last(args['deploy_type'], 'tag')
   args['deploy_dir'] = _deploy_dir(args)

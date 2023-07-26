@@ -17,7 +17,7 @@ fi
 # install docker-compose
 # https://docs.docker.com/compose/install/#install-compose-on-linux-systems
 if ! type "docker-compose" > /dev/null; then
-  sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+  sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
   sudo chmod +x /usr/local/bin/docker-compose
 fi
 
@@ -34,11 +34,11 @@ sudo docker pull mrvautin/adminmongo:latest
 sudo docker pull rabbitmq:3.8
 sudo docker pull rabbitmq:3.8-management
 sudo docker pull redis:latest
+sudo docker pull yg397/media-frontend:xenial
 sudo docker pull portainer/agent:latest
 sudo docker pull portainer/portainer-ce:latest
 sudo docker pull prom/pushgateway:latest
 sudo docker pull prom/prometheus:latest
-sudo docker pull yg397/media-frontend:xenial
 # pull our images
 sudo docker pull ${NAMESPACE}/mongodb-delayed:4.4.6
 sudo docker pull ${NAMESPACE}/mongodb-setup:4.4.6
@@ -51,6 +51,7 @@ sudo docker pull ${NAMESPACE}/python-wkld:antipode
 
 # install some extras
 sudo apt-get install -y --no-install-recommends \
+    build-essential \
     rsync \
     less \
     vim \
@@ -60,21 +61,25 @@ sudo apt-get install -y --no-install-recommends \
     tree \
     tmux \
     jq \
+    python3-dev \
+    python3-pip \
+    ansible \
     ;
 
 # add alias for python
-# sudo ln -s /usr/bin/python3 /usr/bin/python
-# sudo ln -s /usr/bin/pip3 /usr/bin/pip
+sudo ln -s /usr/bin/python3 /usr/bin/python
+sudo ln -s /usr/bin/pip3 /usr/bin/pip
 
 # Clean image
 sudo apt-get clean
 sudo apt-get autoclean
 
 # Install pip packages
+sudo pip install wheel
+sudo pip install cython
+sudo pip install aiohttp
 sudo pip install plumbum
 sudo pip install requests
-sudo pip install ansible
-sudo pip install aiohttp
 
 # Allow ssh root login
 sudo sed -i 's/PermitRootLogin no/PermitRootLogin prohibit-password/g' /etc/ssh/sshd_config
