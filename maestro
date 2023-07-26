@@ -1060,16 +1060,12 @@ def run__socialNetwork__gsd(args):
       _wait_url_up(prometheus_url)
       print(f"[INFO] Prometheus link: {prometheus_url}")
 
-
-  ansible_playbook['portainer-start.yml'] & FG
-  portainer_ip = GSD_AVAILABLE_NODES[next(iter(GSD_SWARM_MANAGER_NODE))]
-  print(f"[INFO] Portainer link (u/pwd: admin/antipode): http://{portainer_ip}:9000 ")
-
-  ansible_playbook['dsb-start.yml', '-e', 'app=socialNetwork'] & FG
-
-  # ansible_playbook['init-social-graph.yml', '-e', 'app=socialNetwork', '-e', f"configuration={filepath}"] & FG
-
-  print("[INFO] Run Complete!")
+  # start dsb services
+  with local.cwd(ROOT_PATH / args['deploy_type']):
+    ansible_playbook['dsb-start.yml',
+      '-i', inventory_filepath,
+      '--extra-vars', f"@{vars_filepath}"
+    ] & FG
 
 def run__socialNetwork__gcp(args):
   _force_gcp_docker()
@@ -1111,8 +1107,6 @@ def run__socialNetwork__gcp(args):
       '-i', inventory_filepath,
       '--extra-vars', f"@{vars_filepath}"
     ] & FG
-
-  print("[INFO] Run Complete!")
 
 
 #-----------------
