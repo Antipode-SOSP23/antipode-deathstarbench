@@ -1,15 +1,4 @@
 ---
-- hosts: all
-  gather_facts: no
-  become: no
-  any_errors_fatal: true
-
-  tasks:
-    - name: Check if Docker is installed
-      command: sudo docker --version
-      register: docker_valid
-      ignore_errors: yes
-
 - hosts: swarm_manager
   gather_facts: no
   become: no

@@ -708,6 +708,14 @@ def deploy__socialNetwork__gsd(args):
   _dump_yaml(vars_filepath, vars_yaml)
   print(f"[SAVED] '{vars_filepath}'")
 
+  print(f"[INFO] Checking docker environment... ", flush=True)
+  with local.cwd(ROOT_PATH / args['deploy_type']):
+    # first restore all images to everyone
+    ansible_playbook['swarm-checker.yml',
+      '-i', inventory_filepath,
+      '--extra-vars', f"@{vars_filepath}",
+    ] & FG
+
   print(f"[INFO] Restoring saved docker images... ", flush=True)
   with local.cwd(ROOT_PATH / args['deploy_type']):
     # first restore all images to everyone
