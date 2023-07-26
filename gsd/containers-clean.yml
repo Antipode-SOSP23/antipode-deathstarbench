@@ -1,0 +1,76 @@
+---
+- hosts: cluster
+  gather_facts: no
+  become: no
+  any_errors_fatal: true
+
+  tasks:
+    - name: Remove loaded images
+      shell: >
+        sudo docker rmi {{ item }}
+      with_items:
+        - "{{ services_containers_images }}"
+      ignore_errors: True
+
+    - name: Remove public docker images
+      shell: >
+        sudo docker rmi {{ item }}
+      with_items:
+        - jaegertracing/all-in-one:latest
+        - jonathanmace/xtrace-server:latest
+        - memcached:latest
+        - mongo:4.4.6
+        - mrvautin/adminmongo:latest
+        - rabbitmq:3.8
+        - rabbitmq:3.8-management
+        - redis:latest
+        - prom/pushgateway:latest
+        - prom/prometheus:latest
+        - yg397/media-frontend:xenial
+      ignore_errors: True
+
+    - name: Prune docker system
+      shell: sudo docker system prune --volumes -f
+
+- hosts: clients
+  gather_facts: no
+  become: no
+  any_errors_fatal: true
+
+  tasks:
+    - name: Remove loaded images
+      shell: >
+        sudo docker rmi {{ item }}
+      with_items:
+        - "{{ clients_containers_images }}"
+      ignore_errors: True
+
+    - name: Remove public docker images
+      shell: >
+        sudo docker rmi {{ item }}
+      with_items:
+        - prom/prometheus:latest
+        - prom/pushgateway:latest
+      ignore_errors: True
+
+    - name: Prune docker system
+      shell: sudo docker system prune --volumes -f
+
+- hosts: swarm_manager
+  gather_facts: no
+  become: no
+  any_errors_fatal: true
+
+  tasks:
+    - name: Remove public docker images
+      shell: >
+        sudo docker rmi {{ item }}
+      with_items:
+        - portainer/agent:latest
+        - portainer/portainer-ce:latest
+        - prom/pushgateway:latest
+        - prom/prometheus:latest
+      ignore_errors: True
+
+    - name: Prune docker system
+      shell: sudo docker system prune --volumes -f

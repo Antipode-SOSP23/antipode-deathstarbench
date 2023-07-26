@@ -1736,6 +1736,23 @@ def clean__socialNetwork__gsd(args):
         '--extra-vars', f"@{vars_filepath}"
       ] & FG
 
+    if args['strong']:
+      with local.cwd(ROOT_PATH / args['deploy_type']):
+        # remove all images
+        ansible_playbook['containers-clean.yml',
+          '-i', inventory_filepath,
+          '--extra-vars', f"@{vars_filepath}",
+          '-e', { 'services_containers_images' : SERVICES_CONTAINERS_BUILT },
+          '-e', { 'clients_containers_images' : CLIENTS_CONTAINERS_BUILT },
+        ] & FG
+        # first restore all images to everyone
+        ansible_playbook['dsb-clean.yml',
+          '-i', inventory_filepath,
+          '--extra-vars', f"@{vars_filepath}",
+          '-e', { 'services_containers_images' : SERVICES_CONTAINERS_BUILT },
+          '-e', { 'clients_containers_images' : CLIENTS_CONTAINERS_BUILT },
+        ] & FG
+
 def clean__socialNetwork__gcp(args):
   _force_gcp_docker()
   from plumbum.cmd import ansible_playbook

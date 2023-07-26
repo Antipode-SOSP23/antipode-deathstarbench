@@ -1,0 +1,11 @@
+---
+- hosts: swarm_manager
+  gather_facts: no
+  become: no
+  any_errors_fatal: true
+
+  tasks:
+    - name: Remove deploy folder at '{{ deploy_nas_path }}'
+      file:
+        path: "{{ deploy_nas_path }}"
+        state: absent
