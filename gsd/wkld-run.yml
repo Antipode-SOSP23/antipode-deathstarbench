@@ -1,26 +1,35 @@
 ---
-  - hosts: clients
-    gather_facts: no
-    become: no
-    any_errors_fatal: true
-    vars:
-      - source: "/home/jfloff/nas_inesc/antipode/antipode-deathstarbench/deploy/container-images"
+- hosts: clients
+  gather_facts: no
+  become: no
+  any_errors_fatal: true
 
-    tasks:
-      - name: Restore the container images
-        shell: >
-              gzip -d -c  {{source}}/{{ item.replace(':','_').replace('/','_').replace('-','_') }}.tgz | docker load
-        with_items:
-          - "{{ apps[app]['containers']['for_wkld'] }}"
+  tasks:
+    - name: Kill tmux session and remove '{{ wkld_container_name }}' container before running
+      shell: >
+        tmux kill-session -t client_init ;
+        sudo docker stop {{ wkld_container_name }} ;
+        sudo docker rm {{ wkld_container_name }}
+      ignore_errors: True
 
-      - name: validate that the images exists
-        shell:  docker image inspect {{item}}
-        with_items:
-          - "{{ apps[app]['containers']['for_wkld'] }}"
+    - name: Copy wkld-run script
+      synchronize:
+        src: "{{ local_gather_path }}/wkld-run.sh"
+        dest: "{{ deploy_nas_path }}/deploy"
+        use_ssh_args: yes
+        mode: push
 
-      - name: Start client
-        shell: >
-            cd /home/jfloff/nas_inesc/antipode/antipode-deathstarbench/deploy/gsd ;
-            tmux new-session -d -s client_init "./wkld-run.sh && exit";
-        args:
-          executable: /bin/bash
+    - name: Start client
+      shell: >
+        tmux new-session -d -s client_init "./wkld-run.sh && exit";
+      args:
+        executable: /bin/bash
+        chdir: "{{ deploy_nas_path }}/deploy"
+
+    - name: Wait for '{{ wkld_container_name }}' container to exit
+      shell: >
+        sudo docker ps -a --filter 'name={{ wkld_container_name }}' --format {% raw %}'{{.Status}}'{% endraw %}
+      register: container_status
+      retries: 15
+      delay: 60
+      until: ('Exited' in container_status.stdout)

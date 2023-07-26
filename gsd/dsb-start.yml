@@ -25,12 +25,12 @@
 
 - hosts: "{{ compose_post_service_instance }}"
   gather_facts: no
-  become: yes
+  become: no
   any_errors_fatal: true
 
   tasks:
     - name: Wait for compose-post-service to be ready for posts by creating dockerize.sync file
       shell: >
-        docker exec $( docker ps -a --filter name='compose-post-service' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) dockerize -wait file:///tmp/dockerize.sync -wait-retry-interval 10s -timeout 60s
+        sudo docker exec $( docker ps -a --filter name='compose-post-service' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) dockerize -wait file:///tmp/dockerize.sync -wait-retry-interval 10s -timeout 60s
       retries: 5
       delay: 30

@@ -1283,6 +1283,67 @@ def wkld__local__run(args):
       docker_args = _wkld_docker_args(args['endpoint'], args, hosts, args['deploy_dir'])
       docker[docker_args] & FG
 
+def wkld__gsd__run(args):
+  from plumbum.cmd import ansible_playbook, sudo
+  from jinja2 import Environment
+  import textwrap
+
+  vars_filepath = args['deploy_dir'] / 'vars.yml'
+  inventory_filepath = args['deploy_dir'] / 'inventory.cfg'
+  inventory = _load_gsd_inventory(inventory_filepath)
+  config = _load_yaml(ROOT_PATH / _get_last(args['deploy_type'], 'config'))
+  endpoint = args['endpoint']
+  hosts = {
+    'eu': _service_ip(args['deploy_type'], args['app'], 'frontend-eu'),
+    'us': _service_ip(args['deploy_type'], args['app'], 'frontend-us'),
+  }
+
+  # build remote and local gather paths
+  gather_path = Path('/tmp') / 'dsb' / args['app'] / args['Endpoint'] / _build_gather_tag() / args['wkld_tag']
+  _put_last(args['deploy_type'], 'remote_gather_path', str(gather_path))
+  # create folder if needed
+  os.makedirs(args['local_gather_path'], exist_ok=True)
+  # force chmod of that dir
+  sudo['chmod', 777, args['local_gather_path']] & FG
+
+  # build docker args
+  app_wd = GSD_DSB_NAS_PATH / 'app'
+  docker_args = _wkld_docker_args(args['endpoint'], args, hosts, app_wd)
+  # remove --rm tag so we can control when wkld finishes
+  docker_args.remove('--rm')
+
+  # Create script to run
+  template = """
+    #! /bin/bash
+
+    export HOST_EU={{ host_eu }}
+    export HOST_US={{ host_us }}
+    sudo -E mkdir -p {{gather_path}}
+    sudo -E docker {{docker_args}} | sudo tee {{gather_path}}/$(hostname).out
+  """
+  script = Environment().from_string(template).render({
+    'host_eu': hosts['eu'],
+    'host_us': hosts['us'],
+    'docker_args': ' '.join([str(e) for e in docker_args]),
+    'gather_path': gather_path,
+  })
+  script_filepath = args['local_gather_path'] / 'wkld-run.sh'
+  with open(script_filepath, 'w') as f:
+    # remove empty lines and dedent for easier read
+    f.write(textwrap.dedent(script))
+  # add executable permissions
+  script_filepath.chmod(script_filepath.stat().st_mode | stat.S_IEXEC)
+  print(f"[SAVED] '{script_filepath}'")
+
+  # run workload remotely
+  with local.cwd(ROOT_PATH / args['deploy_type']):
+    ansible_playbook['wkld-run.yml',
+      '-i', inventory_filepath,
+      '--extra-vars', f"@{vars_filepath}",
+      '-e', f"local_gather_path={args['local_gather_path']}",
+      '-e', f"wkld_container_name={WKLD_CONTAINER_NAME}",
+    ] & FG
+
 def wkld__gcp__run(args):
   _force_gcp_docker()
   from plumbum.cmd import ansible_playbook, sudo
@@ -1345,95 +1406,6 @@ def wkld__gcp__run(args):
       '-e', f"wkld_container_name={WKLD_CONTAINER_NAME}",
     ] & FG
 
-
-#-----------------
-
-def wkld__socialNetwork__gsd__hosts(args):
-  # eu - nginx-thrift: node23
-  # us - nginx-thrift-us: node24§
-
-  filepath = args['configuration_path']
-  with open(filepath, 'r') as f_conf:
-    conf = yaml.load(f_conf, Loader=yaml.FullLoader)
-    return {
-      'eu': f"http://{conf['services']['nginx-thrift']}:8080",
-      'us': f"http://{conf['services']['nginx-thrift-us']}:8082",
-    }
-
-def wkld__gsd__run(args, hosts, exe_path, exe_args):
-  from plumbum.cmd import ansible_playbook
-  from jinja2 import Environment
-  import textwrap
-
-
-  if not args['node']:
-    print("[INFO] No nodes passed onto gsd deployment workload. Using current node with remote hosts.")
-    wkld__socialNetwork__local__run(args, hosts, exe_path, exe_args)
-    return
-
-  app_dir = DSB_PATH / args['app']
-  os.chdir(ROOT_PATH / 'deploy')
-
-  conf_filepath = args['configuration_path']
-
-  # Create inventory for clients
-  template = """
-    [clients]
-    {% for k,v in client_nodes.items() %}{{k}} ansible_host={{v}} ansible_user=jfloff ansible_ssh_private_key_file=~/.ssh/id_rsa_inesc_cluster_jfloff
-    {% endfor %}
-  """
-  inventory = Environment().from_string(template).render({
-    'client_nodes': { n:GSD_AVAILABLE_NODES[n] for n in set(args['node']) },
-  })
-  inventory_filepath = Path('gsd/clients_inventory.cfg')
-  with open(inventory_filepath, 'w') as f:
-    # remove empty lines and dedent for easier read
-    f.write(textwrap.dedent(inventory))
-
-  print(f"[SAVED] '{inventory_filepath.resolve()}'")
-
-  # Create script to run
-  conf_id = f"{conf_filepath.stem}__{datetime.now().strftime('%Y%m%d%H%M%S')}"
-  out_folder = f"/tmp/dsb-wkld-data/{conf_id}"
-  out_filepath = f"{out_folder}/{conf_filepath.stem}__{datetime.now().strftime('%Y%m%d%H%M%S')}__$(hostname).out"
-  template = """
-    #! /bin/bash
-
-    export HOST_EU={{ host_eu }}
-    export HOST_US={{ host_us }}
-    mkdir -p {{out_folder}}
-    {{exe_path}} {{exe_args}} | tee {{out_filepath}}
-  """
-  script = Environment().from_string(template).render({
-    'host_eu': hosts['eu'],
-    'host_us': hosts['us'],
-    'exe_path': exe_path,
-    'exe_args': ' '.join([str(e) for e in exe_args]),
-    'out_folder': out_folder,
-    'out_filepath': out_filepath,
-  })
-  script_filepath = Path('gsd/wkld-run.sh')
-  with open(script_filepath, 'w') as f:
-    # remove empty lines and dedent for easier read
-    f.write(textwrap.dedent(script))
-  # add executable permissions
-  script_filepath.chmod(script_filepath.stat().st_mode | stat.S_IEXEC)
-
-  print(f"[SAVED] '{script_filepath.resolve()}'")
-
-  # change path to playbooks folder
-  os.chdir(ROOT_PATH / 'deploy' / 'gsd')
-  ansible_playbook['wkld-run.yml', '-i', 'clients_inventory.cfg', '-e', 'app=socialNetwork'] & FG
-
-  # sleep before gather
-  if args['duration'] is not None:
-    sleep_for = args['duration'] + 60
-    print(f"[INFO] Sleeping for {sleep_for} seconds ...")
-    time.sleep(sleep_for)
-  else:
-    input("Press any key when done ...")
-
-  ansible_playbook['wkld-gather.yml', '-i', 'clients_inventory.cfg', '-e', 'app=socialNetwork', '-e', f'conf_id={conf_id}' ] & FG
 
 #-----------------
 # GATHER
