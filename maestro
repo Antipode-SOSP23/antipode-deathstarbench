@@ -399,6 +399,15 @@ def build__socialNetwork__local(args):
 
   # Build the social network docker image
   with local.cwd(args['app_dir']):
+    # build thrift objects first
+    docker['run',
+      '--rm', '-it',
+      '-v', f"{local.cwd}:/socialNetwork",
+      '-w', '/socialNetwork',
+      'yg397/thrift-microservice-deps:antipode',
+      'thrift', '-r', '--gen', 'cpp', 'social_network.thrift'
+    ] & FG
+
     docker['build',
       '--no-cache' if args['no_cache'] else None,
       '-t', 'yg397/social-network-microservices:antipode',
