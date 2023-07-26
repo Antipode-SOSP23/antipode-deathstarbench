@@ -18,13 +18,13 @@
   tasks:
     - name: Create containers folder
       file:
-        path: "{{ nas_containers_path }}"
+        path: "{{ deploy_nas_path }}/container-images"
         state: directory
 
     - name: Uploading containers tars to NAS
       synchronize:
         src: "{{ local_containers_path }}/"
-        dest: "{{ nas_containers_path }}"
+        dest: "{{ deploy_nas_path }}/container-images"
         # use_ssh_args: yes
         mode: push
         rsync_opts:
@@ -40,7 +40,7 @@
       shell: >
         sudo docker load --input {{ item }}.tar
       args:
-        chdir: "{{ nas_containers_path }}"
+        chdir: "{{ deploy_nas_path }}/container-images"
       with_items:
         - "{{ services_containers_tars }}"
 
@@ -48,7 +48,7 @@
     #   shell: >
     #     sudo docker image inspect {{ item }}
     #   args:
-    #     chdir: "{{ nas_containers_path }}"
+    #     chdir: "{{ deploy_nas_path }}/container-images"
     #   with_items:
     #     - "{{ services_containers_images }}"
 
@@ -82,7 +82,7 @@
       shell: >
         sudo docker load --input {{ item }}.tar
       args:
-        chdir: "{{ nas_containers_path }}"
+        chdir: "{{ deploy_nas_path }}/container-images"
       with_items:
         - "{{ clients_containers_tars }}"
 
@@ -90,6 +90,6 @@
     #   shell: >
     #     sudo docker image inspect {{ item }}
     #   args:
-    #     chdir: "{{ nas_containers_path }}"
+    #     chdir: "{{ deploy_nas_path }}/container-images"
     #   with_items:
     #     - "{{ clients_containers_images }}"

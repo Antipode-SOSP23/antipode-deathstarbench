@@ -698,7 +698,6 @@ def deploy__socialNetwork__gsd(args):
       '-i', inventory_filepath,
       '--extra-vars', f"@{vars_filepath}",
       '-e', f"local_containers_path={CONTAINER_IMAGES_PATH}",
-      '-e', f"nas_containers_path={GSD_DSB_NAS_PATH / 'container-images'}",
       '-e', { 'services_containers_tars' : [ _docker_image_tag_to_tar(i) for i in SERVICES_CONTAINERS_BUILT ] },
       '-e', { 'clients_containers_tars' : [ _docker_image_tag_to_tar(i) for i in CLIENTS_CONTAINERS_BUILT ] },
     ] & FG
