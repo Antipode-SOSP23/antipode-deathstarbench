@@ -6,7 +6,9 @@
 
   tasks:
     - name: Ensures network prometheus configuration dir exists
-      file: path=/code/prometheus state=directory
+      file:
+        path: /code/prometheus
+        state: directory
 
     - name: Create prometheus docker-compose file
       copy:
@@ -28,7 +30,9 @@
 
   tasks:
     - name: Ensures network prometheus configuration dir exists
-      file: path=/code/prometheus state=directory
+      file:
+        path: /code/prometheus
+        state: directory
 
     - name: Download Prometheus Nodeexporter version
       get_url:
