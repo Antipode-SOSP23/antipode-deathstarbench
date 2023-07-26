@@ -30,6 +30,15 @@
         rsync_opts:
           - '--delete'
 
+    - name: Pre-pull public docker images
+      shell: >
+        sudo docker pull {{ item }}
+      with_items:
+        - portainer/agent:latest
+        - portainer/portainer-ce:latest
+        - prom/pushgateway:latest
+        - prom/prometheus:latest
+
 - hosts: cluster
   gather_facts: no
   become: no
@@ -55,8 +64,6 @@
     - name: Pre-pull public docker images
       shell: >
         sudo docker pull {{ item }}
-      args:
-        chdir: "{{ deploy_nas_path }}/app"
       with_items:
         - jaegertracing/all-in-one:latest
         - jonathanmace/xtrace-server:latest
@@ -66,8 +73,6 @@
         - rabbitmq:3.8
         - rabbitmq:3.8-management
         - redis:latest
-        - portainer/agent:latest
-        - portainer/portainer-ce:latest
         - prom/pushgateway:latest
         - prom/prometheus:latest
         - yg397/media-frontend:xenial
