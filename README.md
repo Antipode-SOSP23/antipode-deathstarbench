@@ -6,7 +6,8 @@
 You need to install the following dependencies before runnning:
 - Python 3.7+
 - The requisites for our `maestro` script. Simply run `pip install -r requirements.txt`
-- Docker
+- Docker > 2.10
+- Docker Compose > 2.14
 - Pull submodules: `git submodule update --init --recursive`
 
 Prerequesites for **Local** deployment:

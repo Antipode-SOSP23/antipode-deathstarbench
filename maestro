@@ -1126,6 +1126,72 @@ def delay__socialNetwork__local(args):
       args['distribution']
     ] & FG
 
+def delay__socialNetwork__gsd(args):
+  # Some notes:
+  #   - Confirm that NET_ADMIN capability is being added inside the container:
+  #       $ apt-get update && apt-get install -y libcap2-bin && capsh --print | grep "Current:" | cut -d' ' -f3 | grep -q cap_netroot@post-storage-mongodb-eu:/# apt-get update ; apt-get install -y libcap2-bin ; capsh --print | grep "Current:" | cut -d' ' -f3 | grep -q cap_net_admin
+  #   - iproute2 should be installed so the netem kernel module is available -- playbooks already install iproute2
+  #
+  from plumbum.cmd import ansible_playbook
+  from jinja2 import Environment
+  import textwrap
+
+  vars_filepath = args['deploy_dir'] / 'vars.yml'
+  inventory_filepath = args['deploy_dir'] / 'inventory.cfg'
+  config = _load_yaml(ROOT_PATH / _get_last(args['deploy_type'], 'config'))
+
+  # checks the configuration for the hostname of the delayed container
+  src_container_host = config['services'][args['src_container']]
+
+  # run workload remotely
+  print("[INFO] Generating delay playbook ...")
+  template = """
+    ---
+    - hosts: {{ src_container_host }}
+      gather_facts: no
+      become: no
+      any_errors_fatal: true
+
+      tasks:
+        - name: Delay container
+          shell: >
+            sudo docker exec $( sudo docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) /home/delay.sh {{ dst_container }} {{ delay }} {{ jitter }} {{ correlation }} {{ distribution }}
+          ignore_errors: True
+
+        - name: Spam ping to kickstart delay
+          shell: >
+            sudo docker exec $( sudo docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) bash -c "for IP in \$(dig +short {{ dst_container }}); do ping -c 200 -f \$IP 2>&1 | tail -1; done"
+          register: ping_out
+
+        - name: Check delay
+          debug:
+            msg: {% raw %}"{{ ping_out.stdout.split('\\n') }}"{% endraw %}
+
+  """
+  playbook = Environment().from_string(template).render({
+    'src_container_host': src_container_host,
+    'src_container': args['src_container'],
+    'dst_container': args['dst_container'],
+    'delay': args['delay'],
+    'jitter': args['jitter'],
+    'correlation': args['correlation'],
+    'distribution': args['distribution'],
+  })
+  playbook_filepath = args['deploy_dir'] / 'delay-container.yml'
+  with open(playbook_filepath, 'w') as f:
+    # remove empty lines and dedent for easier read
+    f.write(textwrap.dedent(playbook))
+    print(f"[SAVED] '{playbook_filepath}'")
+
+  print("[INFO] Running delay playbook ...")
+  with local.cwd(ROOT_PATH / args['deploy_type']):
+    ansible_playbook[f"{playbook_filepath}",
+      '-i', inventory_filepath,
+      '--extra-vars', f"@{vars_filepath}",
+    ] & FG
+
+
+
 def delay__socialNetwork__gcp(args):
   _force_gcp_docker()
   from plumbum.cmd import ansible_playbook
@@ -1173,7 +1239,6 @@ def delay__socialNetwork__gcp(args):
     'correlation': args['correlation'],
     'distribution': args['distribution'],
   })
-
   playbook_filepath = args['deploy_dir'] / 'delay-container.yml'
   with open(playbook_filepath, 'w') as f:
     # remove empty lines and dedent for easier read
