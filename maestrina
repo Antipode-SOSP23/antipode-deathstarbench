@@ -19,16 +19,16 @@ ROOT_PATH = Path(os.path.abspath(os.path.dirname(sys.argv[0])))
 APP = 'socialNetwork'
 DEFAULT_CONFIG = 'configs/gcp/socialNetwork/us-eu.yml'
 DURATION = 300
-JAEGER_REQUESTS = 37000 # this is aprox
+JAEGER_REQUESTS = 40000 # this is aprox
 maestro = local["./maestro"]
 #--------------
 COMBINATIONS = [
-  # antipode, cli , rate
+  # antipode, cli , con, threads, rate
   # ------------------------
   # baseline
-  # (False ,   4  ,  100),
+  ( False ,  1  ,  4 ,    2   , 100 ),
   # with antipode
-  (True  ,   4  ,  100),
+  ( True  ,  1  ,  4 ,    2   , 100 ),
 ]
 
 
@@ -36,15 +36,15 @@ COMBINATIONS = [
 # RUN
 #--------------
 # strong clean at the begining
-# maestro['--gcp', APP, 'clean', '-strong'] & FG
+maestro['--gcp', APP, 'clean', '-strong'] & FG
 
 # build the deployment
-# maestro['--gcp', APP, 'build'] & FG
+maestro['--gcp', APP, 'build'] & FG
 
 gathered_dirs = []
-for antipode, clients, rate in COMBINATIONS:
+for antipode, clients, connections, threads, rate in COMBINATIONS:
   print('[INFO] New deployment starting:')
-  print(f"\t > antipode: {antipode} // clients: {clients} // rate: {rate}\n")
+  print(f"\t > antipode: {antipode} // clients: {clients} // connections: {connections} // threads: {threads} // rate: {rate}\n")
 
   # deploy configuration
   maestro['--gcp', APP, 'deploy', '-config', DEFAULT_CONFIG, '-clients', clients] & FG
@@ -56,7 +56,12 @@ for antipode, clients, rate in COMBINATIONS:
   maestro[run_args] & FG
 
   # run the workload
-  maestro['--gcp', APP, 'wkld', '-E', 'compose-post', '-d', DURATION, '-r', rate] & FG
+  maestro['--gcp', APP, 'wkld', '-E', 'compose-post',
+    '-d', DURATION,
+    '-c', connections,
+    '-t', threads,
+    '-r', rate
+  ] & FG
 
   # gather data workload
   maestro['--gcp', APP, 'gather', '-n', JAEGER_REQUESTS] & FG
