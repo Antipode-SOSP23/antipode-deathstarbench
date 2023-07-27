@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+
+from pathlib import Path
+import os
+import sys
+from pprint import pprint as pp
+from plumbum import FG, BG
+from plumbum import local
+import time
+
+#--------------
+# HELPERS
+#--------------
+
+#--------------
+# CONSTANTS
+#--------------
+ROOT_PATH = Path(os.path.abspath(os.path.dirname(sys.argv[0])))
+APP = 'socialNetwork'
+DEFAULT_CONFIG = 'configs/gcp/socialNetwork/us-eu.yml'
+DURATION = 300
+JAEGER_REQUESTS = 37000 # this is aprox
+maestro = local["./maestro"]
+#--------------
+COMBINATIONS = [
+  # antipode, cli , rate
+  # ------------------------
+  # baseline
+  # (False ,   4  ,  100),
+  # with antipode
+  (True  ,   4  ,  100),
+]
+
+
+#--------------
+# RUN
+#--------------
+# strong clean at the begining
+# maestro['--gcp', APP, 'clean', '-strong'] & FG
+
+# build the deployment
+# maestro['--gcp', APP, 'build'] & FG
+
+gathered_dirs = []
+for antipode, clients, rate in COMBINATIONS:
+  print('[INFO] New deployment starting:')
+  print(f"\t > antipode: {antipode} // clients: {clients} // rate: {rate}\n")
+
+  # deploy configuration
+  maestro['--gcp', APP, 'deploy', '-config', DEFAULT_CONFIG, '-clients', clients] & FG
+
+  # run configuration with the proper arguments
+  run_args = ['--gcp', APP, 'run']
+  if antipode:
+    run_args.append('-antipode')
+  maestro[run_args] & FG
+
+  # run the workload
+  maestro['--gcp', APP, 'wkld', '-E', 'compose-post', '-d', DURATION, '-r', rate] & FG
+
+  # gather data workload
+  maestro['--gcp', APP, 'gather', '-n', JAEGER_REQUESTS] & FG
+  # find out the gather dir
+  gathered_dirs.append(max(Path(ROOT_PATH / 'gather' / 'gcp' / APP / 'compose-post').glob('**/*'), key=os.path.getmtime).parent)
+
+  # Look at info
+  # maestro['--gcp', 'info', '-links'] & FG
+  # input("[WAIT] Observe output ....")
+
+  # soft clean
+  maestro['--gcp', APP, 'clean'] & FG
+  print('\n[INFO] Done!')
+
+# strong clean at the end
+maestro['--gcp', APP, 'clean', '-strong'] & FG
+
+print("[INFO] Gathered results:")
+print('\n'.join([p.name for p in gathered_dirs]))
