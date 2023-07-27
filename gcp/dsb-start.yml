@@ -8,7 +8,7 @@
     - name: Copy updated docker-compose-swarm
       synchronize:
         src: "{{ deploy_dir }}/docker-compose-swarm.yml"
-        dest: /code/app/docker-compose-swarm.yml"
+        dest: /code/app/docker-compose-swarm.yml
         use_ssh_args: yes
         recursive: true
         mode: push
