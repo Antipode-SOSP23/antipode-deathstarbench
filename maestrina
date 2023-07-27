@@ -17,18 +17,27 @@ import time
 #--------------
 ROOT_PATH = Path(os.path.abspath(os.path.dirname(sys.argv[0])))
 APP = 'socialNetwork'
-DEFAULT_CONFIG = 'configs/gcp/socialNetwork/us-eu.yml'
+DEFAULT_CONFIG = 'configs/gcp/socialNetwork/us-eu.yml' # for US->SG 'configs/gcp/socialNetwork/us-sg.yml'
 DURATION = 300
-JAEGER_REQUESTS = 40000 # this is aprox
+NUM_ROUNDS = 5
+JAEGER_REQUESTS = 50000 # this is aprox
 maestro = local["./maestro"]
 #--------------
 COMBINATIONS = [
   # antipode, cli , con, threads, rate
   # ------------------------
   # baseline
+  ( False ,  1  ,  4 ,    2   , 50 ),
   ( False ,  1  ,  4 ,    2   , 100 ),
+  ( False ,  1  ,  4 ,    2   , 125 ),
+  ( False ,  1  ,  4 ,    2   , 150 ),
+  ( False ,  1  ,  4 ,    2   , 160 ),
   # with antipode
-  ( True  ,  1  ,  4 ,    2   , 100 ),
+  ( True ,  1  ,  4 ,    2   , 50 ),
+  ( True ,  1  ,  4 ,    2   , 100 ),
+  ( True ,  1  ,  4 ,    2   , 125 ),
+  ( True ,  1  ,  4 ,    2   , 150 ),
+  ( True ,  1  ,  4 ,    2   , 160 ),
 ]
 
 
@@ -36,45 +45,46 @@ COMBINATIONS = [
 # RUN
 #--------------
 # strong clean at the begining
-maestro['--gcp', APP, 'clean', '-strong'] & FG
+# maestro['--gcp', APP, 'clean', '-strong'] & FG
 
 # build the deployment
-maestro['--gcp', APP, 'build'] & FG
+# maestro['--gcp', APP, 'build'] & FG
 
 gathered_dirs = []
 for antipode, clients, connections, threads, rate in COMBINATIONS:
-  print('[INFO] New deployment starting:')
-  print(f"\t > antipode: {antipode} // clients: {clients} // connections: {connections} // threads: {threads} // rate: {rate}\n")
+  for nround in range(NUM_ROUNDS):
+    print('[INFO] New deployment starting:')
+    print(f"\t [ROUND #{nround}] antipode: {antipode} // clients: {clients} // connections: {connections} // threads: {threads} // rate: {rate}\n")
 
-  # deploy configuration
-  maestro['--gcp', APP, 'deploy', '-config', DEFAULT_CONFIG, '-clients', clients] & FG
+    # deploy configuration
+    maestro['--gcp', APP, 'deploy', '-config', DEFAULT_CONFIG, '-clients', clients] & FG
 
-  # run configuration with the proper arguments
-  run_args = ['--gcp', APP, 'run']
-  if antipode:
-    run_args.append('-antipode')
-  maestro[run_args] & FG
+    # run configuration with the proper arguments
+    run_args = ['--gcp', APP, 'run']
+    if antipode:
+      run_args.append('-antipode')
+    maestro[run_args] & FG
 
-  # run the workload
-  maestro['--gcp', APP, 'wkld', '-E', 'compose-post',
-    '-d', DURATION,
-    '-c', connections,
-    '-t', threads,
-    '-r', rate
-  ] & FG
+    # run the workload
+    maestro['--gcp', APP, 'wkld', '-E', 'compose-post',
+      '-d', DURATION,
+      '-c', connections,
+      '-t', threads,
+      '-r', rate
+    ] & FG
 
-  # gather data workload
-  maestro['--gcp', APP, 'gather', '-n', JAEGER_REQUESTS] & FG
-  # find out the gather dir
-  gathered_dirs.append(max(Path(ROOT_PATH / 'gather' / 'gcp' / APP / 'compose-post').glob('**/*'), key=os.path.getmtime).parent)
+    # gather data workload
+    maestro['--gcp', APP, 'gather', '-n', JAEGER_REQUESTS] & FG
+    # find out the gather dir
+    gathered_dirs.append(max(Path(ROOT_PATH / 'gather' / 'gcp' / APP / 'compose-post').glob('**/*'), key=os.path.getmtime))
 
-  # Look at info
-  # maestro['--gcp', 'info', '-links'] & FG
-  # input("[WAIT] Observe output ....")
+    # Look at info
+    # maestro['--gcp', 'info', '-links'] & FG
+    # input("[WAIT] Observe output ....")
 
-  # soft clean
-  maestro['--gcp', APP, 'clean'] & FG
-  print('\n[INFO] Done!')
+    # soft clean
+    maestro['--gcp', APP, 'clean'] & FG
+    print('\n[INFO] Done!')
 
 # strong clean at the end
 maestro['--gcp', APP, 'clean', '-strong'] & FG
