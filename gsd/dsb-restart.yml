@@ -12,17 +12,6 @@
         sudo docker rm {{ wkld_container_name }}
       ignore_errors: True
 
-- hosts: "{{ compose_post_service_instance }}"
-  gather_facts: no
-  become: no
-  any_errors_fatal: true
-
-  tasks:
-    - name: Remove dockerize.sync from container
-      shell: >
-        sudo docker exec $( sudo docker ps -a --filter name='compose-post-service' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) rm -f /tmp/dockerize.sync
-      ignore_errors: True
-
 - hosts: swarm_manager
   any_errors_fatal: true
   gather_facts: no
@@ -46,4 +35,9 @@
     - name: Wait for compose-post-service to be ready for posts by creating dockerize.sync file
       shell: >
         sudo docker exec $( sudo docker ps -a --filter name='compose-post-service' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) dockerize -wait file:///tmp/ -wait-retry-interval 10s -timeout 300s
+      ignore_errors: True
+
+    - name: Remove dockerize.sync from container
+      shell: >
+        sudo docker exec $( sudo docker ps -a --filter name='compose-post-service' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) rm -f /tmp/dockerize.sync
       ignore_errors: True

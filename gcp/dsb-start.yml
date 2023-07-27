@@ -42,3 +42,8 @@
         docker exec $( docker ps -a --filter name='compose-post-service' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) dockerize -wait file:///tmp/dockerize.sync -wait-retry-interval 10s -timeout 60s
       retries: 5
       delay: 30
+
+    - name: Remove dockerize.sync from container
+      shell: >
+        docker exec $( docker ps -a --filter name='compose-post-service' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) rm -f /tmp/dockerize.sync
+      ignore_errors: True
