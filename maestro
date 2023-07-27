@@ -1074,7 +1074,19 @@ def run__socialNetwork__gsd(args):
       _wait_url_up(prometheus_url)
       print(f"[INFO] Prometheus link: {prometheus_url}")
 
+  print(f"[INFO] Setting env vars in docker compose ...", flush=True)
+  with local.cwd(args['deploy_dir']):
+    app_compose = _load_yaml('docker-compose-swarm.yml')
+
+    for s in ANTIPODE_TARGET_SERVICES:
+      # Changing the docker-compose file to set ANTIPODE env var
+      app_compose['services'][s]['environment']['ANTIPODE'] = int(args['antipode'])
+
+    # now write the new compose into a new file
+    _dump_yaml(local.cwd / 'docker-compose-swarm.yml', app_compose)
+
   # start dsb services
+  print(f"[INFO] Run start playbooks ...", flush=True)
   with local.cwd(ROOT_PATH / args['deploy_type']):
     ansible_playbook['dsb-start.yml',
       '-i', inventory_filepath,
@@ -1115,7 +1127,19 @@ def run__socialNetwork__gcp(args):
       _wait_url_up(prometheus_url)
       print(f"[INFO] Prometheus link: {prometheus_url}")
 
+  print(f"[INFO] Setting env vars in docker compose ...", flush=True)
+  with local.cwd(args['deploy_dir']):
+    app_compose = _load_yaml('docker-compose-swarm.yml')
+
+    for s in ANTIPODE_TARGET_SERVICES:
+      # Changing the docker-compose file to set ANTIPODE env var
+      app_compose['services'][s]['environment']['ANTIPODE'] = int(args['antipode'])
+
+    # now write the new compose into a new file
+    _dump_yaml(local.cwd / 'docker-compose-swarm.yml', app_compose)
+
   # start dsb services
+  print(f"[INFO] Run start playbooks ...", flush=True)
   with local.cwd(ROOT_PATH / args['deploy_type']):
     ansible_playbook['dsb-start.yml',
       '-i', inventory_filepath,
