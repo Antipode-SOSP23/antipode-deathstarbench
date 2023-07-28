@@ -50,14 +50,14 @@ COMBINATIONS = [
 # build the deployment
 # maestro['--gcp', APP, 'build'] & FG
 
+# deploy configuration
+maestro['--gcp', APP, 'deploy', '-config', DEFAULT_CONFIG, '-clients', 1] & FG
+
 gathered_dirs = []
 for antipode, clients, connections, threads, rate in COMBINATIONS:
   for nround in range(NUM_ROUNDS):
     print('[INFO] New deployment starting:')
     print(f"\t [ROUND #{nround}] antipode: {antipode} // clients: {clients} // connections: {connections} // threads: {threads} // rate: {rate}\n")
-
-    # deploy configuration
-    maestro['--gcp', APP, 'deploy', '-config', DEFAULT_CONFIG, '-clients', clients] & FG
 
     # run configuration with the proper arguments
     run_args = ['--gcp', APP, 'run']
@@ -74,7 +74,7 @@ for antipode, clients, connections, threads, rate in COMBINATIONS:
     ] & FG
 
     # gather data workload
-    maestro['--gcp', APP, 'gather', '-n', JAEGER_REQUESTS] & FG
+    maestro['--gcp', APP, 'gather'] & FG
     # find out the gather dir
     gathered_dirs.append(max(Path(ROOT_PATH / 'gather' / 'gcp' / APP / 'compose-post').glob('**/*'), key=os.path.getmtime))
 
@@ -83,7 +83,7 @@ for antipode, clients, connections, threads, rate in COMBINATIONS:
     # input("[WAIT] Observe output ....")
 
     # soft clean
-    maestro['--gcp', APP, 'clean'] & FG
+    maestro['--gcp', APP, 'clean', '-restart'] & FG
     print('\n[INFO] Done!')
 
 # strong clean at the end

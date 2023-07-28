@@ -41,27 +41,27 @@ nas_path: /mnt/nas/inesc/jfloff
 
 Run `maestro` to build and deploy the GCP instances:
 ```zsh
-./maestro --gcp socialNetwork build
-./maestro --gcp socialNetwork deploy -config CONFIG_FILE -clients NUM_CLIENTS
+./maestro --gsd socialNetwork build
+./maestro --gsd socialNetwork deploy -config CONFIG_FILE -clients NUM_CLIENTS
 ```
 You can either build your own deployment configuration file, or you one already existing.
 
 After deploy is done you can start the DeathStarBench services with:
 ```zsh
-./maestro --gcp socialNetwork run -antipode
+./maestro --gsd socialNetwork run -antipode
 ```
 In order to run the original TrainTicket application remove the `-antipode` parameter.
 
 Then you can run the `compose-post` workloads to evaluate inconsistencies and gather its results:
 ```zsh
-./maestro --gcp socialNetwork wkld -E compose-post -r RATE -d DURATION
-./maestro --gcp gather
+./maestro --gsd socialNetwork wkld -E compose-post -r RATE -d DURATION
+./maestro --gsd socialNetwork gather
 ```
 For instance, we can the workload for 300 seconds (`300`), and with a rate of `100` requests per second.
 
 At the end, you can clean your experiment:
 ```zsh
-./maestro --gcp socialNetwork clean
+./maestro --gsd socialNetwork clean
 ```
 
 ### GCP Deploymnet
@@ -101,19 +101,20 @@ In order to run the original TrainTicket application remove the `-antipode` para
 
 Then you can run the `compose-post` workloads to evaluate inconsistencies and gather its results:
 ```zsh
-./maestro --gcp socialNetwork wkld -E compose-post -d DURATION -r RATE  -c CONNECTIONS -t THREADS
-./maestro --gcp gather
+./maestro --gcp socialNetwork wkld -E compose-post -d DURATION -r RATE -c CONNECTIONS -t THREADS
+./maestro --gcp socialNetwork gather 
 ```
+
 For instance, we can the workload for 300 seconds (`300`), and with a rate of `100` requests per second, with `4` connections and `2` threads.
 
 At the end, you can clean your experiment and destroy your GCP instance with:
 ```zsh
 ./maestro --gcp socialNetwork clean -strong
 ```
-In order to keep your GCP instances and just undeploy undeploy DeathStarBench, remove the `-strong` parameter (you can also restart by passing the `-restart` parameter).
+In order to keep your GCP instances and just undeploy DeathStarBench, remove the `-strong` parameter (you can also restart by passing the `-restart` parameter).
 
 Although `maestro` run a single deployment end-to-end, in order to run all the necessary workloads for plots you need to repeat these steps for several different combinations.
-To ease that process we provide `maestrina`, a convenience script that executes all combinations of workloads to plot after. In order to change the combinations just edit the code get your own combinations in place. There might be instances where `maestrina` is not able to run a specific endpoint, and in those scenarios you might need to rerun ou run `maestro` individually -- which is always the safest method.
+To ease that process we provide `maestrina`, a convenience script that executes all combinations of workloads to plot after. In order to change the combinations just edit the code get your own combinations in place. There might be instances where `maestrina` is not able to run a specific endpoint, and in those scenarios you might need to rerun or run `maestro` individually -- which is always the safest method.
 We provide a pre-populated `maestrina` with the combinations and rounds configurations for the `us-eu` configuration.
 
 

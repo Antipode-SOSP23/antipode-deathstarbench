@@ -474,10 +474,10 @@ def build__socialNetwork__gcp(args):
   compute = googleapiclient.discovery.build('compute', 'v1')
   image_response = compute.images().getFromFamily(project='debian-cloud', family='debian-10').execute()
   source_disk_image = image_response['selfLink']
-  zone = 'us-east1-b'
+  zone = GCP_MACHINE_IMAGE_ZONE
   config = {
     'name': GCP_BUILD_IMAGE_NAME,
-    'machineType': f"zones/{zone}/machineTypes/f1-micro",
+    'machineType': f"zones/{zone}/machineTypes/e2-medium",
     'disks': [
       {
         'boot': True,
@@ -548,7 +548,7 @@ def build__socialNetwork__gcp(args):
   image_config = {
     "kind": "compute#image",
     "name": GCP_MACHINE_IMAGE_NAME,
-    "sourceDisk": f"projects/pluribus/zones/us-east1-b/disks/{GCP_BUILD_IMAGE_NAME}",
+    "sourceDisk": f"projects/{GCP_PROJECT_ID}/zones/{GCP_MACHINE_IMAGE_ZONE}/disks/{GCP_BUILD_IMAGE_NAME}",
     "storageLocations": [
       "us"
     ]
@@ -1516,6 +1516,18 @@ def wkld__gcp__run(args):
 def _fetch_span_tag(tags, tag_to_search):
   return next(item for item in tags if item['key'] == tag_to_search)['value']
 
+def _fetch_call_count(jaeger_host):
+  import requests
+
+  # curl -X GET "jaeger:16686/api/dependencies?lookback=604800000&prettyPrint=true
+  params = (
+    ('lookback', 604800000), # 30mins in ms
+    # ('prettyPrint', 'true'),
+  )
+  # fetch the call count
+  response = requests.get(f'{jaeger_host}/api/dependencies', params=params)
+  return list(filter(lambda s: s['child'] == 'write-home-timeline-service-us', response.json()['data']))[0]['callCount']
+
 def _fetch_compose_post_service_traces(jaeger_host, limit):
   import requests
   import pandas as pd
@@ -1674,12 +1686,8 @@ def gather(args):
   # force chmod of that dir
   sudo['chmod', 777, args['local_gather_path']] & FG
 
-  # set number of requests to gather from jaeger
-  limit = args['num_requests']
-  if limit is None:
-    limit = int(input(f"Visit {jaeger_host}/dependencies to check number of flowing requests: "))
-
   # read traces from jaeger
+  limit = _fetch_call_count(jaeger_host)
   df, missing_info = _fetch_compose_post_service_traces(jaeger_host, limit)
 
   # merge result with mongodb change stream consistency diff information
@@ -1886,7 +1894,7 @@ def clean__socialNetwork__gcp(args):
 
   if args['strong']:
     print("[INFO] Removing GCP nodes ...")
-    _gcp_vm_delete('us-east1-b', GCP_BUILD_IMAGE_NAME)
+    _gcp_vm_delete(GCP_MACHINE_IMAGE_ZONE, GCP_BUILD_IMAGE_NAME)
     for _, host in inventory.items():
       _gcp_vm_delete(host['gcp_zone'], host['gcp_name'])
   elif args['restart']:
@@ -2012,7 +2020,7 @@ DOCKER_COMPOSE_NETWORK = 'deathstarbench_network'
 GCP_DOCKER_IMAGE_NAME = 'gcp-manager:antipode'
 GCP_BUILD_IMAGE_NAME = 'antipode-dev-dsb'
 GCP_MACHINE_IMAGE_NAME = 'antipode-dev-dsb'
-GCP_CREDENTIALS_FILE = ROOT_PATH / 'gcp' / 'pluribus.json'
+GCP_MACHINE_IMAGE_ZONE = 'us-central1-a'
 GCP_PROJECT_ID = _get_config('gcp','project_id')
 GCP_DEFAULT_SSH_USER = _get_config('gcp','default_ssh_user')
 GCP_DOCKER_IMAGE_NAMESPACE = f"gcr.io/{GCP_PROJECT_ID}/dsb"
@@ -2089,7 +2097,6 @@ if __name__ == "__main__":
 
   # gather application
   gather_parser = subparsers.add_parser('gather', help='Gather data from application')
-  gather_parser.add_argument('-n', '--num-requests', type=int, default=None, help="Gather this amount of requests skipping the input")
 
   # clean application
   clean_parser = subparsers.add_parser('clean', help='Clean application')

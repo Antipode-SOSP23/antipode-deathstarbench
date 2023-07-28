@@ -6,6 +6,15 @@ throughput_visibility_latency:
 
 throughput_latency:
   - gather/gcp/socialNetwork/compose-post/us-eu-100/20210814065624
+  - gather/gcp/socialNetwork/compose-post/us-sg-100/20210814065624
+  - gather/gcp/socialNetwork/compose-post/us-eu-100-antipode/20210814065624
+  - gather/gcp/socialNetwork/compose-post/us-sg-100-antipode/20210814065624
 
 per_inconsistencies:
   - gather/gcp/socialNetwork/compose-post/us-eu-100/20210814065624
+
+throughput_latency_with_consistency_window:
+  - gather/gcp/socialNetwork/compose-post/us-eu-100/20210814065624
+  - gather/gcp/socialNetwork/compose-post/us-sg-100/20210814065624
+  - gather/gcp/socialNetwork/compose-post/us-eu-100-antipode/20210814065624
+  - gather/gcp/socialNetwork/compose-post/us-sg-100-antipode/20210814065624

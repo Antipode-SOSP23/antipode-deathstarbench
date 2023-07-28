@@ -166,7 +166,7 @@ def plot__throughput_latency(args):
 
     latency_90 = None
     throughput = None
-    with open(ROOT_PATH / d / 'client01.out') as f:
+    with open(ROOT_PATH / d / 'client00.out') as f:
       lines = f.readlines()
       for line in lines:
         # this is the line latency
@@ -331,7 +331,7 @@ def plot__throughput_visibility_latency(gather_paths):
     info = _load_yaml(d / 'info.yml')
 
     throughput = None
-    with open(ROOT_PATH / d / 'client01.out') as f:
+    with open(ROOT_PATH / d / 'client00.out') as f:
       lines = f.readlines()
       for line in lines:
         # this is the line for throughput
@@ -428,7 +428,7 @@ def plot__visibility_latency_overhead(gather_paths):
     info = _load_yaml(d / 'info.yml')
 
     throughput = None
-    with open(ROOT_PATH / d / 'client01.out') as f:
+    with open(ROOT_PATH / d / 'client00.out') as f:
       lines = f.readlines()
       for line in lines:
         # this is the line for throughput
@@ -522,7 +522,7 @@ def plot__throughput_latency_with_consistency_window(args):
 
     latency_90 = None
     throughput = None
-    with open(ROOT_PATH / d / 'client01.out') as f:
+    with open(ROOT_PATH / d / 'client00.out') as f:
       lines = f.readlines()
       for line in lines:
         # this is the line latency
@@ -586,7 +586,7 @@ def plot__throughput_latency_with_consistency_window(args):
   df = pd.DataFrame(df_data)
 
   # split dataframe into multiple based on the amount of unique zone_pairs we have
-  PEAK_RPS = 125
+  PEAK_RPS = df['rps'].max()
   df_zone_pairs = []
   for zone_pair, df_zone_pair in df.groupby('zone_pair', as_index=False):
     # drop uneeded columns
