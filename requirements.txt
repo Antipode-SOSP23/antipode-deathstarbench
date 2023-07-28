@@ -8,3 +8,7 @@ MarkupSafe
 textwrap3
 ruamel.yaml
 paramiko
+matplotlib
+seaborn
+argparse
+numpy
