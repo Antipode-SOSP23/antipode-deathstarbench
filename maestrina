@@ -17,10 +17,12 @@ import time
 #--------------
 ROOT_PATH = Path(os.path.abspath(os.path.dirname(sys.argv[0])))
 APP = 'socialNetwork'
-DEFAULT_CONFIG = 'configs/gcp/socialNetwork/us-eu.yml' # for US->SG 'configs/gcp/socialNetwork/us-sg.yml'
+CONFIGS = [
+  'configs/gcp/socialNetwork/us-eu.yml', # for US->EU
+  'configs/gcp/socialNetwork/us-sg.yml', # for US->SG
+]
 DURATION = 300
-NUM_ROUNDS = 5
-JAEGER_REQUESTS = 50000 # this is aprox
+NUM_ROUNDS = 2
 maestro = local["./maestro"]
 #--------------
 COMBINATIONS = [
@@ -33,61 +35,62 @@ COMBINATIONS = [
   ( False ,  1  ,  4 ,    2   , 150 ),
   ( False ,  1  ,  4 ,    2   , 160 ),
   # with antipode
-  ( True ,  1  ,  4 ,    2   , 50 ),
-  ( True ,  1  ,  4 ,    2   , 100 ),
-  ( True ,  1  ,  4 ,    2   , 125 ),
-  ( True ,  1  ,  4 ,    2   , 150 ),
-  ( True ,  1  ,  4 ,    2   , 160 ),
+  ( True  ,  1  ,  4 ,    2   , 50 ),
+  ( True  ,  1  ,  4 ,    2   , 100 ),
+  ( True  ,  1  ,  4 ,    2   , 125 ),
+  ( True  ,  1  ,  4 ,    2   , 150 ),
+  ( True  ,  1  ,  4 ,    2   , 160 ),
 ]
 
 
 #--------------
 # RUN
 #--------------
-# strong clean at the begining
-# maestro['--gcp', APP, 'clean', '-strong'] & FG
+for config in CONFIGS:
+  # strong clean at the begining
+  maestro['--gcp', APP, 'clean', '-strong'] & FG
 
-# build the deployment
-# maestro['--gcp', APP, 'build'] & FG
+  # build the deployment
+  maestro['--gcp', APP, 'build'] & FG
 
-# deploy configuration
-maestro['--gcp', APP, 'deploy', '-config', DEFAULT_CONFIG, '-clients', 1] & FG
+  # deploy configuration
+  maestro['--gcp', APP, 'deploy', '-config', config, '-clients', 1] & FG
 
-gathered_dirs = []
-for antipode, clients, connections, threads, rate in COMBINATIONS:
-  for nround in range(NUM_ROUNDS):
-    print('[INFO] New deployment starting:')
-    print(f"\t [ROUND #{nround}] antipode: {antipode} // clients: {clients} // connections: {connections} // threads: {threads} // rate: {rate}\n")
+  gathered_dirs = []
+  for antipode, clients, connections, threads, rate in COMBINATIONS:
+    for nround in range(NUM_ROUNDS):
+      print('[INFO] New deployment starting:')
+      print(f"\t [ROUND #{nround}] antipode: {antipode} // clients: {clients} // connections: {connections} // threads: {threads} // rate: {rate}\n")
 
-    # run configuration with the proper arguments
-    run_args = ['--gcp', APP, 'run']
-    if antipode:
-      run_args.append('-antipode')
-    maestro[run_args] & FG
+      # run configuration with the proper arguments
+      run_args = ['--gcp', APP, 'run']
+      if antipode:
+        run_args.append('-antipode')
+      maestro[run_args] & FG
 
-    # run the workload
-    maestro['--gcp', APP, 'wkld', '-E', 'compose-post',
-      '-d', DURATION,
-      '-c', connections,
-      '-t', threads,
-      '-r', rate
-    ] & FG
+      # run the workload
+      maestro['--gcp', APP, 'wkld', '-E', 'compose-post',
+        '-d', DURATION,
+        '-c', connections,
+        '-t', threads,
+        '-r', rate
+      ] & FG
 
-    # gather data workload
-    maestro['--gcp', APP, 'gather'] & FG
-    # find out the gather dir
-    gathered_dirs.append(max(Path(ROOT_PATH / 'gather' / 'gcp' / APP / 'compose-post').glob('**/*'), key=os.path.getmtime))
+      # gather data workload
+      maestro['--gcp', APP, 'gather'] & FG
+      # find out the gather dir
+      gathered_dirs.append(max(Path(ROOT_PATH / 'gather' / 'gcp' / APP / 'compose-post').glob('**/*'), key=os.path.getmtime))
 
-    # Look at info
-    # maestro['--gcp', 'info', '-links'] & FG
-    # input("[WAIT] Observe output ....")
+      # Look at info
+      # maestro['--gcp', 'info', '-links'] & FG
+      # input("[WAIT] Observe output ....")
 
-    # soft clean
-    maestro['--gcp', APP, 'clean', '-restart'] & FG
-    print('\n[INFO] Done!')
+      # soft clean
+      maestro['--gcp', APP, 'clean', '-restart'] & FG
+      print('\n[INFO] Done!')
 
-# strong clean at the end
-maestro['--gcp', APP, 'clean', '-strong'] & FG
+  # strong clean at the end
+  maestro['--gcp', APP, 'clean', '-strong'] & FG
 
 print("[INFO] Gathered results:")
 print('\n'.join([p.name for p in gathered_dirs]))
