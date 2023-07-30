@@ -34,6 +34,6 @@
       shell: >
         docker exec $( docker ps -a --filter name='compose-post-service' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) dockerize -wait file:///tmp/ -wait-retry-interval 10s -timeout 300s
       retries: 15
-      delay: 30
+      delay: 60
 
     # We are not removing the dockerize.sync file here since we are going to use the dsb-start playbook which already removes the file
