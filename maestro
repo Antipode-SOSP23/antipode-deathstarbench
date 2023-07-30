@@ -299,6 +299,9 @@ def _load_inventory(deploy_type, filepath):
   #
   return loaded_inventory
 
+def _get_inventory_group(inventory, group):
+  return { k:v for k, v in inventory.items() if group in v['groups'] }
+
 def _wait_url_up(url):
   import urllib.request
   while True:
@@ -317,6 +320,7 @@ def _build_gather_tag():
 
 def _docker_image_tag_to_tar(image_name):
   return image_name.replace(':','_').replace('/','_').replace('-','_')
+
 
 #-----------------
 # BUILD
@@ -1248,8 +1252,6 @@ def delay__socialNetwork__gsd(args):
       '--extra-vars', f"@{vars_filepath}",
     ] & FG
 
-
-
 def delay__socialNetwork__gcp(args):
   _force_gcp_docker()
   from plumbum.cmd import ansible_playbook
@@ -1927,6 +1929,43 @@ def clean__socialNetwork__gcp(args):
       ] & FG
 
 
+#--------------
+# SSH
+#--------------
+def ssh(args):
+  args['tag'] = _get_last(args['deploy_type'], 'tag')
+  args['deploy_dir'] = _deploy_dir(args)
+
+  getattr(sys.modules[__name__], f"ssh__{args['deploy_type']}")(args)
+  print("[INFO] SSH done!")
+
+def ssh__local(args):
+  return
+
+def ssh__gcp(args):
+  from plumbum import FG
+  from plumbum.cmd import xpanes, ssh
+
+  inventory_filepath = args['deploy_dir'] / 'inventory.cfg'
+  inventory = _load_inventory(args['deploy_type'], inventory_filepath)
+  ssh_key = ROOT_PATH / args['deploy_type'] / '.ssh' / 'google_compute_engine'
+
+  # add hosts from groups into the hosts args
+  for g in args['groups']:
+    for h in _get_inventory_group(inventory, g).keys():
+      args['hosts'].append(h)
+
+  # sudo is needed since ssh key was created by root user as well
+  xpanes_args = ['sudo', 'xpanes', '-c', f"'ssh -o StrictHostKeyChecking=no -i {ssh_key} root@{{}}'"]
+  for h in args['hosts']:
+    if h not in inventory:
+      print(f"[WARN] Skipping '{h}' - not found in inventory")
+    # get the public ip
+    xpanes_args.append(inventory[h]['external_ip'])
+  # plumbum does not work hence
+  os.system(' '.join(xpanes_args))
+
+
 #-----------------
 # CONSTANTS
 #-----------------
@@ -2102,6 +2141,10 @@ if __name__ == "__main__":
   clean_parser = subparsers.add_parser('clean', help='Clean application')
   clean_parser.add_argument('-strong', action='store_true', help="delete images")
   clean_parser.add_argument('-restart', action='store_true', help="clean deployment by restarting containers")
+
+  ssh_parser = subparsers.add_parser('ssh', help='SSH into machines')
+  ssh_parser.add_argument('-hosts', required=False, nargs='+', default=[], help="Connect to nodes based on id")
+  ssh_parser.add_argument('-groups', required=False, nargs='+', default=[], help="Connect to nodes based on group")
 
   ##
   args = vars(main_parser.parse_args())
