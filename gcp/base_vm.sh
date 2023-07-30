@@ -95,3 +95,19 @@ sudo sysctl -w net.ipv4.tcp_syncookies=1
 sudo sysctl -w net.ipv4.tcp_synack_retries=1
 sudo sysctl -w net.ipv4.tcp_syn_retries=1
 sudo sysctl -w net.core.somaxconn=4096
+
+# Disable Transparent Huge Pages
+# https://www.mongodb.com/docs/manual/tutorial/transparent-huge-pages/
+echo "[Unit]
+Description=Disable Transparent Huge Pages (THP)
+DefaultDependencies=no
+After=sysinit.target local-fs.target
+Before=mongod.service
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'echo never | tee /sys/kernel/mm/transparent_hugepage/enabled > /dev/null'
+[Install]
+WantedBy=basic.target" | sudo tee /etc/systemd/system/disable-thp.service
+sudo systemctl daemon-reload
+sudo systemctl start disable-thp
+sudo systemctl enable disable-thp
