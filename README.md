@@ -102,7 +102,7 @@ In order to run the original TrainTicket application remove the `-antipode` para
 Then you can run the `compose-post` workloads to evaluate inconsistencies and gather its results:
 ```zsh
 ./maestro --gcp socialNetwork wkld -E compose-post -d DURATION -r RATE -c CONNECTIONS -t THREADS
-./maestro --gcp socialNetwork gather 
+./maestro --gcp socialNetwork gather
 ```
 
 For instance, we can the workload for 300 seconds (`300`), and with a rate of `100` requests per second, with `4` connections and `2` threads.
@@ -115,7 +115,7 @@ In order to keep your GCP instances and just undeploy DeathStarBench, remove the
 
 Although `maestro` run a single deployment end-to-end, in order to run all the necessary workloads for plots you need to repeat these steps for several different combinations.
 To ease that process we provide `maestrina`, a convenience script that executes all combinations of workloads to plot after. In order to change the combinations just edit the code get your own combinations in place. There might be instances where `maestrina` is not able to run a specific endpoint, and in those scenarios you might need to rerun or run `maestro` individually -- which is always the safest method.
-We provide a pre-populated `maestrina` with the combinations and rounds configurations for the `us-eu` configuration.
+We provide a pre-populated `maestrina` with the combinations and rounds configurations for the SOSP'23 plots.
 
 
 There are other commands available (for details do `-h`), namely:

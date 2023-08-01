@@ -560,33 +560,11 @@ def plot__throughput_latency_with_consistency_window(args):
       'throughput': throughput,
     })
 
-  # since each tag/type has multiple rounds we have to group them into a single row
-  df_data = []
-  for t,vs in groupby(parsed_data, key=lambda x: [ x['rps'], x['zone_pair'], x['type'] ]):
-    vs = list(vs)
-    vs = sorted(vs, key=lambda k: (k['throughput'], k['latency_90']) )
-    mid_index = int(len(vs) / 2)
-
-    throughput = vs[mid_index]['throughput']
-    latency_90 = vs[mid_index]['latency_90']
-    # latency_90 = np.median([ v['latency_90'] for v in vs])
-    # throughput = np.median([ v['throughput'] for v in vs])
-
-    df_data.append({
-      'rps': t[0],
-      'zone_pair': t[1],
-      'type': 'Antipode' if t[2] == 'antipode' else 'Original',
-      'latency_90': latency_90,
-      'throughput': throughput,
-      # 'consistency_window_90': np.median([ v['consistency_window_90'] for v in vs]),
-      'consistency_window_90': [ v['consistency_window_90'] for v in vs],
-    })
-
   # transform dict into dataframe
-  df = pd.DataFrame(df_data)
+  df = pd.DataFrame(parsed_data).groupby(['zone_pair','type','rps']).median().reset_index().sort_values(by=['zone_pair','type','rps'])
 
   # split dataframe into multiple based on the amount of unique zone_pairs we have
-  PEAK_RPS = df['rps'].max()
+  peark_rps = df['rps'].max()
   df_zone_pairs = []
   for zone_pair, df_zone_pair in df.groupby('zone_pair', as_index=False):
     # drop uneeded columns
@@ -596,9 +574,9 @@ def plot__throughput_latency_with_consistency_window(args):
 
     # gather all consistency window samples from Original and Antipode and then compute the median
     cw_data = {
-      'Throughput': PEAK_RPS,
-      'Original': round(np.median(_flatten_list(df_zone_pair[(df_zone_pair['type'] == 'Original') & (df_zone_pair['rps'] == PEAK_RPS)]['consistency_window_90'].values.tolist()))),
-      'Antipode': round(np.median(_flatten_list(df_zone_pair[(df_zone_pair['type'] == 'Antipode') & (df_zone_pair['rps'] == PEAK_RPS)]['consistency_window_90'].values.tolist()))),
+      'Throughput': fr'$\approx${peark_rps}',
+      'Original': round(df_zone_pair[(df_zone_pair['type'] == 'baseline') & (df_zone_pair['rps'] == peark_rps)]['consistency_window_90'].values[0]),
+      'Antipode': round(df_zone_pair[(df_zone_pair['type'] == 'antipode') & (df_zone_pair['rps'] == peark_rps)]['consistency_window_90'].values[0]),
     }
     # for each Baseline / Antipode pair we take the Baseline out of antipode so
     # stacked bars are presented correctly
