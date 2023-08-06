@@ -1371,6 +1371,7 @@ def wkld(args):
   args['endpoint'] = WKLD_ENDPOINTS[args['app']][args['Endpoint']]
   args['wkld_tag'] = f"{datetime.now().strftime('%Y%m%d%H%M')}"
   args['local_gather_path'] = GATHER_PATH / args['deploy_type'] / args['app'] / args['Endpoint'] / _build_gather_tag() / args['wkld_tag']
+  _put_last(args['deploy_type'], 'wkld_duration', args['duration'])
   _put_last(args['deploy_type'], 'wkld_tag', args['wkld_tag'])
   _put_last(args['deploy_type'], 'wkld_rate', args['rate'])
   _put_last(args['deploy_type'], 'wkld_endpoint', args['Endpoint'])
@@ -1738,6 +1739,7 @@ def gather(args):
     # build info file
     print(f"[INFO] Save '{local.cwd}/info.yml'\n")
     plot_info = {
+      'duration': _get_last(args['deploy_type'], 'wkld_duration'),
       'por_inconsistencies': inconsistent_count / float(len(df)),
       'requests': limit,
       'type': 'antipode' if _get_last(args['deploy_type'], 'antipode') else 'baseline',
