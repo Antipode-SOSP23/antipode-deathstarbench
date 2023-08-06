@@ -618,7 +618,7 @@ def deploy(args):
   _put_last(args['deploy_type'], 'config', args['config'])
 
   getattr(sys.modules[__name__], f"deploy__{args['app']}__{args['deploy_type']}")(args)
-  print(f"[INFO] {args['app']} @ {args['deploy_type']} deployed successfully with '{args['tag']}' tag!")
+  print(f"[INFO][{args['tag']}] {args['app']} @ {args['deploy_type']} deployed successfully!")
 
 def deploy__socialNetwork__local(args):
   import shutil
@@ -1005,7 +1005,7 @@ def run(args):
   _put_last(args['deploy_type'], 'prometheus', args['prometheus'])
 
   getattr(sys.modules[__name__], f"run__{args['app']}__{args['deploy_type']}")(args)
-  print(f"[INFO] {args['app']} @ {args['deploy_type']} ran successfully!")
+  print(f"[INFO][{args['tag']}] {args['app']} @ {args['deploy_type']} ran successfully!")
 
 def run__socialNetwork__local(args):
   from plumbum import FG
@@ -1173,7 +1173,7 @@ def delay(args):
   args['dst_container'] = 'post-storage-mongodb-us'
 
   getattr(sys.modules[__name__], f"delay__{args['app']}__{args['deploy_type']}")(args)
-  print(f"[INFO] {args['app']} @ {args['deploy_type']} delay activated successfully!")
+  print(f"[INFO][{args['tag']}] {args['app']} @ {args['deploy_type']} delay activated successfully!")
 
 def delay__socialNetwork__local(args):
   from plumbum.cmd import docker_compose, docker
@@ -1377,7 +1377,7 @@ def wkld(args):
   _put_last(args['deploy_type'], 'local_gather_path', str(args['local_gather_path']))
 
   getattr(sys.modules[__name__], f"wkld__{args['deploy_type']}__run")(args)
-  print(f"[INFO] {args['app']} @ {args['deploy_type']} workload ran successfully!")
+  print(f"[INFO][{args['tag']}] {args['app']} @ {args['deploy_type']} workload ran successfully!")
 
 def wkld__local__run(args):
   from plumbum.cmd import docker, python
@@ -1754,7 +1754,7 @@ def gather(args):
     with open('traces.info', 'r') as f:
         print(f.read())
   #
-  print(f"[INFO] {args['app']} @ {args['deploy_type']} gathered successfully!")
+  print(f"[INFO][{args['tag']}] {args['app']} @ {args['deploy_type']} gathered successfully!")
 
 def gather__socialNetwork__local__download(args):
   return None
@@ -1803,7 +1803,7 @@ def clean(args):
   args['deploy_dir'] = _deploy_dir(args)
 
   getattr(sys.modules[__name__], f"clean__{args['app']}__{args['deploy_type']}")(args)
-  print(f"[INFO] {args['app']} @ {args['deploy_type']} cleaned successfully!")
+  print(f"[INFO][{args['tag']}] {args['app']} @ {args['deploy_type']} cleaned successfully!")
 
 def clean__socialNetwork__local(args):
   from plumbum.cmd import docker_compose, docker
@@ -1942,7 +1942,7 @@ def ssh(args):
   args['deploy_dir'] = _deploy_dir(args)
 
   getattr(sys.modules[__name__], f"ssh__{args['deploy_type']}")(args)
-  print("[INFO] SSH done!")
+  print(f"[INFO][{args['tag']}] SSH done!")
 
 def ssh__local(args):
   return
