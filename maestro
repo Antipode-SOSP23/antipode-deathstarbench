@@ -622,7 +622,7 @@ def deploy(args):
 
 def deploy__socialNetwork__local(args):
   import shutil
-  from plumbum import local, FG
+  from plumbum.cmd import docker
 
   deploy_dir = args['deploy_dir']
   config = _load_yaml(args['config'])
@@ -630,6 +630,11 @@ def deploy__socialNetwork__local(args):
   print(f"[INFO] Copying deploy files... ", flush=True)
   os.makedirs(deploy_dir, exist_ok=True)
   shutil.copytree(DSB_PATH / args['app'], deploy_dir, dirs_exist_ok=True)
+
+  # Warn about logs
+  docker_logging_driver = docker['info', '--format', '{{.LoggingDriver}}']().strip()
+  if docker_logging_driver != 'local':
+    print(f"[WARN] Docker's logging set up to {docker_logging_driver} which might not be compatible with DSB logging format.")
 
 def deploy__socialNetwork__gsd(args):
   from plumbum.cmd import ansible_playbook
