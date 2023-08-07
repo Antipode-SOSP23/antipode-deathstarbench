@@ -1379,7 +1379,10 @@ def wkld(args):
   print(f"[INFO][{args['tag']}] {args['app']} @ {args['deploy_type']} workload ran successfully!")
 
 def wkld__local__run(args):
-  from plumbum.cmd import docker, docker_compose
+  from plumbum.cmd import docker, docker_compose, tee
+
+  # create wkld folder if needed
+  os.makedirs(args['local_gather_path'], exist_ok=True)
 
   hosts = {
     'eu': 'http://127.0.0.1:8080',
@@ -1390,7 +1393,7 @@ def wkld__local__run(args):
     # run workload for hosts as env variables
     with local.env(**{ f"HOST_{k.upper()}":v for k,v in hosts.items() }):
       docker_args = _wkld_docker_args(args['endpoint'], args, hosts, args['deploy_dir'])
-      docker[docker_args] & FG
+      (docker[docker_args] | tee[ args['local_gather_path'] / 'localhost.out']) & FG
 
   # Capture multiple stats at the end of the wkld
   stats = {}
@@ -1896,7 +1899,6 @@ def gather(args):
     info['connections'] = _get_last(args['deploy_type'], 'wkld_connections')
     info['threads'] = _get_last(args['deploy_type'], 'wkld_threads')
     info['zone_pair'] = _load_yaml(ROOT_PATH / _get_last(args['deploy_type'], 'config'))['replication_pair'].upper()
-    info['antipode_enabled'] = _get_last(args['deploy_type'], 'antipode')
     _dump_yaml(local.cwd / 'info.yml', info)
 
     # copy last file
