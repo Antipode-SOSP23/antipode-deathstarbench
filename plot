@@ -515,7 +515,7 @@ def plot__visibility_latency_overhead(gather_paths):
   print(f"[INFO] Saved plot '{plot_filename}'")
 
 
-def plot__throughput_latency_with_consistency_window(args):
+def plot__throughput_latency_with_consistency_window(gather_paths):
   parsed_data = []
   for d in gather_paths:
     info = _load_yaml(d / 'info.yml')
@@ -684,6 +684,30 @@ def plot__throughput_latency_with_consistency_window(args):
   plot_filename = f"throughput_latency_with_consistency_window__{datetime.now().strftime('%Y%m%d%H%M')}"
   plt.savefig(PLOTS_PATH / plot_filename, bbox_inches = 'tight', pad_inches = 0.1)
   print(f"[INFO] Saved plot '{plot_filename}'")
+
+
+def plot__storage_overhead(gather_paths):
+  # in DSB storages are fixed so we init them here
+  data = {
+    'mongo': { 'storage': 'mongo', 'baseline': [], 'antipode': [] },
+    'rabbitmq': { 'storage': 'rabbitmq', 'baseline': [], 'antipode': [] },
+  }
+  # go over gathers to extract info
+  for d in gather_paths:
+    info = _load_yaml(d / 'info.yml')
+    data['mongo'][info['type']].append(info['total_post_storage_size_bytes'])
+    data['rabbitmq'][info['type']].append(info['total_notification_size_bytes'])
+
+  # pick median from all storage overheads and do the overhead percentage
+  for _,e in data.items():
+    e['antipode'] = round(np.percentile(e['antipode'], 50))
+    e['baseline'] = round(np.percentile(e['baseline'], 50))
+    #
+    e['overhead'] = e['antipode'] - e['baseline']
+    e['por_overhead'] = (e['overhead'] / e['baseline'])*100
+
+  df = pd.DataFrame.from_records(list(data.values())).set_index('storage')
+  pp(df)
 
 
 #-----------
