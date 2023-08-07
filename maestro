@@ -1370,6 +1370,8 @@ def wkld(args):
   _put_last(args['deploy_type'], 'wkld_duration', args['duration'])
   _put_last(args['deploy_type'], 'wkld_tag', args['wkld_tag'])
   _put_last(args['deploy_type'], 'wkld_rate', args['rate'])
+  _put_last(args['deploy_type'], 'wkld_connections', args['connections'])
+  _put_last(args['deploy_type'], 'wkld_threads', args['threads'])
   _put_last(args['deploy_type'], 'wkld_endpoint', args['Endpoint'])
   _put_last(args['deploy_type'], 'local_gather_path', str(args['local_gather_path']))
 
@@ -1891,6 +1893,8 @@ def gather(args):
     info['requests'] = limit
     info['type'] = 'antipode' if _get_last(args['deploy_type'], 'antipode') else 'baseline'
     info['rps'] = rqs
+    info['connections'] = _get_last(args['deploy_type'], 'wkld_connections')
+    info['threads'] = _get_last(args['deploy_type'], 'wkld_threads')
     info['zone_pair'] = _load_yaml(ROOT_PATH / _get_last(args['deploy_type'], 'config'))['replication_pair'].upper()
     info['antipode_enabled'] = _get_last(args['deploy_type'], 'antipode')
     _dump_yaml(local.cwd / 'info.yml', info)
