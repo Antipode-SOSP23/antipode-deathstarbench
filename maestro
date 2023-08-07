@@ -1896,6 +1896,7 @@ def gather(args):
     info['type'] = 'antipode' if _get_last(args['deploy_type'], 'antipode') else 'baseline'
     info['rps'] = rqs
     info['zone_pair'] = _load_yaml(ROOT_PATH / _get_last(args['deploy_type'], 'config'))['replication_pair'].upper()
+    info['antipode_enabled'] = _get_last(args['deploy_type'], 'antipode')
     _dump_yaml(local.cwd / 'info.yml', info)
 
     # copy last file
