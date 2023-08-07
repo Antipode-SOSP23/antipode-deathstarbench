@@ -35,7 +35,5 @@
     - name: Wait for compose-post-service to be ready for posts by creating dockerize.sync file
       shell: >
         sudo docker exec $( sudo docker ps -a --filter name='compose-post-service' --filter status=running --format {% raw %}'{{ .ID }}'{% endraw %} ) dockerize -wait file:///tmp/ -wait-retry-interval 10s -timeout 300s
-      retries: 15
-      delay: 30
 
     # We are not removing the dockerize.sync file here since we are going to use the dsb-start playbook which already removes the file

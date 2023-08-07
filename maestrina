@@ -48,7 +48,7 @@ COMBINATIONS = [
 #--------------
 gathered_dirs = []
 for config in CONFIGS:
-  # strong clean at the begining
+  # strong clean at the beginning
   maestro['--gcp', APP, 'clean', '-strong'] & FG
 
   # build the deployment
