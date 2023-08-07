@@ -97,13 +97,9 @@ def _wrk2_params(args, endpoint, main_host):
   import urllib.parse
 
   params = []
-  # optional arguments
-  if 'connections' in args:
-    params.extend(['--connections', args['connections']])
-  if 'duration' in args:
-    params.extend(['--duration', f"{args['duration']}s"])
-  if 'threads' in args:
-    params.extend(['--threads', args['threads']])
+  params.extend(['--connections', args['connections']])
+  params.extend(['--duration', f"{args['duration']}s"])
+  params.extend(['--threads', args['threads']])
   # add rate --> requests per second
   params.extend(['--rate', args['rate']])
   # we want latency by default
