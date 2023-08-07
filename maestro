@@ -1381,7 +1381,7 @@ def wkld(args):
   print(f"[INFO][{args['tag']}] {args['app']} @ {args['deploy_type']} workload ran successfully!")
 
 def wkld__local__run(args):
-  from plumbum.cmd import docker, python
+  from plumbum.cmd import docker, docker_compose
 
   hosts = {
     'eu': 'http://127.0.0.1:8080',
@@ -1393,6 +1393,22 @@ def wkld__local__run(args):
     with local.env(**{ f"HOST_{k.upper()}":v for k,v in hosts.items() }):
       docker_args = _wkld_docker_args(args['endpoint'], args, hosts, args['deploy_dir'])
       docker[docker_args] & FG
+
+  # Capture multiple stats at the end of the wkld
+  stats = {}
+  with local.cwd(args['deploy_dir']):
+    # Get the total post-storage size
+    r = docker_compose['exec',
+        'post-storage-mongodb-eu',
+        'mongo', 'post', '--quiet', '--eval', 'db.post.totalSize()'
+        # db.post.storageSize()
+        # db.post.count()
+        # db.stats() --> e.g. db.stats().avgObjSize
+      ]().strip()
+    stats['total_post_storage_size_bytes'] = int(r)
+
+  # save file
+  _dump_yaml(args['local_gather_path'] / 'info.yml', stats)
 
 def wkld__gsd__run(args):
   from plumbum.cmd import ansible_playbook, sudo
@@ -1453,6 +1469,72 @@ def wkld__gsd__run(args):
       '--extra-vars', f"@{vars_filepath}",
       '-e', f"local_gather_path={args['local_gather_path']}",
       '-e', f"wkld_container_name={WKLD_CONTAINER_NAME}",
+    ] & FG
+
+  # Capture multiple stats at the end of the wkld
+  src_container = 'post-storage-mongodb-eu'
+  src_container_host = config['services'][src_container]
+
+  print("[INFO] Generating stats playbook ...")
+  template = """
+    ---
+    - hosts: {{ src_container_host }}
+      gather_facts: no
+      become: no
+      any_errors_fatal: true
+
+      tasks:
+        - name: Find MongoDB storage size
+          shell: >
+            sudo docker exec $( sudo docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) mongo post --quiet --eval 'db.post.totalSize()'
+          register: total_post_storage_size_bytes
+
+    - hosts: swarm_manager
+      gather_facts: no
+      become: yes
+      any_errors_fatal: true
+
+      tasks:
+        - name: Make sure gather path exists
+          file:
+            path: {{ gather_path }}
+            state: directory
+
+        # - name: print vars
+        #   debug:
+        #     var: hostvars['{{ src_container_host }}']
+
+        - name: Parse total_post_storage_size_bytes
+          set_fact:
+            total_post_storage_size_bytes={% raw %}{{ hostvars['{% endraw %}{{ src_container_host }}{% raw %}']['total_post_storage_size_bytes'].stdout | trim | int }}{% endraw %}
+
+        # - name: print vars
+        #   debug:
+        #     var: total_post_storage_size_bytes
+
+        - name: Save stats in file
+          copy:
+            content: |
+              total_post_storage_size_bytes: {% raw %}{{ total_post_storage_size_bytes }}{% endraw %}
+
+            dest: {{ gather_path }}/info.yml
+  """
+  playbook = Environment().from_string(template).render({
+    'src_container_host': src_container_host,
+    'src_container': src_container,
+    'gather_path': gather_path,
+  })
+  playbook_filepath = args['deploy_dir'] / 'stats-compute.yml'
+  with open(playbook_filepath, 'w') as f:
+    # remove empty lines and dedent for easier read
+    f.write(textwrap.dedent(playbook))
+    print(f"[SAVED] '{playbook_filepath}'")
+
+  print("[INFO] Running stats playbook ...")
+  with local.cwd(ROOT_PATH / args['deploy_type']):
+    ansible_playbook[f"{playbook_filepath}",
+      '-i', inventory_filepath,
+      '--extra-vars', f"@{vars_filepath}",
     ] & FG
 
 def wkld__gcp__run(args):
@@ -1517,6 +1599,72 @@ def wkld__gcp__run(args):
       '-e', f"wkld_container_name={WKLD_CONTAINER_NAME}",
     ] & FG
 
+  # Capture multiple stats at the end of the wkld
+  src_container = 'post-storage-mongodb-eu'
+  src_gcp_container_hostname = config['nodes'][config['services'][src_container]]['hostname']
+
+  print("[INFO] Generating stats playbook ...")
+  template = """
+    ---
+    - hosts: {{ src_gcp_container_hostname }}
+      gather_facts: no
+      become: yes
+      any_errors_fatal: true
+
+      tasks:
+        - name: Find MongoDB storage size
+          shell: >
+            docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) mongo post --quiet --eval 'db.post.totalSize()'
+          register: total_post_storage_size_bytes
+
+    - hosts: swarm_manager
+      gather_facts: no
+      become: yes
+      any_errors_fatal: true
+
+      tasks:
+        - name: Make sure gather path exists
+          file:
+            path: {{ gather_path }}
+            state: directory
+
+        # - name: print vars
+        #   debug:
+        #     var: hostvars['{{ src_gcp_container_hostname }}']
+
+        - name: Parse total_post_storage_size_bytes
+          set_fact:
+            total_post_storage_size_bytes={% raw %}{{ hostvars['{% endraw %}{{ src_gcp_container_hostname }}{% raw %}']['total_post_storage_size_bytes'].stdout | trim | int }}{% endraw %}
+
+        # - name: print vars
+        #   debug:
+        #     var: total_post_storage_size_bytes
+
+        - name: Save stats in file
+          copy:
+            content: |
+              total_post_storage_size_bytes: {% raw %}{{ total_post_storage_size_bytes }}{% endraw %}
+
+            dest: {{ gather_path }}/info.yml
+  """
+  playbook = Environment().from_string(template).render({
+    'src_gcp_container_hostname': src_gcp_container_hostname,
+    'src_container': src_container,
+    'gather_path': gather_path,
+  })
+  playbook_filepath = args['deploy_dir'] / 'stats-compute.yml'
+  with open(playbook_filepath, 'w') as f:
+    # remove empty lines and dedent for easier read
+    f.write(textwrap.dedent(playbook))
+    print(f"[SAVED] '{playbook_filepath}'")
+
+  print("[INFO] Running stats playbook ...")
+  with local.cwd(ROOT_PATH / args['deploy_type']):
+    ansible_playbook[f"{playbook_filepath}",
+      '-i', inventory_filepath,
+      '--extra-vars', f"@{vars_filepath}",
+    ] & FG
+
 
 #-----------------
 # GATHER
@@ -1569,6 +1717,7 @@ def _fetch_compose_post_service_traces(jaeger_host, limit):
       'poststorage_read_notification_ts': None,
       'consistency_bool': None,
       'consistency_mongoread_duration': None,
+      'notification_size_bytes': None,
       #
       'wht_start_queue_ts': None,
       'wht_start_worker_ts': None,
@@ -1586,6 +1735,7 @@ def _fetch_compose_post_service_traces(jaeger_host, limit):
         trace_info['poststorage_read_notification_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_read_notification_ts'))
         trace_info['consistency_bool'] = _fetch_span_tag(s['tags'], 'consistency_bool')
         trace_info['consistency_mongoread_duration'] = float(_fetch_span_tag(s['tags'], 'consistency_mongoread_duration'))
+        trace_info['notification_size_bytes'] = int(_fetch_span_tag(s['tags'], 'notification_size_bytes'))
         # compute the time spent in the queue
         trace_info['wht_start_worker_ts'] = float(_fetch_span_tag(s['tags'], 'wht_start_worker_ts'))
         # duration spent in antipode
@@ -1738,15 +1888,15 @@ def gather(args):
 
     # build info file
     print(f"[INFO] Save '{local.cwd}/info.yml'\n")
-    plot_info = {
-      'duration': _get_last(args['deploy_type'], 'wkld_duration'),
-      'por_inconsistencies': inconsistent_count / float(len(df)),
-      'requests': limit,
-      'type': 'antipode' if _get_last(args['deploy_type'], 'antipode') else 'baseline',
-      'rps': rqs,
-      'zone_pair': _load_yaml(ROOT_PATH / _get_last(args['deploy_type'], 'config'))['replication_pair'].upper(),
-    }
-    _dump_yaml(local.cwd / 'info.yml', plot_info)
+    info = _load_yaml(local.cwd / 'info.yml')
+    info['total_notification_size_bytes'] = int(df['notification_size_bytes'].sum())
+    info['duration'] = _get_last(args['deploy_type'], 'wkld_duration')
+    info['por_inconsistencies'] = inconsistent_count / float(len(df))
+    info['requests'] = limit
+    info['type'] = 'antipode' if _get_last(args['deploy_type'], 'antipode') else 'baseline'
+    info['rps'] = rqs
+    info['zone_pair'] = _load_yaml(ROOT_PATH / _get_last(args['deploy_type'], 'config'))['replication_pair'].upper()
+    _dump_yaml(local.cwd / 'info.yml', info)
 
     # copy last file
     print(f"[INFO] Save '{local.cwd}/last.yml'\n")
