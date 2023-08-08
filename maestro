@@ -1407,6 +1407,12 @@ def wkld__local__run(args):
         # db.stats() --> e.g. db.stats().avgObjSize
       ]().strip()
     stats['total_post_storage_size_bytes'] = int(r)
+    # Get the average post-storage size
+    r = docker_compose['exec',
+        'post-storage-mongodb-eu',
+        'mongo', 'post', '--quiet', '--eval', 'db.stats().avgObjSize'
+      ]().strip()
+    stats['avg_post_storage_size_bytes'] = int(r)
 
   # save file
   _dump_yaml(args['local_gather_path'] / 'info.yml', stats)
@@ -1485,10 +1491,15 @@ def wkld__gsd__run(args):
       any_errors_fatal: true
 
       tasks:
-        - name: Find MongoDB storage size
+        - name: Find MongoDB total storage size
           shell: >
             sudo docker exec $( sudo docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) mongo post --quiet --eval 'db.post.totalSize()'
           register: total_post_storage_size_bytes
+
+        - name: Find MongoDB average storage size
+          shell: >
+            sudo docker exec $( sudo docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) mongo post --quiet --eval 'db.stats().avgObjSize'
+          register: avg_post_storage_size_bytes
 
     - hosts: swarm_manager
       gather_facts: no
@@ -1509,14 +1520,15 @@ def wkld__gsd__run(args):
           set_fact:
             total_post_storage_size_bytes={% raw %}{{ hostvars['{% endraw %}{{ src_container_host }}{% raw %}']['total_post_storage_size_bytes'].stdout | trim | int }}{% endraw %}
 
-        # - name: print vars
-        #   debug:
-        #     var: total_post_storage_size_bytes
+        - name: Parse avg_post_storage_size_bytes
+          set_fact:
+            avg_post_storage_size_bytes={% raw %}{{ hostvars['{% endraw %}{{ src_container_host }}{% raw %}']['avg_post_storage_size_bytes'].stdout | trim | int }}{% endraw %}
 
         - name: Save stats in file
           copy:
             content: |
               total_post_storage_size_bytes: {% raw %}{{ total_post_storage_size_bytes }}{% endraw %}
+              avg_post_storage_size_bytes: {% raw %}{{ avg_post_storage_size_bytes }}{% endraw %}
 
             dest: {{ gather_path }}/info.yml
   """
@@ -1613,10 +1625,15 @@ def wkld__gcp__run(args):
       any_errors_fatal: true
 
       tasks:
-        - name: Find MongoDB storage size
+        - name: Find MongoDB total storage size
           shell: >
             docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) mongo post --quiet --eval 'db.post.totalSize()'
           register: total_post_storage_size_bytes
+
+        - name: Find MongoDB average storage size
+          shell: >
+            docker exec $( docker ps -a --filter name='{{ src_container }}' --filter status=running --format {{ "{% raw %}'{{ .ID }}'{% endraw %}" }} ) mongo post --quiet --eval 'db.stats().avgObjSize'
+          register: avg_post_storage_size_bytes
 
     - hosts: swarm_manager
       gather_facts: no
@@ -1637,14 +1654,15 @@ def wkld__gcp__run(args):
           set_fact:
             total_post_storage_size_bytes={% raw %}{{ hostvars['{% endraw %}{{ src_gcp_container_hostname }}{% raw %}']['total_post_storage_size_bytes'].stdout | trim | int }}{% endraw %}
 
-        # - name: print vars
-        #   debug:
-        #     var: total_post_storage_size_bytes
+        - name: Parse avg_post_storage_size_bytes
+          set_fact:
+            avg_post_storage_size_bytes={% raw %}{{ hostvars['{% endraw %}{{ src_gcp_container_hostname }}{% raw %}']['avg_post_storage_size_bytes'].stdout | trim | int }}{% endraw %}
 
         - name: Save stats in file
           copy:
             content: |
               total_post_storage_size_bytes: {% raw %}{{ total_post_storage_size_bytes }}{% endraw %}
+              avg_post_storage_size_bytes: {% raw %}{{ avg_post_storage_size_bytes }}{% endraw %}
 
             dest: {{ gather_path }}/info.yml
   """
@@ -1682,7 +1700,17 @@ def _fetch_call_count(jaeger_host):
     # ('prettyPrint', 'true'),
   )
   # fetch the call count
-  response = requests.get(f'{jaeger_host}/api/dependencies', params=params)
+
+  # Retry on certain exceptions
+  while True:
+    try:
+      response = requests.get(f'{jaeger_host}/api/dependencies', params=params)
+      break
+    except ConnectionRefusedError as e:
+      # give time to sleep if connections got refused
+      time.sleep(30)
+      pass
+
   return list(filter(lambda s: s['child'] == 'write-home-timeline-service-us', response.json()['data']))[0]['callCount']
 
 def _fetch_compose_post_service_traces(jaeger_host, limit):
@@ -1891,6 +1919,7 @@ def gather(args):
     print(f"[INFO] Save '{local.cwd}/info.yml'\n")
     info = _load_yaml(local.cwd / 'info.yml')
     info['total_notification_size_bytes'] = int(df['notification_size_bytes'].sum())
+    info['avg_notification_storage_size_bytes'] = int(df['notification_size_bytes'].mean())
     info['duration'] = _get_last(args['deploy_type'], 'wkld_duration')
     info['por_inconsistencies'] = inconsistent_count / float(len(df))
     info['requests'] = limit
