@@ -689,22 +689,40 @@ def plot__throughput_latency_with_consistency_window(gather_paths):
 def plot__storage_overhead(gather_paths):
   # in DSB storages are fixed so we init them here
   data = {
-    'mongo': { 'storage': 'mongo', 'baseline': [], 'antipode': [] },
-    'rabbitmq': { 'storage': 'rabbitmq', 'baseline': [], 'antipode': [] },
+    'mongo': {
+      'storage': 'mongo',
+      'baseline_total': [],
+      'antipode_total': [],
+      'baseline_avg': [],
+      'antipode_avg': [],
+    },
+    'rabbitmq': {
+      'storage': 'rabbitmq',
+      'baseline_total': [],
+      'antipode_total': [],
+      'baseline_avg': [],
+      'antipode_avg': [],
+    },
   }
   # go over gathers to extract info
   for d in gather_paths:
     info = _load_yaml(d / 'info.yml')
-    data['mongo'][info['type']].append(info['total_post_storage_size_bytes'])
-    data['rabbitmq'][info['type']].append(info['total_notification_size_bytes'])
+    data['mongo'][f"{info['type']}_total"].append(info['total_post_storage_size_bytes'])
+    data['rabbitmq'][f"{info['type']}_total"].append(info['total_notification_size_bytes'])
+    data['mongo'][f"{info['type']}_avg"].append(info['avg_post_storage_size_bytes'])
+    data['rabbitmq'][f"{info['type']}_avg"].append(info['avg_notification_storage_size_bytes'])
 
   # pick median from all storage overheads and do the overhead percentage
   for _,e in data.items():
-    e['antipode'] = round(np.percentile(e['antipode'], 50))
-    e['baseline'] = round(np.percentile(e['baseline'], 50))
+    e['baseline_total'] = round(np.percentile(e['baseline_total'], 50))
+    e['antipode_total'] = round(np.percentile(e['antipode_total'], 50))
+    e['overhead_total'] = e['antipode_total'] - e['baseline_total']
+    e['por_overhead_total'] = (e['overhead_total'] / e['baseline_total'])*100
     #
-    e['overhead'] = e['antipode'] - e['baseline']
-    e['por_overhead'] = (e['overhead'] / e['baseline'])*100
+    e['baseline_avg'] = round(np.percentile(e['baseline_avg'], 50))
+    e['antipode_avg'] = round(np.percentile(e['antipode_avg'], 50))
+    e['overhead_avg'] = e['antipode_avg'] - e['baseline_avg']
+    e['por_overhead_avg'] = (e['overhead_avg'] / e['baseline_avg'])*100
 
   df = pd.DataFrame.from_records(list(data.values())).set_index('storage')
   pp(df)
