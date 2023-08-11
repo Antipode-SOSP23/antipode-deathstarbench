@@ -1398,9 +1398,10 @@ def wkld__local__run(args):
   # Capture multiple stats at the end of the wkld
   stats = {}
   with local.cwd(args['deploy_dir']):
+    container_id = docker_compose['ps', '-q', 'post-storage-mongodb-eu']().strip()
     # Get the total post-storage size
-    r = docker_compose['exec',
-        'post-storage-mongodb-eu',
+    r = docker['exec', 
+        container_id,
         'mongo', 'post', '--quiet', '--eval', 'db.post.totalSize()'
         # db.post.storageSize()
         # db.post.count()
@@ -1408,11 +1409,11 @@ def wkld__local__run(args):
       ]().strip()
     stats['total_post_storage_size_bytes'] = int(r)
     # Get the average post-storage size
-    r = docker_compose['exec',
-        'post-storage-mongodb-eu',
+    r = docker['exec',
+        container_id,
         'mongo', 'post', '--quiet', '--eval', 'db.stats().avgObjSize'
       ]().strip()
-    stats['avg_post_storage_size_bytes'] = int(r)
+    stats['avg_post_storage_size_bytes'] = int(float(r))
 
   # save file
   _dump_yaml(args['local_gather_path'] / 'info.yml', stats)
