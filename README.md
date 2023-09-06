@@ -12,6 +12,7 @@ You need to install the following dependencies before runnning:
 
 Prerequesites for **Local** deployment:
 - Docker Compose
+    - Make sure the exec `docker-compose` (with hyphen) is available. If you only have the `docker compose` (no hyphen) version, you can create a symlink like this: `sudo ln -s /usr/libexec/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose`
 
 Prerequesites for **GCP** deployment:
 - Google Cloud Platform account
