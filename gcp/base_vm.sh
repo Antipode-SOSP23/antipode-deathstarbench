@@ -48,6 +48,7 @@ sudo docker pull ${NAMESPACE}/yg397/social-network-microservices:antipode
 sudo docker pull ${NAMESPACE}/redis-im:antipode
 sudo docker pull ${NAMESPACE}/wrk2:antipode
 sudo docker pull ${NAMESPACE}/python-wkld:antipode
+sudo docker pull ${NAMESPACE}/rendezvous:latest
 
 # install some extras
 sudo apt-get install -y --no-install-recommends \

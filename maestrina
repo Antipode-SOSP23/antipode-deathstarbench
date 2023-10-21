@@ -19,27 +19,50 @@ APP = 'socialNetwork'
 GATHER_PATH = ROOT_PATH / 'gather' / 'gcp' / APP / 'compose-post'
 CONFIGS = [
   'configs/gcp/socialNetwork/us-eu.yml', # for US->EU
-  'configs/gcp/socialNetwork/us-sg.yml', # for US->SG
+  #'configs/gcp/socialNetwork/us-sg.yml', # for US->SG
 ]
 DURATION = 300
-NUM_ROUNDS = 2
+MAX_ROUNDS = 2
 maestro = local["./maestro"]
 #--------------
-COMBINATIONS = [
-  # antipode, cli , con, threads, rate
+COMBINATIONS_ANTIPODE = [
+  # app_type, consistency_checks, cli , con, threads, rate
   # ------------------------
   # baseline
-  ( False ,  1  ,  4 ,    2   , 50 ),
-  ( False ,  1  ,  4 ,    2   , 100 ),
-  ( False ,  1  ,  4 ,    2   , 125 ),
-  ( False ,  1  ,  4 ,    2   , 150 ),
-  ( False ,  1  ,  4 ,    2   , 160 ),
-  # with antipode
-  ( True  ,  1  ,  4 ,    2   , 50 ),
-  ( True  ,  1  ,  4 ,    2   , 100 ),
-  ( True  ,  1  ,  4 ,    2   , 125 ),
-  ( True  ,  1  ,  4 ,    2   , 150 ),
-  ( True  ,  1  ,  4 ,    2   , 160 ),
+  ( 'baseline' ,  None ,  1  ,  4 ,    2   , 50 ),
+  ( 'baseline' ,  None ,  1  ,  4 ,    2   , 100 ),
+  ( 'baseline' ,  None ,  1  ,  4 ,    2   , 125 ),
+  ( 'baseline' ,  None ,  1  ,  4 ,    2   , 150 ),
+  ( 'baseline' ,  None ,  1  ,  4 ,    2   , 160 ),
+  # antipode
+  ( 'antipode' ,  None ,  1  ,  4 ,    2   , 50 ),
+  ( 'antipode' ,  None ,  1  ,  4 ,    2   , 100 ),
+  ( 'antipode' ,  None ,  1  ,  4 ,    2   , 125 ),
+  ( 'antipode' ,  None ,  1  ,  4 ,    2   , 150 ),
+  ( 'antipode' ,  None ,  1  ,  4 ,    2   , 160 ),
+]
+
+COMBINATIONS_RENDEZVOUS = [
+  # app_type, consistency_checks, cli , con, threads, rate
+  # ----------------------
+  ( 'rendezvous',   True,   1  ,  4 ,    2   , 150 ),
+  ( 'rendezvous',   True,   1  ,  4 ,    2   , 125 ),
+  ( 'rendezvous',   True,   1  ,  4 ,    2   , 100 ),
+  ( 'rendezvous',   True,   1  ,  4 ,    2   , 50 ),
+
+  ( 'rendezvous',   False,  1  ,  4 ,    2   , 150 ),
+  ( 'rendezvous',   False,  1  ,  4 ,    2   , 125 ),
+  ( 'rendezvous',   False,  1  ,  4 ,    2   , 100 ),
+  ( 'rendezvous',   False,  1  ,  4 ,    2   , 50 ),
+
+  ( 'baseline',     None,   1  ,  4 ,    2   , 150 ),
+  ( 'baseline',     None,   1  ,  4 ,    2   , 125 ),
+  ( 'baseline',     None,   1  ,  4 ,    2   , 100 ),
+  ( 'baseline',     None,   1  ,  4 ,    2   , 50 ),
+
+
+
+
 ]
 
 
@@ -48,7 +71,7 @@ COMBINATIONS = [
 #--------------
 gathered_dirs = []
 for config in CONFIGS:
-  # strong clean at the beginning
+  # strong clean at the begining
   maestro['--gcp', APP, 'clean', '-strong'] & FG
 
   # build the deployment
@@ -57,15 +80,19 @@ for config in CONFIGS:
   # deploy configuration
   maestro['--gcp', APP, 'deploy', '-config', config, '-clients', 1] & FG
 
-  for antipode, clients, connections, threads, rate in COMBINATIONS:
-    for nround in range(NUM_ROUNDS):
+  for app_type, consistency_checks, clients, connections, threads, rate in COMBINATIONS_RENDEZVOUS:
+    for nround in range(MAX_ROUNDS):
       print('[INFO] New deployment starting:')
-      print(f"\t [ROUND #{nround}] antipode: {antipode} // clients: {clients} // connections: {connections} // threads: {threads} // rate: {rate}\n")
+      print(f"\t [ROUND #{nround}] type: {app_type} // clients: {clients} // connections: {connections} // threads: {threads} // rate: {rate}\n")
 
       # run configuration with the proper arguments
       run_args = ['--gcp', APP, 'run']
-      if antipode:
+      if 'antipode' in app_type:
         run_args.append('-antipode')
+      elif 'rendezvous' in app_type:
+        run_args.append('-rendezvous')
+        if consistency_checks == False:
+          run_args.append('-no-consistency-checks')
       maestro[run_args] & FG
 
       # run the workload
@@ -83,6 +110,11 @@ for config in CONFIGS:
       gather_path = GATHER_PATH / Path(config).stem / gather_path.parent.stem / gather_path
       gathered_dirs.append(gather_path)
 
+      if os.path.exists(gather_path / 'traces.csv'):
+        # avoid running more rounds if successful, otherwise retry in case of some network error
+        maestro['--gcp', APP, 'clean', '-restart'] & FG
+        break
+
       # Look at info
       # maestro['--gcp', 'info', '-links'] & FG
       # input("[WAIT] Observe output ....")
@@ -91,7 +123,7 @@ for config in CONFIGS:
       maestro['--gcp', APP, 'clean', '-restart'] & FG
 
   # strong clean at the end
-  maestro['--gcp', APP, 'clean', '-strong'] & FG
+  #maestro['--gcp', APP, 'clean', '-strong'] & FG
 
 print("[INFO] Gathered results:")
 print('\n'.join([str(p).split(str(ROOT_PATH) + '/')[1] for p in gathered_dirs]))

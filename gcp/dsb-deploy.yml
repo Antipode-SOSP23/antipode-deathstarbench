@@ -61,3 +61,4 @@
         - yg397/openresty-thrift:latest
         - yg397/social-network-microservices:antipode
         - redis-im:antipode
+        - rendezvous:latest

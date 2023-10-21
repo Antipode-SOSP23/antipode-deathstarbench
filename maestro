@@ -311,8 +311,16 @@ def _wait_url_up(url):
 def _build_gather_tag():
   config_name = Path(_get_last(args['deploy_type'], 'config')).stem
   rate = _get_last(args['deploy_type'], 'wkld_rate')
-  antipode = '-antipode' if _get_last(args['deploy_type'], 'antipode') else ''
-  return f"{config_name}-{rate}{antipode}"
+  if _get_last(args['deploy_type'], 'antipode'):
+    app_type = 'antipode'
+  elif _get_last(args['deploy_type'], 'rendezvous'):
+    if _get_last(args['deploy_type'], 'no_consistency_checks'):
+      app_type = '-rendezvous_no-consistency-checks'
+    else:
+      app_type = '-rendezvous'
+  else:
+    app_type = ''
+  return f"{config_name}-{rate}{app_type}"
 
 def _docker_image_tag_to_tar(image_name):
   return image_name.replace(':','_').replace('/','_').replace('-','_')
@@ -450,7 +458,7 @@ def build__socialNetwork__gcp(args):
 
   # tag images built localy with GCP tag
   if not args['skip_images']:
-    for image in SERVICES_CONTAINERS_BUILT + CLIENTS_CONTAINERS_BUILT:
+    for image in SERVICES_CONTAINERS_BUILT + CLIENTS_CONTAINERS_BUILT + RENDEZVOUS_CONTAINERS_BUILT:
       # These images are tag with gcp namespace but then are retagged when deploying
       gcp_image_name = f"{GCP_DOCKER_IMAGE_NAMESPACE}/{image}"
       docker['tag', image, gcp_image_name] & FG
@@ -997,6 +1005,8 @@ def run(args):
   args['tag'] = _get_last(args['deploy_type'], 'tag')
   args['deploy_dir'] = _deploy_dir(args)
   _put_last(args['deploy_type'], 'antipode', args['antipode'])
+  _put_last(args['deploy_type'], 'rendezvous', args['rendezvous'])
+  _put_last(args['deploy_type'], 'no_consistency_checks', args['no_consistency_checks'])
   _put_last(args['deploy_type'], 'portainer', args['portainer'])
   _put_last(args['deploy_type'], 'prometheus', args['prometheus'])
 
@@ -1014,6 +1024,14 @@ def run__socialNetwork__local(args):
     for s in ANTIPODE_TARGET_SERVICES:
       # Changing the docker-compose file to set ANTIPODE env var
       app_compose['services'][s]['environment']['ANTIPODE'] = int(args['antipode'])
+    for s in RENDEZVOUS_TARGET_SERVICES:
+      # Changing the docker-compose file to set RENDEZVOUS env var
+      app_compose['services'][s]['environment']['RENDEZVOUS'] = int(args['rendezvous'])
+      app_compose['services'][s]['environment']['CONSISTENCY_CHECKS'] = int(args['no_consistency_checks'] == False)
+    # Disable rendezvous consistency checks
+    if args['rendezvous']:
+      for s in RENDEZVOUS_SERVICES:
+        app_compose['services'][s]['environment']['CONSISTENCY_CHECKS'] = int(args['no_consistency_checks'] == False)
 
     # now write the new compose into a new file
     _dump_yaml(local.cwd / 'docker-compose.yml', app_compose)
@@ -1041,7 +1059,7 @@ def run__socialNetwork__local(args):
         'dockerize',
         '-wait', 'file:///tmp/dockerize.sync',
         '-wait-retry-interval', '10s',
-        '-timeout', '60s'
+        '-timeout', '300s'
       ] & FG
       # remove file after the check completes
       rm['-rf', '/tmp/dockerize.sync'] & FG
@@ -1086,6 +1104,14 @@ def run__socialNetwork__gsd(args):
     for s in ANTIPODE_TARGET_SERVICES:
       # Changing the docker-compose file to set ANTIPODE env var
       app_compose['services'][s]['environment']['ANTIPODE'] = int(args['antipode'])
+    for s in RENDEZVOUS_TARGET_SERVICES:
+      # Changing the docker-compose file to set RENDEZVOUS env var
+      app_compose['services'][s]['environment']['RENDEZVOUS'] = int(args['rendezvous'])
+      app_compose['services'][s]['environment']['CONSISTENCY_CHECKS'] = int(args['no_consistency_checks'] == False)
+    # Disable rendezvous consistency checks
+    if args['rendezvous']:
+      for s in RENDEZVOUS_SERVICES:
+        app_compose['services'][s]['environment']['CONSISTENCY_CHECKS'] = int(args['no_consistency_checks'] == False)
 
     # now write the new compose into a new file
     _dump_yaml(local.cwd / 'docker-compose-swarm.yml', app_compose)
@@ -1139,6 +1165,14 @@ def run__socialNetwork__gcp(args):
     for s in ANTIPODE_TARGET_SERVICES:
       # Changing the docker-compose file to set ANTIPODE env var
       app_compose['services'][s]['environment']['ANTIPODE'] = int(args['antipode'])
+    for s in RENDEZVOUS_TARGET_SERVICES:
+      # Changing the docker-compose file to set RENDEZVOUS env var
+      app_compose['services'][s]['environment']['RENDEZVOUS'] = int(args['rendezvous'])
+      app_compose['services'][s]['environment']['CONSISTENCY_CHECKS'] = int(args['no_consistency_checks'] == False)
+    # Disable rendezvous consistency checks
+    if args['rendezvous']:
+      for s in RENDEZVOUS_SERVICES:
+        app_compose['services'][s]['environment']['CONSISTENCY_CHECKS'] = int(args['no_consistency_checks'] == False)
 
     # now write the new compose into a new file
     _dump_yaml(local.cwd / 'docker-compose-swarm.yml', app_compose)
@@ -1745,6 +1779,7 @@ def _fetch_compose_post_service_traces(jaeger_host, limit):
       #
       'poststorage_post_written_ts': None,
       'poststorage_read_notification_ts': None,
+      'poststorage_write_duration': None,
       'consistency_bool': None,
       'consistency_mongoread_duration': None,
       'notification_size_bytes': None,
@@ -1753,14 +1788,47 @@ def _fetch_compose_post_service_traces(jaeger_host, limit):
       'wht_start_worker_ts': None,
       'wht_antipode_duration': None,
     }
+
+    # RENDEZVOUS
+    rendezvous_timeouts = 0
+    if _get_last(args['deploy_type'], 'rendezvous'):
+      # compose post
+      trace_info['composepost_rendezvous_rb_async_duration'] = None
+      trace_info['composepost_rendezvous_rb_async_complete_duration'] = None
+      #trace_info['composepost_rendezvous_rb_composepost_duration'] = None
+      #trace_info['composepost_rendezvous_rb_poststorage_duration'] = None
+      #trace_info['composepost_rendezvous_rb_wht_duration'] = None
+      trace_info['composepost_rendezvous_cb_composepost_duration'] = None
+      # post storage
+      trace_info['poststorage_rendezvous_rb_poststorage_writepost_duration'] = None
+      trace_info['poststorage_rendezvous_cb_poststorage_duration'] = None
+      # write home timeline
+      trace_info['wht_rendezvous_wait_duration'] = None
+      trace_info['wht_rendezvous_prevented_inconsistency'] = None
+      trace_info['wht_rendezvous_timed_out'] = None
+      trace_info['wht_rendezvous_cb_wht_duration'] = None
+
     # search trace info in different spans
     for s in trace['spans']:
       if s['operationName'] == '/wrk2-api/post/compose':
         trace_info['ts'] = datetime.fromtimestamp(s['startTime']/1000000.0)
       elif s['operationName'] == '_ComposeAndUpload':
         trace_info['post_id'] = int(_fetch_span_tag(s['tags'], 'composepost_id'))
+        # RENDEZVOUS
+        if _get_last(args['deploy_type'], 'rendezvous'):
+          trace_info['composepost_rendezvous_rb_async_duration'] = float(_fetch_span_tag(s['tags'], 'composepost_rendezvous_rb_async_duration'))
+          trace_info['composepost_rendezvous_rb_async_complete_duration'] = float(_fetch_span_tag(s['tags'], 'composepost_rendezvous_rb_async_complete_duration'))
+          #trace_info['composepost_rendezvous_rb_composepost_duration'] = float(_fetch_span_tag(s['tags'], 'composepost_rendezvous_rb_composepost_duration'))
+          #trace_info['composepost_rendezvous_rb_poststorage_duration'] = float(_fetch_span_tag(s['tags'], 'composepost_rendezvous_rb_poststorage_duration'))
+          #trace_info['composepost_rendezvous_rb_wht_duration'] = float(_fetch_span_tag(s['tags'], 'composepost_rendezvous_rb_wht_duration'))
+          trace_info['composepost_rendezvous_cb_composepost_duration'] = float(_fetch_span_tag(s['tags'], 'composepost_rendezvous_cb_composepost_duration'))
       elif s['operationName'] == 'StorePost':
         trace_info['poststorage_post_written_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_post_written_ts'))
+        trace_info['poststorage_write_duration'] = float(_fetch_span_tag(s['tags'], 'poststorage_write_duration'))
+        # RENDEZVOUS
+        if _get_last(args['deploy_type'], 'rendezvous'):
+          trace_info['poststorage_rendezvous_rb_poststorage_writepost_duration'] = float(_fetch_span_tag(s['tags'], 'poststorage_rendezvous_rb_poststorage_writepost_duration'))
+          trace_info['poststorage_rendezvous_cb_poststorage_duration'] = float(_fetch_span_tag(s['tags'], 'poststorage_rendezvous_cb_poststorage_duration'))
       elif s['operationName'] == 'FanoutHomeTimelines':
         trace_info['poststorage_read_notification_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_read_notification_ts'))
         trace_info['consistency_bool'] = _fetch_span_tag(s['tags'], 'consistency_bool')
@@ -1770,6 +1838,15 @@ def _fetch_compose_post_service_traces(jaeger_host, limit):
         trace_info['wht_start_worker_ts'] = float(_fetch_span_tag(s['tags'], 'wht_start_worker_ts'))
         # duration spent in antipode
         trace_info['wht_antipode_duration'] = float(_fetch_span_tag(s['tags'], 'wht_antipode_duration'))
+        # RENDEZVOUS
+        if _get_last(args['deploy_type'], 'rendezvous'):
+          trace_info['wht_rendezvous_wait_duration'] = float(_fetch_span_tag(s['tags'], 'wht_rendezvous_wait_duration'))
+          trace_info['wht_rendezvous_prevented_inconsistency'] = bool(_fetch_span_tag(s['tags'], 'wht_rendezvous_prevented_inconsistency'))
+          trace_info['wht_rendezvous_timed_out'] = bool(_fetch_span_tag(s['tags'], 'wht_rendezvous_timed_out'))
+          if trace_info['wht_rendezvous_timed_out']:
+            rendezvous_timeouts += 1
+          trace_info['wht_rendezvous_cb_wht_duration'] = float(_fetch_span_tag(s['tags'], 'wht_rendezvous_cb_wht_duration'))
+
       elif s['operationName'] == '_UploadHomeTimelineHelper':
         # compute the time spent in the queue
         trace_info['wht_start_queue_ts'] = float(_fetch_span_tag(s['tags'], 'wht_start_queue_ts'))
@@ -1798,7 +1875,7 @@ def _fetch_compose_post_service_traces(jaeger_host, limit):
   df = pd.DataFrame(traces)
   df = df.set_index('ts')
 
-  return df, missing_info
+  return df, missing_info, rendezvous_timeouts
 
 def _fetch_mongo_change_stream_traces(jaeger_host, limit):
   import requests
@@ -1876,7 +1953,7 @@ def gather(args):
 
   # read traces from jaeger
   limit = _fetch_call_count(jaeger_host)
-  df, missing_info = _fetch_compose_post_service_traces(jaeger_host, limit)
+  df, missing_info, rendezvous_timeouts = _fetch_compose_post_service_traces(jaeger_host, limit)
 
   # merge result with mongodb change stream consistency diff information
   # consistency_df,_ = _fetch_mongo_change_stream_traces(jaeger_host, limit)
@@ -1899,6 +1976,10 @@ def gather(args):
   inconsistent_df = df[df['consistency_bool'] == False]
   inconsistent_count = len(inconsistent_df)
   consistent_count = len(consistent_df)
+
+  if _get_last(args['deploy_type'], 'rendezvous'):
+    prevented_inconsistencies_df = df[df['wht_rendezvous_prevented_inconsistency'] == True]
+    prevented_inconsistencies_count = len(prevented_inconsistencies_df)
 
   with local.cwd(args['local_gather_path']):
     # save datatraces to info
@@ -1924,7 +2005,15 @@ def gather(args):
     info['duration'] = _get_last(args['deploy_type'], 'wkld_duration')
     info['por_inconsistencies'] = inconsistent_count / float(len(df))
     info['requests'] = limit
-    info['type'] = 'antipode' if _get_last(args['deploy_type'], 'antipode') else 'baseline'
+    info['type'] = 'baseline' 
+    if _get_last(args['deploy_type'], 'antipode'): 
+      info['type'] = 'antipode' 
+    elif _get_last(args['deploy_type'], 'rendezvous'):
+      if _get_last(args['deploy_type'], 'no_consistency_checks'):
+        info['type'] = 'rendezvous_no-consistency-checks'
+      else:
+        info['type'] = 'rendezvous'
+      info['prevented_inconsistencies'] = prevented_inconsistencies_count / float(len(df))
     info['rps'] = rqs
     info['connections'] = _get_last(args['deploy_type'], 'wkld_connections')
     info['threads'] = _get_last(args['deploy_type'], 'wkld_threads')
@@ -1938,7 +2027,10 @@ def gather(args):
     # print file to stdout at the end of gather
     with open('traces.info', 'r') as f:
         print(f.read())
-  #
+  
+  if rendezvous_timeouts > 0:
+    print(f"[WARNING] Rendezvous timed out in {rendezvous_timeouts} wait calls")
+    
   print(f"[INFO][{args['tag']}] {args['app']} @ {args['deploy_type']} gathered successfully!")
 
 def gather__socialNetwork__local__download(args):
@@ -2222,6 +2314,9 @@ SERVICE_PORTS = {
     'frontend-us': 8082,
   }
 }
+RENDEZVOUS_CONTAINERS_BUILT = [
+  'rendezvous:latest'
+]
 SERVICES_CONTAINERS_BUILT = [
   'mongodb-delayed:4.4.6',
   'mongodb-setup:4.4.6',
@@ -2235,13 +2330,24 @@ CLIENTS_CONTAINERS_BUILT = [
   'python-wkld:antipode',
 ]
 NUM_SERVICES = {
-  'socialNetwork': 40,
+  'socialNetwork': 42, # rendezvous accounts for more 2
 }
 ANTIPODE_TARGET_SERVICES = [
   'write-home-timeline-service-eu',
   'write-home-timeline-service-us',
   'post-storage-service-eu',
   'post-storage-service-us',
+]
+RENDEZVOUS_TARGET_SERVICES = [
+  'compose-post-service',
+  'write-home-timeline-service-eu',
+  'write-home-timeline-service-us',
+  'post-storage-service-eu',
+  'post-storage-service-us',
+]
+RENDEZVOUS_SERVICES = [
+  'rendezvous-eu',
+  'rendezvous-us',
 ]
 # docker
 DOCKER_COMPOSE_NETWORK = 'deathstarbench_network'
@@ -2301,6 +2407,8 @@ if __name__ == "__main__":
   run_parser.add_argument('-portainer', action='store_true', help="Run with portainer enabled")
   run_parser.add_argument('-attached', action='store_true', help="attached")
   run_parser.add_argument('-antipode', action='store_true', default=False, help="enable antipode")
+  run_parser.add_argument('-rendezvous', action='store_true', default=False, help="enable rendezvous")
+  run_parser.add_argument('-no-consistency-checks', action='store_true', default=False, help="disable rendezvous consistency checks")
 
   # delay application
   delay_parser = subparsers.add_parser('delay', help='Delay application')

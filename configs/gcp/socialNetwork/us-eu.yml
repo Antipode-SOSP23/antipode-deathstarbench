@@ -89,6 +89,17 @@ services:
   antipode-oracle: antipode-oracle
 
   #----------------------------------------------------------
+  # Rendezvous EU
+  #----------------------------------------------------------
+  # 1 / 2 cores
+  rendezvous-eu: rendezvous-eu
+  #----------------------------------------------------------
+  # Rendezvous US
+  #----------------------------------------------------------
+  # 1 / 2 cores
+  rendezvous-us: rendezvous-us
+  
+  #----------------------------------------------------------
   # Frontend EU
   #----------------------------------------------------------
   # 1 / 2 cores
@@ -165,6 +176,14 @@ nodes:
   antipode-oracle:
     hostname: antipode-oracle.pluribus
     zone: us-central1-a
+    machine_type: e2-standard-4
+  rendezvous-eu:
+    hostname: rendezvous-eu.pluribus
+    zone: us-central1-a
+    machine_type: e2-standard-4
+  rendezvous-us:
+    hostname: rendezvous-us.pluribus
+    zone: europe-west3-a
     machine_type: e2-standard-4
   frontend-eu:
     hostname: frontend-eu.pluribus

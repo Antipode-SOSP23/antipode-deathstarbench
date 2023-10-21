@@ -42,6 +42,7 @@ def _convert_old_info(exp_dir):
   info = {}
   # find out if baseline or antipode
   info['type'] = 'antipode' if 'antipode' in exp_dir.parent.stem else 'baseline'
+  info['type'] = 'rendezvous' if 'rendezvous' in exp_dir.parent.stem else 'baseline'
   # find zone pair and rps from gather tag
   with open(ROOT_PATH / exp_dir / 'traces.info') as f:
     lines = f.readlines()
@@ -214,7 +215,7 @@ def plot__throughput_latency(args):
     df_data.append({
       'rps': t[0],
       'zone_pair': t[1],
-      'type': 'Antipode' if t[2] == 'antipode' else 'Original',
+      'type': 'Antipode' if t[2] == 'rendezvous' else 'Original',
       'latency_90': latency_90,
       'throughput': throughput,
     })
@@ -471,7 +472,7 @@ def plot__visibility_latency_overhead(gather_paths):
     data.append({
       'Regions': zone_pair.replace('->',r'$\rightarrow$'),
       'Original': round(df_zone_pair.loc[df_zone_pair.type=='baseline', 'latency_90'].values[0]),
-      'Antipode': round(df_zone_pair.loc[df_zone_pair.type=='antipode', 'latency_90'].values[0]),
+      'Antipode': round(df_zone_pair.loc[df_zone_pair.type=='rendezvous', 'latency_90'].values[0]),
     })
 
   # for each Baseline / Antipode pair we take the Baseline out of antipode so
@@ -514,7 +515,6 @@ def plot__visibility_latency_overhead(gather_paths):
   plt.savefig(PLOTS_PATH / plot_filename, bbox_inches = 'tight', pad_inches = 0.1)
   print(f"[INFO] Saved plot '{plot_filename}'")
 
-
 def plot__throughput_latency_with_consistency_window(gather_paths):
   parsed_data = []
   for d in gather_paths:
@@ -549,6 +549,7 @@ def plot__throughput_latency_with_consistency_window(gather_paths):
     # get visibility latency from csv
     df = pd.read_csv(ROOT_PATH / d / 'traces.csv', sep=';', index_col='ts')
     consistency_window_90 = np.percentile(df[['post_notification_diff_ms']], 90)
+    queue_duration_90 = np.percentile(df[['wht_queue_duration']], 90)
 
     # insert at the position of the round
     parsed_data.append({
@@ -558,10 +559,22 @@ def plot__throughput_latency_with_consistency_window(gather_paths):
       'latency_90': latency_90,
       'consistency_window_90': consistency_window_90,
       'throughput': throughput,
+      'queue_duration_90': queue_duration_90,
     })
+
+    #if info['type'] == 'rendezvous':
+      #parsed_data[-1]['register_request_ms'] = np.percentile(df[['composepost_rendezvous_rr_duration']], 90)
+      #parsed_data[-1]['register_branch_ms'] = np.percentile(df[['poststorage_rendezvous_rb_duration']], 90)
+      #parsed_data[-1]['wait_request_ms'] = np.percentile(df[['wht_rendezvous_wait_duration']], 90)
 
   # transform dict into dataframe
   df = pd.DataFrame(parsed_data).groupby(['zone_pair','type','rps']).median().reset_index().sort_values(by=['zone_pair','type','rps'])
+
+  # manually replace type
+  df['type'] = df['type'].replace('rendezvous_no-consistency-checks', 'rendezvous ncc')
+  df['type'] = df['type'].replace('rendezvous', 'rendezvous core')
+
+  pp(df)
 
   # split dataframe into multiple based on the amount of unique zone_pairs we have
   peark_rps = df['rps'].max()
@@ -576,11 +589,16 @@ def plot__throughput_latency_with_consistency_window(gather_paths):
     cw_data = {
       'Throughput': fr'$\approx${peark_rps}',
       'Original': round(df_zone_pair[(df_zone_pair['type'] == 'baseline') & (df_zone_pair['rps'] == peark_rps)]['consistency_window_90'].values[0]),
-      'Antipode': round(df_zone_pair[(df_zone_pair['type'] == 'antipode') & (df_zone_pair['rps'] == peark_rps)]['consistency_window_90'].values[0]),
+      'Rendezvous NCC': round(df_zone_pair[(df_zone_pair['type'] == 'rendezvous ncc') & (df_zone_pair['rps'] == peark_rps)]['consistency_window_90'].values[0]),
+      'Rendezvous': round(df_zone_pair[(df_zone_pair['type'] == 'rendezvous core') & (df_zone_pair['rps'] == peark_rps)]['consistency_window_90'].values[0]),
+      #'Rendezvous RR': round(df_zone_pair[(df_zone_pair['type'] == 'rendezvous') & (df_zone_pair['rps'] == peark_rps)]['register_request_ms'].values[0]),
+      #'Rendezvous RB': round(df_zone_pair[(df_zone_pair['type'] == 'rendezvous') & (df_zone_pair['rps'] == peark_rps)]['register_branch_ms'].values[0]),
+      #'Rendezvous WR': round(df_zone_pair[(df_zone_pair['type'] == 'rendezvous') & (df_zone_pair['rps'] == peark_rps)]['wait_request_ms'].values[0]),
     }
     # for each Baseline / Antipode pair we take the Baseline out of antipode so
     # stacked bars are presented correctly
-    cw_data['Antipode'] = max(0, cw_data['Antipode'] - cw_data['Original'])
+    cw_data['Rendezvous NCC'] = max(0, cw_data['Rendezvous NCC'] - cw_data['Original'])
+    cw_data['Rendezvous'] = max(0, cw_data['Rendezvous'] - cw_data['Original'] - cw_data['Rendezvous NCC'])
     cw_df = pd.DataFrame.from_records([cw_data]).set_index('Throughput')
 
     # index -> x -> throughput -> effective throughput
@@ -592,7 +610,9 @@ def plot__throughput_latency_with_consistency_window(gather_paths):
 
   # Apply the default theme
   sns.set_theme(style='ticks')
-  plt.rcParams["figure.figsize"] = [6,4.25]
+  #plt.rcParams["figure.figsize"] = [6,4.25]
+  #RENDEZVOUS:
+  plt.rcParams["figure.figsize"] = [6,6]
   plt.rcParams["figure.dpi"] = 600
   plt.rcParams['axes.labelsize'] = 'small'
 
@@ -604,17 +624,19 @@ def plot__throughput_latency_with_consistency_window(gather_paths):
   tl_xlim_right = df['throughput'].max() * 1.03
   # tl_xlim_left = df['throughput'].min() * 0.8
 
+  single_zone = True if len(df_zone_pairs) == 1 else False
+
   for i, (zone_pair, df_zone_pair, cw_df) in enumerate(df_zone_pairs):
     #---------------
     # Throughput / Latency part
     #---------------
     # select the row of the subplot where to plot
-    tl_ax=axes[i][0]
+    tl_ax=axes[i][0] if not single_zone else axes[0]
 
     tl_ax.set(yscale="symlog")
     tl_ax.yaxis.set_minor_locator(MinorSymLogLocator(1e-1))
 
-    color_palette = sns.color_palette("deep",2)[::-1]
+    color_palette = sns.color_palette("deep",3)
     sns.lineplot(ax=tl_ax, data=df_zone_pair, sort=False, x='throughput', y='latency_90',
       hue='type', style='type', palette=color_palette, markers=True, dashes=False, linewidth = 3)
 
@@ -625,26 +647,31 @@ def plot__throughput_latency_with_consistency_window(gather_paths):
     # common xlim for both plots
     tl_ax.set_xlim(right=tl_xlim_right)
 
-    if i == 0:
+    if i == 0 and not single_zone:
       # only keep labels on bottom plot
       tl_ax.set_xlabel('')
       tl_ax.set_ylabel('')
       tl_ax.set_xticklabels([])
       # remove title from legends
       tl_ax.legend_.set_title(None)
-    elif i == 1:
+    elif i == 1 or single_zone:
       tl_ax.set_xlabel('Throughput (req/s)')
-      tl_ax.set_ylabel('Latency (ms)', y=1.1)
+      tl_ax.set_ylabel('Latency (ms)', y=1.1) if not single_zone else tl_ax.set_ylabel('Latency (ms)')
       # only keep legend on top plot
-      tl_ax.get_legend().remove()
+      if not single_zone:
+        tl_ax.get_legend().remove()
 
     #---------------
     # Consistency window
     #---------------
     # select the row of the subplot where to plot
-    cw_ax=axes[i][1]
+    cw_ax=axes[i][1] if not single_zone else axes[1]
 
-    cw_df.plot(ax=cw_ax, kind='bar', stacked=True, logy=False, width=0.4)
+    # change order of orange/green colors to match the throughput latency plot
+    # 2rd type -> green -> rendezvous api
+    # 3rd type -> orange -> rendezvous
+    color_palette[1], color_palette[2] = color_palette[2], color_palette[1]
+    cw_df.plot(ax=cw_ax, kind='bar', stacked=True, logy=False, width=0.4, color=color_palette)
 
     # set axis labels
     cw_ax.set_ylabel(r'Consistency Window (ms)')
@@ -653,8 +680,13 @@ def plot__throughput_latency_with_consistency_window(gather_paths):
     # plot baseline bar
     cw_ax.bar_label(cw_ax.containers[0], label_type='center', fontsize=8, weight='bold', color='white')
     # plot overhead bar
-    cw_ax.bar_label(cw_ax.containers[1], labels=[ f"+ {round(e)}" for e in cw_ax.containers[1].datavalues ],
-      label_type='edge', padding=-1, fontsize=8, weight='bold', color='black')
+    if cw_ax.containers[1].datavalues > cw_ax.containers[0].datavalues:
+      cw_ax.bar_label(cw_ax.containers[1], labels=[ f"+ {round(e)}" for e in cw_ax.containers[1].datavalues ],
+        label_type='edge', padding=-1, fontsize=8, weight='bold', color='black')
+    # plot api overhead bar
+    if cw_ax.containers[2].datavalues > cw_ax.containers[0].datavalues:
+      cw_ax.bar_label(cw_ax.containers[2], labels=[ f"+ {round(e)}" for e in cw_ax.containers[2].datavalues ],
+        label_type='edge', padding=-1, fontsize=8, weight='bold', color='black')
 
     # remove legend
     cw_ax.get_legend().remove()
@@ -666,14 +698,14 @@ def plot__throughput_latency_with_consistency_window(gather_paths):
     cw_ax.set_ylim(bottom=0, top=cw_ylim)
 
     # only show one yaxis label
-    if i == 0:
+    if i == 0 and not single_zone:
       # mention that consistency window is for runs with 125rps only ??
       cw_ax.set_title(f"peak req/s",loc='right',fontdict={'fontsize': 'xx-small'}, style='italic')
       cw_ax.set_ylabel('')
       cw_ax.set_xticklabels([])
-    elif i == 1:
+    elif i == 1 or single_zone:
       cw_ax.set_title('')
-      cw_ax.set_ylabel('Consistency Window (ms)', y=1.1)
+      cw_ax.set_ylabel('Consistency Window (ms)', y=1.1) if not single_zone else cw_ax.set_ylabel('Consistency Window (ms)')
       cw_ax.yaxis.set_label_position('right')
       cw_ax.tick_params(axis='x', labelrotation=0)
 
@@ -685,6 +717,91 @@ def plot__throughput_latency_with_consistency_window(gather_paths):
   plt.savefig(PLOTS_PATH / plot_filename, bbox_inches = 'tight', pad_inches = 0.1)
   print(f"[INFO] Saved plot '{plot_filename}'")
 
+def plot__rendezvous_info(gather_paths):
+  # -------------------
+  # write post overhead
+  # -------------------
+  dfs = {
+    'baseline': None,
+    'rendezvous': None
+  }
+  for d in gather_paths:
+    df = pd.read_csv(ROOT_PATH / d / 'traces.csv', sep=';', index_col='ts')
+    info = _load_yaml(d / 'info.yml')
+
+    # ignore rendezvous no consistency checks
+    if info['type'] in dfs:
+      if dfs[info['type']] is None:
+        dfs[info['type']] = df[['poststorage_write_duration']]
+      else:
+        pd.concat([dfs[info['type']], df[['poststorage_write_duration']]])
+  
+  data = {app_type: np.average(df) for app_type, df in dfs.items()}
+  df = pd.DataFrame(data.items(), columns=['type', 'write post (ms)'])
+  pp(df)
+  print('---')
+  # -------------------------
+  # prevented inconsistencies
+  # -------------------------
+  data = {
+    'baseline': [],
+    'rendezvous': None,
+  }
+  for d in gather_paths:
+    df = pd.read_csv(ROOT_PATH / d / 'traces.csv', sep=';', index_col='ts')
+    info = _load_yaml(d / 'info.yml')
+
+    if info['type'] == 'rendezvous':
+      v = df[['wht_rendezvous_prevented_inconsistency']]
+      if data['rendezvous'] is None:
+        data['rendezvous'] = v
+      else:
+        pd.concat([data['rendezvous'], v])
+    elif info['type'] == 'baseline':
+      data['baseline'].append(info['por_inconsistencies'])
+  
+  data = {app_type: np.average(df) for app_type, df in data.items()}
+  df = pd.DataFrame(data.items(), columns=['type', '% inconsistencies / prevented inconsistencies'])
+  pp(df)
+  print('---')
+  # ------------------
+  # api calls overhead
+  # ------------------
+  peark_rps = {
+    'rendezvous': 0,
+    'rendezvous_no-consistency-checks': 0
+  }
+  peark_rps_gather_paths = {
+    'rendezvous': None,
+    'rendezvous_no-consistency-checks': None
+  }
+
+  # find maximum rps
+  for d in gather_paths:
+    df = pd.read_csv(ROOT_PATH / d / 'traces.csv', sep=';', index_col='ts')
+    info = _load_yaml(d / 'info.yml')
+    if info['type'] in ['rendezvous', 'rendezvous_no-consistency-checks']:
+      if info['rps'] > peark_rps[info['type']]:
+        peark_rps[info['type']] = info['rps']
+        peark_rps_gather_paths[info['type']] = d
+  
+  # get df for results with peark rps
+  for gather_path in peark_rps_gather_paths.values():
+    df = pd.read_csv(ROOT_PATH / gather_path / 'traces.csv', sep=';', index_col='ts')
+    data = {
+      'composepost: async register branches': df[['composepost_rendezvous_rb_async_duration']],
+      'composepost: complete async register branches': df[['composepost_rendezvous_rb_async_complete_duration']],
+      'composepost: close branch': df[['composepost_rendezvous_cb_composepost_duration']],
+      'poststorage: register write branch': df[['poststorage_rendezvous_rb_poststorage_writepost_duration']],
+      'poststorage: close branch': df[['poststorage_rendezvous_cb_poststorage_duration']],
+      'wht: wait': df[['wht_rendezvous_wait_duration']],
+      'wht: close branch': df[['wht_rendezvous_cb_wht_duration']]
+    }
+
+  data = {app_type: np.percentile(df, 90) for app_type, df in data.items()}
+  df = pd.DataFrame(data.items(), columns=['api call', 'duration (ms)'])
+  pp(df)
+  print('---')
 
 def plot__storage_overhead(gather_paths):
   # in DSB storages are fixed so we init them here
@@ -692,16 +809,16 @@ def plot__storage_overhead(gather_paths):
     'mongo': {
       'storage': 'mongo',
       'baseline_total': [],
-      'antipode_total': [],
+      'rendezvous_total': [],
       'baseline_avg': [],
-      'antipode_avg': [],
+      'rendezvous_avg': [],
     },
     'rabbitmq': {
       'storage': 'rabbitmq',
       'baseline_total': [],
-      'antipode_total': [],
+      'rendezvous_total': [],
       'baseline_avg': [],
-      'antipode_avg': [],
+      'rendezvous_avg': [],
     },
   }
   # go over gathers to extract info
@@ -715,18 +832,17 @@ def plot__storage_overhead(gather_paths):
   # pick median from all storage overheads and do the overhead percentage
   for _,e in data.items():
     e['baseline_total'] = round(np.percentile(e['baseline_total'], 50))
-    e['antipode_total'] = round(np.percentile(e['antipode_total'], 50))
-    e['overhead_total'] = e['antipode_total'] - e['baseline_total']
+    e['rendezvous_total'] = round(np.percentile(e['rendezvous_total'], 50))
+    e['overhead_total'] = e['rendezvous_total'] - e['baseline_total']
     e['por_overhead_total'] = (e['overhead_total'] / e['baseline_total'])*100
     #
     e['baseline_avg'] = round(np.percentile(e['baseline_avg'], 50))
-    e['antipode_avg'] = round(np.percentile(e['antipode_avg'], 50))
-    e['overhead_avg'] = e['antipode_avg'] - e['baseline_avg']
+    e['rendezvous_avg'] = round(np.percentile(e['rendezvous_avg'], 50))
+    e['overhead_avg'] = e['rendezvous_avg'] - e['baseline_avg']
     e['por_overhead_avg'] = (e['overhead_avg'] / e['baseline_avg'])*100
 
   df = pd.DataFrame.from_records(list(data.values())).set_index('storage')
   pp(df)
-
 
 #-----------
 # CONSTANTS
