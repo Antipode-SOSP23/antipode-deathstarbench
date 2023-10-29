@@ -562,17 +562,12 @@ def plot__throughput_latency_with_consistency_window(gather_paths):
       'queue_duration_90': queue_duration_90,
     })
 
-    #if info['type'] == 'rendezvous':
-      #parsed_data[-1]['register_request_ms'] = np.percentile(df[['composepost_rendezvous_rr_duration']], 90)
-      #parsed_data[-1]['register_branch_ms'] = np.percentile(df[['poststorage_rendezvous_rb_duration']], 90)
-      #parsed_data[-1]['wait_request_ms'] = np.percentile(df[['wht_rendezvous_wait_duration']], 90)
-
   # transform dict into dataframe
   df = pd.DataFrame(parsed_data).groupby(['zone_pair','type','rps']).median().reset_index().sort_values(by=['zone_pair','type','rps'])
 
   # manually replace type
   df['type'] = df['type'].replace('rendezvous_no-consistency-checks', 'rendezvous ncc')
-  df['type'] = df['type'].replace('rendezvous', 'rendezvous core')
+  df['type'] = df['type'].replace('rendezvous', 'rendezvous')
 
   pp(df)
 
@@ -590,10 +585,7 @@ def plot__throughput_latency_with_consistency_window(gather_paths):
       'Throughput': fr'$\approx${peark_rps}',
       'Original': round(df_zone_pair[(df_zone_pair['type'] == 'baseline') & (df_zone_pair['rps'] == peark_rps)]['consistency_window_90'].values[0]),
       'Rendezvous NCC': round(df_zone_pair[(df_zone_pair['type'] == 'rendezvous ncc') & (df_zone_pair['rps'] == peark_rps)]['consistency_window_90'].values[0]),
-      'Rendezvous': round(df_zone_pair[(df_zone_pair['type'] == 'rendezvous core') & (df_zone_pair['rps'] == peark_rps)]['consistency_window_90'].values[0]),
-      #'Rendezvous RR': round(df_zone_pair[(df_zone_pair['type'] == 'rendezvous') & (df_zone_pair['rps'] == peark_rps)]['register_request_ms'].values[0]),
-      #'Rendezvous RB': round(df_zone_pair[(df_zone_pair['type'] == 'rendezvous') & (df_zone_pair['rps'] == peark_rps)]['register_branch_ms'].values[0]),
-      #'Rendezvous WR': round(df_zone_pair[(df_zone_pair['type'] == 'rendezvous') & (df_zone_pair['rps'] == peark_rps)]['wait_request_ms'].values[0]),
+      'Rendezvous': round(df_zone_pair[(df_zone_pair['type'] == 'rendezvous') & (df_zone_pair['rps'] == peark_rps)]['consistency_window_90'].values[0]),
     }
     # for each Baseline / Antipode pair we take the Baseline out of antipode so
     # stacked bars are presented correctly
@@ -680,11 +672,11 @@ def plot__throughput_latency_with_consistency_window(gather_paths):
     # plot baseline bar
     cw_ax.bar_label(cw_ax.containers[0], label_type='center', fontsize=8, weight='bold', color='white')
     # plot overhead bar
-    if cw_ax.containers[1].datavalues > cw_ax.containers[0].datavalues:
+    if cw_ax.containers[1].datavalues > 0:
       cw_ax.bar_label(cw_ax.containers[1], labels=[ f"+ {round(e)}" for e in cw_ax.containers[1].datavalues ],
-        label_type='edge', padding=-1, fontsize=8, weight='bold', color='black')
+        label_type='edge', padding=1, fontsize=8, weight='bold', color='white')
     # plot api overhead bar
-    if cw_ax.containers[2].datavalues > cw_ax.containers[0].datavalues:
+    if cw_ax.containers[2].datavalues > 0:
       cw_ax.bar_label(cw_ax.containers[2], labels=[ f"+ {round(e)}" for e in cw_ax.containers[2].datavalues ],
         label_type='edge', padding=-1, fontsize=8, weight='bold', color='black')
 
@@ -736,7 +728,8 @@ def plot__rendezvous_info(gather_paths):
       else:
         pd.concat([dfs[info['type']], df[['poststorage_write_duration']]])
   
-  data = {app_type: np.average(df) for app_type, df in dfs.items()}
+  
+  data = {app_type: round(np.percentile(df, 90), 2) for app_type, df in dfs.items()}
   df = pd.DataFrame(data.items(), columns=['type', 'write post (ms)'])
   pp(df)
   print('---')
@@ -780,15 +773,18 @@ def plot__rendezvous_info(gather_paths):
   for d in gather_paths:
     df = pd.read_csv(ROOT_PATH / d / 'traces.csv', sep=';', index_col='ts')
     info = _load_yaml(d / 'info.yml')
+    # ignore baseline paths
     if info['type'] in ['rendezvous', 'rendezvous_no-consistency-checks']:
       if info['rps'] > peark_rps[info['type']]:
         peark_rps[info['type']] = info['rps']
         peark_rps_gather_paths[info['type']] = d
   
   # get df for results with peark rps
+  data = {}
   for gather_path in peark_rps_gather_paths.values():
     df = pd.read_csv(ROOT_PATH / gather_path / 'traces.csv', sep=';', index_col='ts')
-    data = {
+    info = _load_yaml(gather_path / 'info.yml')
+    data[info['type']] = {
       'composepost: async register branches': df[['composepost_rendezvous_rb_async_duration']],
       'composepost: complete async register branches': df[['composepost_rendezvous_rb_async_complete_duration']],
       'composepost: close branch': df[['composepost_rendezvous_cb_composepost_duration']],
@@ -798,10 +794,12 @@ def plot__rendezvous_info(gather_paths):
       'wht: close branch': df[['wht_rendezvous_cb_wht_duration']]
     }
 
-  data = {app_type: np.percentile(df, 90) for app_type, df in data.items()}
-  df = pd.DataFrame(data.items(), columns=['api call', 'duration (ms)'])
-  pp(df)
-  print('---')
+  for app_type in data.keys():
+    print(app_type, ":")
+    data_df = {app_type: np.percentile(df, 90) for app_type, df in data[app_type].items()}
+    df = pd.DataFrame(data_df.items(), columns=['api call', 'duration (ms)'])
+    pp(df)
+    print('---')
 
 def plot__storage_overhead(gather_paths):
   # in DSB storages are fixed so we init them here
