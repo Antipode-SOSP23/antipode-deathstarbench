@@ -1801,6 +1801,7 @@ def _fetch_compose_post_service_traces(jaeger_host, limit):
       trace_info['composepost_rendezvous_cb_composepost_duration'] = None
       # post storage
       trace_info['poststorage_rendezvous_rb_poststorage_writepost_duration'] = None
+      trace_info['poststorage_rendezvous_rb_async_complete_duration'] = None
       trace_info['poststorage_rendezvous_cb_poststorage_duration'] = None
       # write home timeline
       trace_info['wht_rendezvous_wait_duration'] = None
@@ -1828,6 +1829,7 @@ def _fetch_compose_post_service_traces(jaeger_host, limit):
         # RENDEZVOUS
         if _get_last(args['deploy_type'], 'rendezvous'):
           trace_info['poststorage_rendezvous_rb_poststorage_writepost_duration'] = float(_fetch_span_tag(s['tags'], 'poststorage_rendezvous_rb_poststorage_writepost_duration'))
+          trace_info['poststorage_rendezvous_rb_async_complete_duration'] = float(_fetch_span_tag(s['tags'], 'poststorage_rendezvous_rb_async_complete_duration'))
           trace_info['poststorage_rendezvous_cb_poststorage_duration'] = float(_fetch_span_tag(s['tags'], 'poststorage_rendezvous_cb_poststorage_duration'))
       elif s['operationName'] == 'FanoutHomeTimelines':
         trace_info['poststorage_read_notification_ts'] = int(_fetch_span_tag(s['tags'], 'poststorage_read_notification_ts'))

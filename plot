@@ -788,7 +788,8 @@ def plot__rendezvous_info(gather_paths):
       'composepost: async register branches': df[['composepost_rendezvous_rb_async_duration']],
       'composepost: complete async register branches': df[['composepost_rendezvous_rb_async_complete_duration']],
       'composepost: close branch': df[['composepost_rendezvous_cb_composepost_duration']],
-      'poststorage: register write branch': df[['poststorage_rendezvous_rb_poststorage_writepost_duration']],
+      'poststorage: async register write branch': df[['poststorage_rendezvous_rb_poststorage_writepost_duration']],
+      'poststorage: complete async register write branch': df[['poststorage_rendezvous_rb_async_complete_duration']],
       'poststorage: close branch': df[['poststorage_rendezvous_cb_poststorage_duration']],
       'wht: wait': df[['wht_rendezvous_wait_duration']],
       'wht: close branch': df[['wht_rendezvous_cb_wht_duration']]

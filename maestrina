@@ -22,7 +22,7 @@ CONFIGS = [
   #'configs/gcp/socialNetwork/us-sg.yml', # for US->SG
 ]
 DURATION = 300
-MAX_ROUNDS = 2
+MAX_ROUNDS = 3
 maestro = local["./maestro"]
 #--------------
 COMBINATIONS_ANTIPODE = [
@@ -45,23 +45,20 @@ COMBINATIONS_ANTIPODE = [
 COMBINATIONS_RENDEZVOUS = [
   # app_type, consistency_checks, cli , con, threads, rate
   # ----------------------
-  ( 'rendezvous',   True,   1  ,  4 ,    2   , 150 ),
-  ( 'rendezvous',   True,   1  ,  4 ,    2   , 125 ),
-  ( 'rendezvous',   True,   1  ,  4 ,    2   , 100 ),
   ( 'rendezvous',   True,   1  ,  4 ,    2   , 50 ),
+  ( 'rendezvous',   True,   1  ,  4 ,    2   , 100 ),
+  ( 'rendezvous',   True,   1  ,  4 ,    2   , 125 ),
+  ( 'rendezvous',   True,   1  ,  4 ,    2   , 150 ),
 
-  ( 'rendezvous',   False,  1  ,  4 ,    2   , 150 ),
-  ( 'rendezvous',   False,  1  ,  4 ,    2   , 125 ),
-  ( 'rendezvous',   False,  1  ,  4 ,    2   , 100 ),
   ( 'rendezvous',   False,  1  ,  4 ,    2   , 50 ),
+  ( 'rendezvous',   False,  1  ,  4 ,    2   , 100 ),
+  ( 'rendezvous',   False,  1  ,  4 ,    2   , 125 ),
+  ( 'rendezvous',   False,  1  ,  4 ,    2   , 150 ),
 
-  ( 'baseline',     None,   1  ,  4 ,    2   , 150 ),
-  ( 'baseline',     None,   1  ,  4 ,    2   , 125 ),
-  ( 'baseline',     None,   1  ,  4 ,    2   , 100 ),
   ( 'baseline',     None,   1  ,  4 ,    2   , 50 ),
-
-
-
+  ( 'baseline',     None,   1  ,  4 ,    2   , 100 ),
+  ( 'baseline',     None,   1  ,  4 ,    2   , 125 ),
+  ( 'baseline',     None,   1  ,  4 ,    2   , 150 ),
 
 ]
 
@@ -110,17 +107,18 @@ for config in CONFIGS:
       gather_path = GATHER_PATH / Path(config).stem / gather_path.parent.stem / gather_path
       gathered_dirs.append(gather_path)
 
-      if os.path.exists(gather_path / 'traces.csv'):
-        # avoid running more rounds if successful, otherwise retry in case of some network error
-        maestro['--gcp', APP, 'clean', '-restart'] & FG
-        break
-
       # Look at info
       # maestro['--gcp', 'info', '-links'] & FG
       # input("[WAIT] Observe output ....")
 
       # soft clean
       maestro['--gcp', APP, 'clean', '-restart'] & FG
+
+      # avoid running more rounds if successful, otherwise retry in case of some network error
+      if os.path.exists(gather_path / 'traces.csv'):
+        break
+      else:
+        print("RETRYING...")
 
   # strong clean at the end
   #maestro['--gcp', APP, 'clean', '-strong'] & FG
