@@ -26,6 +26,28 @@ All the deployment is controlled by our `./maestro` script. Type `./maestro -h` 
 
 ### Local Deployment
 
+```zsh
+./maestro --local socialNetwork build
+./maestro --local socialNetwork deploy -config configs/local/socialNetwork/debug.yml -clients 1
+./maestro --local socialNetwork run -rendezvous
+./maestro --local socialNetwork run -rendezvous -no-consistency-checks
+./maestro --local socialNetwork wkld -E compose-post -d 300 -r 150 -c 4 -t 2
+./maestro --local socialNetwork wkld -E compose-post -d 1 -r 1 -c 1 -t 1
+./maestro --local socialNetwork clean
+
+./maestro --gcp socialNetwork build
+./maestro --gcp socialNetwork deploy -config configs/gcp/socialNetwork/us-eu.yml -clients 1
+./maestro --gcp socialNetwork run -rendezvous
+./maestro --gcp socialNetwork wkld -E compose-post -d 30 -r 100 -c 4 -t 2
+./maestro --gcp socialNetwork gather
+./maestro --gcp socialNetwork info
+./maestro --gcp socialNetwork clean
+
+./plot plots/configs/rendezvous.yml --plots throughput_latency_with_consistency_window
+./plot plots/configs/rendezvous.yml --plots storage_overhead
+./plot plots/configs/rendezvous.yml --plots rendezvous_info
+```
+
 ### Cluster Deployment
 For this deployment we are using INESC-ID DPSS cluster, although it should be easy to adapt to other clusters. We are making the following assumptions:
 - `maestro` is ran from a machine within the cluster -- not necessarly one you will be using for your deployment

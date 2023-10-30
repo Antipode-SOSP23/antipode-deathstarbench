@@ -1776,6 +1776,7 @@ def _fetch_compose_post_service_traces(jaeger_host, limit):
       'ts': None,
       'post_id': None,
       # 'trace_id': trace['spans'][0]['traceID'],
+      'composepost_start_ts': None,
       #
       'poststorage_post_written_ts': None,
       'poststorage_read_notification_ts': None,
@@ -1787,6 +1788,8 @@ def _fetch_compose_post_service_traces(jaeger_host, limit):
       'wht_start_queue_ts': None,
       'wht_start_worker_ts': None,
       'wht_antipode_duration': None,
+      #
+      'wht_end_ts': None,
     }
 
     # RENDEZVOUS
@@ -1815,6 +1818,7 @@ def _fetch_compose_post_service_traces(jaeger_host, limit):
         trace_info['ts'] = datetime.fromtimestamp(s['startTime']/1000000.0)
       elif s['operationName'] == '_ComposeAndUpload':
         trace_info['post_id'] = int(_fetch_span_tag(s['tags'], 'composepost_id'))
+        trace_info['composepost_start_ts'] = float(_fetch_span_tag(s['tags'], 'composepost_start_ts'))
         # RENDEZVOUS
         if _get_last(args['deploy_type'], 'rendezvous'):
           trace_info['composepost_rendezvous_rb_async_duration'] = float(_fetch_span_tag(s['tags'], 'composepost_rendezvous_rb_async_duration'))
@@ -1840,6 +1844,7 @@ def _fetch_compose_post_service_traces(jaeger_host, limit):
         trace_info['wht_start_worker_ts'] = float(_fetch_span_tag(s['tags'], 'wht_start_worker_ts'))
         # duration spent in antipode
         trace_info['wht_antipode_duration'] = float(_fetch_span_tag(s['tags'], 'wht_antipode_duration'))
+        trace_info['wht_end_ts'] = int(_fetch_span_tag(s['tags'], 'wht_end_ts'))
         # RENDEZVOUS
         if _get_last(args['deploy_type'], 'rendezvous'):
           trace_info['wht_rendezvous_wait_duration'] = float(_fetch_span_tag(s['tags'], 'wht_rendezvous_wait_duration'))
@@ -1870,6 +1875,12 @@ def _fetch_compose_post_service_traces(jaeger_host, limit):
     # vl from nginx to notification
     diff = datetime.fromtimestamp(trace_info['poststorage_read_notification_ts']/1000.0) - trace_info['ts']
     trace_info['wht_vl_duration'] = float(diff.total_seconds() * 1000)
+
+    diff = datetime.fromtimestamp(trace_info['wht_end_ts']/1000.0) - datetime.fromtimestamp(trace_info['composepost_start_ts']/1000.0)
+    trace_info['composepost_wht_duration'] = float(diff.total_seconds() * 1000)
+
+    diff = datetime.fromtimestamp(trace_info['wht_end_ts']/1000.0) - trace_info['ts']
+    trace_info['nginx_wht_duration'] = float(diff.total_seconds() * 1000)
 
     traces.append(trace_info)
 
