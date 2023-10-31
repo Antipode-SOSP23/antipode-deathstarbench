@@ -516,6 +516,7 @@ def plot__visibility_latency_overhead(gather_paths):
   print(f"[INFO] Saved plot '{plot_filename}'")
 
 def plot__throughput_latency_with_consistency_window(gather_paths):
+  app = 'antipode'
   parsed_data = []
   for d in gather_paths:
     info = _load_yaml(d / 'info.yml')
@@ -565,11 +566,14 @@ def plot__throughput_latency_with_consistency_window(gather_paths):
   # transform dict into dataframe
   df = pd.DataFrame(parsed_data).groupby(['zone_pair','type','rps']).median().reset_index().sort_values(by=['zone_pair','type','rps'])
 
+  pp(df)
+
   # manually replace type
   df['type'] = df['type'].replace('rendezvous_no-consistency-checks', 'rendezvous ncc')
   df['type'] = df['type'].replace('rendezvous', 'rendezvous')
 
-  pp(df)
+  if 'rendezvous' in df['type'].values:
+    app = 'rendezvous'
 
   # split dataframe into multiple based on the amount of unique zone_pairs we have
   peark_rps = df['rps'].max()
@@ -584,13 +588,25 @@ def plot__throughput_latency_with_consistency_window(gather_paths):
     cw_data = {
       'Throughput': fr'$\approx${peark_rps}',
       'Original': round(df_zone_pair[(df_zone_pair['type'] == 'baseline') & (df_zone_pair['rps'] == peark_rps)]['consistency_window_90'].values[0]),
+      'Antipode': round(df_zone_pair[(df_zone_pair['type'] == 'antipode') & (df_zone_pair['rps'] == peark_rps)]['consistency_window_90'].values[0]),
+      # maintain this order for rendezvous
       'Rendezvous NCC': round(df_zone_pair[(df_zone_pair['type'] == 'rendezvous ncc') & (df_zone_pair['rps'] == peark_rps)]['consistency_window_90'].values[0]),
       'Rendezvous': round(df_zone_pair[(df_zone_pair['type'] == 'rendezvous') & (df_zone_pair['rps'] == peark_rps)]['consistency_window_90'].values[0]),
     }
+
+    #if app == 'rendezvous':
+    #  # rendezvous ncc must be assigned before to respect colors
+    #  cw_data['Rendezvous NCC'] = round(df_zone_pair[(df_zone_pair['type'] == 'rendezvous ncc') & (df_zone_pair['rps'] == peark_rps)]['consistency_window_90'].values[0])
+    #  cw_data['Rendezvous'] = round(df_zone_pair[(df_zone_pair['type'] == 'rendezvous') & (df_zone_pair['rps'] == peark_rps)]['consistency_window_90'].values[0])
+      
     # for each Baseline / Antipode pair we take the Baseline out of antipode so
     # stacked bars are presented correctly
-    cw_data['Rendezvous NCC'] = max(0, cw_data['Rendezvous NCC'] - cw_data['Original'])
-    cw_data['Rendezvous'] = max(0, cw_data['Rendezvous'] - cw_data['Original'] - cw_data['Rendezvous NCC'])
+    cw_data['Antipode'] = max(0, cw_data['Antipode'] - cw_data['Original'])
+    if app == 'rendezvous':
+      # maintain this order for rendezvous
+      cw_data['Rendezvous NCC'] = max(0, cw_data['Rendezvous NCC'] - cw_data['Original'])
+      cw_data['Rendezvous'] = max(0, cw_data['Rendezvous'] - cw_data['Original'] - cw_data['Rendezvous NCC'])
+
     cw_df = pd.DataFrame.from_records([cw_data]).set_index('Throughput')
 
     # index -> x -> throughput -> effective throughput
@@ -599,6 +615,7 @@ def plot__throughput_latency_with_consistency_window(gather_paths):
     #           y -> consistency_window_90
     # columns -> line
     df_zone_pairs.append((zone_pair, df_zone_pair, cw_df))
+
 
   # Apply the default theme
   sns.set_theme(style='ticks')
@@ -612,8 +629,15 @@ def plot__throughput_latency_with_consistency_window(gather_paths):
   fig, axes = plt.subplots(len(df_zone_pairs), 2, gridspec_kw={'wspace':0.05, 'hspace':0.23, 'width_ratios': [4, 1]})
 
   # values to apply to all plots
+  # rendezvous eval removes antipode from cw plot
+  if app == 'rendezvous':
+    for _, (_, _, cw_df) in enumerate(df_zone_pairs):
+      cw_df.pop('Antipode')
+
   cw_ylim = max([ cw_df.sum(axis=1).tolist()[0] for (_,_,cw_df) in df_zone_pairs ]) * 1.075
+
   tl_xlim_right = df['throughput'].max() * 1.03
+  tl_ylim_top = df['latency_90'].max() * 5
   # tl_xlim_left = df['throughput'].min() * 0.8
 
   single_zone = True if len(df_zone_pairs) == 1 else False
@@ -628,9 +652,19 @@ def plot__throughput_latency_with_consistency_window(gather_paths):
     tl_ax.set(yscale="symlog")
     tl_ax.yaxis.set_minor_locator(MinorSymLogLocator(1e-1))
 
-    color_palette = sns.color_palette("deep",3)
+    color_palette_tl = sns.color_palette("deep",4)
+    if app == 'rendezvous':
+      # hard coded for now
+      # baseline        -> blue
+      # antipode        -> orange
+      # rendezvous      -> red
+      # rendezvous ncc  -> green
+      color_palette_tl[0], color_palette_tl[1] = color_palette_tl[1], color_palette_tl[0]
+      color_palette_tl[2], color_palette_tl[3] = color_palette_tl[3], color_palette_tl[2]
+      color_palette_tl[0], color_palette_tl[2] = color_palette_tl[2], color_palette_tl[0]
+    
     sns.lineplot(ax=tl_ax, data=df_zone_pair, sort=False, x='throughput', y='latency_90',
-      hue='type', style='type', palette=color_palette, markers=True, dashes=False, linewidth = 3)
+      hue='type', style='type', palette=color_palette_tl, markers=True, dashes=False, linewidth = 3)
 
     # set title for the zone pair
     tl_ax.set_title(zone_pair.replace('->',r'$\rightarrow$'),
@@ -638,6 +672,7 @@ def plot__throughput_latency_with_consistency_window(gather_paths):
 
     # common xlim for both plots
     tl_ax.set_xlim(right=tl_xlim_right)
+    tl_ax.set_ylim(top=tl_ylim_top)
 
     if i == 0 and not single_zone:
       # only keep labels on bottom plot
@@ -647,11 +682,19 @@ def plot__throughput_latency_with_consistency_window(gather_paths):
       # remove title from legends
       tl_ax.legend_.set_title(None)
     elif i == 1 or single_zone:
+      # only keep legend on top plot
       tl_ax.set_xlabel('Throughput (req/s)')
       tl_ax.set_ylabel('Latency (ms)', y=1.1) if not single_zone else tl_ax.set_ylabel('Latency (ms)')
-      # only keep legend on top plot
       if not single_zone:
         tl_ax.get_legend().remove()
+
+    # reverse order of legend
+    handles, labels = tl_ax.get_legend_handles_labels()
+    handles = handles[::-1]
+    handles[0], handles[1], handles[2], handles[3] = handles[1], handles[0], handles[3], handles[2]
+    labels[0], labels[1], labels[2], labels[3] = labels[1], labels[0], labels[3], labels[2]
+    labels = labels[::-1]
+    tl_ax.legend(handles, labels)
 
     #---------------
     # Consistency window
@@ -659,11 +702,16 @@ def plot__throughput_latency_with_consistency_window(gather_paths):
     # select the row of the subplot where to plot
     cw_ax=axes[i][1] if not single_zone else axes[1]
 
-    # change order of orange/green colors to match the throughput latency plot
-    # 2rd type -> green -> rendezvous api
-    # 3rd type -> orange -> rendezvous
-    color_palette[1], color_palette[2] = color_palette[2], color_palette[1]
-    cw_df.plot(ax=cw_ax, kind='bar', stacked=True, logy=False, width=0.4, color=color_palette)
+    color_palette_cw = color_palette_tl
+    if app == 'rendezvous':
+      # hard coded for now
+      # skip antipode
+      color_palette_cw.pop(0)
+      # fix color order for rendezvous and rendezvous ncc
+      #color_palette_cw[0], color_palette_cw[2] = color_palette_cw[2], color_palette_cw[0]
+      color_palette_cw[1], color_palette_cw[2] = color_palette_cw[2], color_palette_cw[1]
+
+    cw_df.plot(ax=cw_ax, kind='bar', stacked=True, logy=False, width=0.4, color=color_palette_cw)
 
     # set axis labels
     cw_ax.set_ylabel(r'Consistency Window (ms)')
@@ -710,29 +758,41 @@ def plot__throughput_latency_with_consistency_window(gather_paths):
   print(f"[INFO] Saved plot '{plot_filename}'")
 
 def plot__rendezvous_info(gather_paths):
-  # -------------------
-  # write post overhead
-  # -------------------
-  dfs = {
-    'baseline': None,
-    'rendezvous': None
-  }
+  peark_rps = {}
+  peark_rps_gather_paths = {}
+
+  # find maximum rps
   for d in gather_paths:
     df = pd.read_csv(ROOT_PATH / d / 'traces.csv', sep=';', index_col='ts')
     info = _load_yaml(d / 'info.yml')
+    # ignore baseline paths
+    if info['type'] in ['rendezvous', 'rendezvous_no-consistency-checks', 'baseline']:
+      if info['type'] not in peark_rps or info['rps'] > peark_rps[info['type']]:
+        peark_rps[info['type'] + '@' + info['zone_pair']] = info['rps']
+        peark_rps_gather_paths[info['type'] + '@' + info['zone_pair']] = d
+
+
+  # -------------------
+  # write post overhead
+  # -------------------
+  data = {}
+  for d in peark_rps_gather_paths.values():
+    df = pd.read_csv(ROOT_PATH / d / 'traces.csv', sep=';', index_col='ts')
+    info = _load_yaml(d / 'info.yml')
+
+    if info['zone_pair'] not in data:
+      data[info['zone_pair']] = {}
 
     # ignore rendezvous no consistency checks
-    if info['type'] in dfs:
-      if dfs[info['type']] is None:
-        dfs[info['type']] = df[['poststorage_write_duration']]
-      else:
-        pd.concat([dfs[info['type']], df[['poststorage_write_duration']]])
-  
-  
-  data = {app_type: round(np.percentile(df, 90), 2) for app_type, df in dfs.items()}
-  df = pd.DataFrame(data.items(), columns=['type', 'write post (ms)'])
-  pp(df)
-  print('---')
+    if info['type'] in ['baseline', 'rendezvous']:
+      data[info['zone_pair']][info['type']] = df[['poststorage_write_duration']]
+
+  for zone_pair in data.keys():
+    print(f'rendezvous vs baseline @ {zone_pair}')
+    d = {app_type: round(np.percentile(df, 90), 2) for app_type, df in data[zone_pair].items()}
+    df = pd.DataFrame(d.items(), columns=['type', 'write post (ms)'])
+    pp(df)
+    print('---')
   # -------------------------
   # prevented inconsistencies
   # -------------------------
@@ -760,47 +820,56 @@ def plot__rendezvous_info(gather_paths):
   # ------------------
   # api calls overhead
   # ------------------
-  peark_rps = {
-    'rendezvous': 0,
-    'rendezvous_no-consistency-checks': 0
-  }
-  peark_rps_gather_paths = {
-    'rendezvous': None,
-    'rendezvous_no-consistency-checks': None
-  }
-
-  # find maximum rps
-  for d in gather_paths:
-    df = pd.read_csv(ROOT_PATH / d / 'traces.csv', sep=';', index_col='ts')
-    info = _load_yaml(d / 'info.yml')
-    # ignore baseline paths
-    if info['type'] in ['rendezvous', 'rendezvous_no-consistency-checks']:
-      if info['rps'] > peark_rps[info['type']]:
-        peark_rps[info['type']] = info['rps']
-        peark_rps_gather_paths[info['type']] = d
-  
-  # get df for results with peark rps
   data = {}
   for gather_path in peark_rps_gather_paths.values():
     df = pd.read_csv(ROOT_PATH / gather_path / 'traces.csv', sep=';', index_col='ts')
     info = _load_yaml(gather_path / 'info.yml')
-    data[info['type']] = {
-      'composepost: async register branches': df[['composepost_rendezvous_rb_async_duration']],
-      'composepost: complete async register branches': df[['composepost_rendezvous_rb_async_complete_duration']],
-      'composepost: close branch': df[['composepost_rendezvous_cb_composepost_duration']],
-      'poststorage: async register write branch': df[['poststorage_rendezvous_rb_poststorage_writepost_duration']],
-      'poststorage: complete async register write branch': df[['poststorage_rendezvous_rb_async_complete_duration']],
-      'poststorage: close branch': df[['poststorage_rendezvous_cb_poststorage_duration']],
-      'wht: wait': df[['wht_rendezvous_wait_duration']],
-      'wht: close branch': df[['wht_rendezvous_cb_wht_duration']]
-    }
+    # ignore baseline
+    if info['type'] in ['rendezvous', 'rendezvous_no-consistency-checks']:
+      if info['zone_pair'] not in data:
+        data[info['zone_pair']] = {}
+      data[info['zone_pair']][info['type']] = {
+        'composepost__register_branches': df[['composepost_rendezvous_rb_async_duration']],
+        'composepost__complete_register': df[['composepost_rendezvous_rb_async_complete_duration']],
+        'composepost__close_branch': df[['composepost_rendezvous_cb_composepost_duration']],
+        'poststorage__register_post_branch': df[['poststorage_rendezvous_rb_poststorage_writepost_duration']],
+        'poststorage__complete_register': df[['poststorage_rendezvous_rb_async_complete_duration']],
+        'poststorage__close_branch': df[['poststorage_rendezvous_cb_poststorage_duration']],
+        'wht__wait': df[['wht_rendezvous_wait_duration']],
+        'wht__close_branch': df[['wht_rendezvous_cb_wht_duration']],
+      }
 
-  for app_type in data.keys():
-    print(app_type, ":")
-    data_df = {app_type: np.percentile(df, 90) for app_type, df in data[app_type].items()}
-    df = pd.DataFrame(data_df.items(), columns=['api call', 'duration (ms)'])
-    pp(df)
-    print('---')
+  for zone_pair in data.keys():
+    for app_type, e in data[zone_pair].items():
+      e['composepost__register_branches'] = round(np.percentile(e['composepost__register_branches'], 90), 1)
+      e['composepost__complete_register'] = round(np.percentile(e['composepost__complete_register'], 90), 1)
+      e['composepost__close_branch'] = round(np.percentile(e['composepost__close_branch'], 90), 1)
+      e['poststorage__register_post_branch'] = round(np.percentile(e['poststorage__register_post_branch'], 90), 1)
+      e['poststorage__complete_register'] = round(np.percentile(e['poststorage__complete_register'], 90), 1)
+      e['poststorage__close_branch'] = round(np.percentile(e['poststorage__close_branch'], 90), 1)
+      e['wht__wait'] = round(np.percentile(e['wht__wait'], 90), 1)
+      e['wht__close_branch'] = round(np.percentile(e['wht__close_branch'], 90), 1)
+
+      total = e['composepost__register_branches'] + e['composepost__complete_register'] + e['composepost__close_branch']
+      total += e['poststorage__register_post_branch'] + e['poststorage__complete_register'] + e['poststorage__close_branch']
+      total += e['wht__wait'] + e['wht__close_branch']
+
+      e['composepost__register_branches'] = str(e['composepost__register_branches']) + '    (' + str(round(((e['composepost__register_branches']) / total)*100, 1)) + '%)'
+      e['composepost__complete_register'] = str(e['composepost__complete_register']) + '    (' + str(round(((e['composepost__complete_register']) / total)*100, 1)) + '%)'
+      e['composepost__close_branch'] = str(e['composepost__close_branch']) + '    (' + str(round(((e['composepost__close_branch']) / total)*100, 1)) + '%)'
+      e['poststorage__register_post_branch'] = str(e['poststorage__register_post_branch']) + '    (' + str(round(((e['poststorage__register_post_branch']) / total)*100, 1)) + '%)'
+      e['poststorage__complete_register'] = str(e['poststorage__complete_register']) + '    (' + str(round(((e['poststorage__complete_register']) / total)*100, 1)) + '%)'
+      e['poststorage__close_branch'] = str(e['poststorage__close_branch']) + '    (' + str(round(((e['poststorage__close_branch']) / total)*100, 1)) + '%)'
+      e['wht__wait'] = str(e['wht__wait']) + '    (' + str(round(((e['wht__wait']) / total)*100, 1)) + '%)'
+      e['wht__close_branch'] = str(e['wht__close_branch']) + '    (' + str(round(((e['wht__close_branch']) / total)*100, 1)) + '%)'
+
+      e['TOTAL'] = total
+      
+      print(f"{app_type} @ {zone_pair}")
+      data_df = {app_type: df for app_type, df in data[zone_pair][app_type].items()}
+      df = pd.DataFrame(data_df.items(), columns=['api call', 'duration (ms)'])
+      pp(df)
+      print('---')
 
 def plot__storage_overhead(gather_paths):
   # in DSB storages are fixed so we init them here

@@ -5,6 +5,7 @@ import os
 import sys
 from pprint import pprint as pp
 from plumbum import FG, local
+from datetime import datetime
 import time
 
 #--------------
@@ -18,8 +19,8 @@ ROOT_PATH = Path(os.path.abspath(os.path.dirname(sys.argv[0])))
 APP = 'socialNetwork'
 GATHER_PATH = ROOT_PATH / 'gather' / 'gcp' / APP / 'compose-post'
 CONFIGS = [
-  'configs/gcp/socialNetwork/us-eu.yml', # for US->EU
-  #'configs/gcp/socialNetwork/us-sg.yml', # for US->SG
+  #'configs/gcp/socialNetwork/us-eu.yml', # for US->EU
+  'configs/gcp/socialNetwork/us-sg.yml', # for US->SG
 ]
 DURATION = 300
 MAX_ROUNDS = 3
@@ -29,37 +30,49 @@ COMBINATIONS_ANTIPODE = [
   # app_type, consistency_checks, cli , con, threads, rate
   # ------------------------
   # baseline
-  ( 'baseline' ,  None ,  1  ,  4 ,    2   , 50 ),
-  ( 'baseline' ,  None ,  1  ,  4 ,    2   , 100 ),
-  ( 'baseline' ,  None ,  1  ,  4 ,    2   , 125 ),
-  ( 'baseline' ,  None ,  1  ,  4 ,    2   , 150 ),
-  ( 'baseline' ,  None ,  1  ,  4 ,    2   , 160 ),
+  #( 'baseline' ,  None ,  1  ,  4 ,    2   , 50 ),
+  #( 'baseline' ,  None ,  1  ,  4 ,    2   , 100 ),
+  #( 'baseline' ,  None ,  1  ,  4 ,    2   , 125 ),
+  #( 'baseline' ,  None ,  1  ,  4 ,    2   , 150 ),
+  #( 'baseline' ,  None ,  1  ,  4 ,    2   , 160 ),
   # antipode
   ( 'antipode' ,  None ,  1  ,  4 ,    2   , 50 ),
   ( 'antipode' ,  None ,  1  ,  4 ,    2   , 100 ),
   ( 'antipode' ,  None ,  1  ,  4 ,    2   , 125 ),
   ( 'antipode' ,  None ,  1  ,  4 ,    2   , 150 ),
-  ( 'antipode' ,  None ,  1  ,  4 ,    2   , 160 ),
+  #( 'antipode' ,  None ,  1  ,  4 ,    2   , 160 ),
 ]
 
 COMBINATIONS_RENDEZVOUS = [
   # app_type, consistency_checks, cli , con, threads, rate
   # ----------------------
-  ( 'rendezvous',   True,   1  ,  4 ,    2   , 50 ),
-  ( 'rendezvous',   True,   1  ,  4 ,    2   , 100 ),
-  ( 'rendezvous',   True,   1  ,  4 ,    2   , 125 ),
-  ( 'rendezvous',   True,   1  ,  4 ,    2   , 150 ),
+  #( 'rendezvous',   False,  1  ,  4 ,    2   , 125 ),
+  #( 'rendezvous',   False,  1  ,  4 ,    2   , 125 ),
+  #( 'rendezvous',   True,   1  ,  4 ,    2   , 125 ),
+  #( 'rendezvous',   True,   1  ,  4 ,    2   , 150 ),
+  #( 'rendezvous',   False,  1  ,  4 ,    2   , 150 ),
 
-  ( 'rendezvous',   False,  1  ,  4 ,    2   , 50 ),
-  ( 'rendezvous',   False,  1  ,  4 ,    2   , 100 ),
-  ( 'rendezvous',   False,  1  ,  4 ,    2   , 125 ),
-  ( 'rendezvous',   False,  1  ,  4 ,    2   , 150 ),
+  #( 'rendezvous',   True,   1  ,  4 ,    2   , 50 ),
+  #( 'rendezvous',   True,   1  ,  4 ,    2   , 100 ),
 
-  ( 'baseline',     None,   1  ,  4 ,    2   , 50 ),
-  ( 'baseline',     None,   1  ,  4 ,    2   , 100 ),
-  ( 'baseline',     None,   1  ,  4 ,    2   , 125 ),
-  ( 'baseline',     None,   1  ,  4 ,    2   , 150 ),
+  #( 'rendezvous',   False,  1  ,  4 ,    2   , 50 ),
+  #( 'rendezvous',   False,  1  ,  4 ,    2   , 100 ),
 
+
+  #( 'baseline',     None,   1  ,  4 ,    2   , 50 ),
+  #( 'baseline',     None,   1  ,  4 ,    2   , 100 ),
+  #( 'baseline',     None,   1  ,  4 ,    2   , 125 ),
+  #( 'baseline',     None,   1  ,  4 ,    2   , 150 ),
+
+  ( 'antipode' ,  None ,  1  ,  4 ,    2   , 50 ),
+  ( 'antipode' ,  None ,  1  ,  4 ,    2   , 100 ),
+  ( 'antipode' ,  None ,  1  ,  4 ,    2   , 125 ),
+  ( 'antipode' ,  None ,  1  ,  4 ,    2   , 150 ),
+
+  ( 'antipode' ,  None ,  1  ,  4 ,    2   , 50 ),
+  ( 'antipode' ,  None ,  1  ,  4 ,    2   , 100 ),
+  ( 'antipode' ,  None ,  1  ,  4 ,    2   , 125 ),
+  ( 'antipode' ,  None ,  1  ,  4 ,    2   , 150 ),
 ]
 
 
@@ -76,10 +89,13 @@ for config in CONFIGS:
 
   # deploy configuration
   maestro['--gcp', APP, 'deploy', '-config', config, '-clients', 1] & FG
+  
+  #maestro['--gcp', APP, 'clean', '-restart'] & FG
 
   for app_type, consistency_checks, clients, connections, threads, rate in COMBINATIONS_RENDEZVOUS:
     for nround in range(MAX_ROUNDS):
-      print('[INFO] New deployment starting:')
+      start = datetime.now().strftime('%H:%M:%S')
+      print(f'[INFO] New deployment starting @ {start}')
       print(f"\t [ROUND #{nround}] type: {app_type} // clients: {clients} // connections: {connections} // threads: {threads} // rate: {rate}\n")
 
       # run configuration with the proper arguments
@@ -110,6 +126,9 @@ for config in CONFIGS:
       # Look at info
       # maestro['--gcp', 'info', '-links'] & FG
       # input("[WAIT] Observe output ....")
+
+      end = datetime.now().strftime('%H:%M:%S')
+      print(f'[INFO] Restarting nodes @ {end}')
 
       # soft clean
       maestro['--gcp', APP, 'clean', '-restart'] & FG
