@@ -554,7 +554,7 @@ def plot__throughput_latency_with_consistency_window(gather_paths):
     parsed_data.append({
       'rps': info['rps'],
       'zone_pair': info['zone_pair'],
-      'type': info['type'],
+      'type': info['type'].capitalize(), # for plot
       'latency_90': latency_90,
       'consistency_window_90': consistency_window_90,
       'throughput': throughput,
@@ -575,8 +575,8 @@ def plot__throughput_latency_with_consistency_window(gather_paths):
     # gather all consistency window samples from Original and Antipode and then compute the median
     cw_data = {
       'Throughput': fr'$\approx${peark_rps}',
-      'Original': round(df_zone_pair[(df_zone_pair['type'] == 'baseline') & (df_zone_pair['rps'] == peark_rps)]['consistency_window_90'].values[0]),
-      'Antipode': round(df_zone_pair[(df_zone_pair['type'] == 'antipode') & (df_zone_pair['rps'] == peark_rps)]['consistency_window_90'].values[0]),
+      'Original': round(df_zone_pair[(df_zone_pair['type'] == 'Baseline') & (df_zone_pair['rps'] == peark_rps)]['consistency_window_90'].values[0]),
+      'Antipode': round(df_zone_pair[(df_zone_pair['type'] == 'Antipode') & (df_zone_pair['rps'] == peark_rps)]['consistency_window_90'].values[0]),
     }
     # for each Baseline / Antipode pair we take the Baseline out of antipode so
     # stacked bars are presented correctly
