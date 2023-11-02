@@ -162,10 +162,10 @@ For more information type `./plot -h`
 
 João Loff, Daniel Porto, João Garcia, Jonathan Mace, Rodrigo Rodrigues\
 Antipode: Enforcing Cross-Service Causal Consistency in Distributed Applications\
-To appear.\
-[Download]()
+SOSP 2023.\
+[Paper](https://dl.acm.org/doi/10.1145/3600006.3613176)
 
 Gan et al\
 An Open-Source Benchmark Suite for Microservices and Their Hardware-Software Implications for Cloud and Edge Systems\
 ASPLOS 2019\
-[Download](http://www.csl.cornell.edu/~delimitrou/papers/2019.asplos.microservices.pdf)
+[Paper](http://www.csl.cornell.edu/~delimitrou/papers/2019.asplos.microservices.pdf)
